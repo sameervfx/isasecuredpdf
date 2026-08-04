@@ -525,7 +525,6 @@ export const App: React.FC = () => {
       <LandingPage
         onLaunchEditor={() => {
           setCurrentView('editor');
-          if (!docState.fileBytes) handleLoadSample();
         }}
       />
     );
