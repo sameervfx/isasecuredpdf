@@ -521,7 +521,14 @@ export const App: React.FC = () => {
   const hasDocument = Boolean(docState.fileBytes);
 
   if (currentView === 'landing') {
-    return <LandingPage onLaunchEditor={() => setCurrentView('editor')} />;
+    return (
+      <LandingPage
+        onLaunchEditor={() => {
+          setCurrentView('editor');
+          if (!docState.fileBytes) handleLoadSample();
+        }}
+      />
+    );
   }
 
   return (
