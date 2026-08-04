@@ -59,6 +59,7 @@ interface HeaderToolbarProps {
   onOpenPremiumExportModal: (format?: ExportFormatType) => void;
   onOpenRecentFile?: (fileItem: RecentFileItem) => void;
   onSelectSavedSignature: (dataUrl: string) => void;
+  onRotatePage?: (pageIndex: number) => void;
   onSavePDF: () => void;
   onExportPDF: () => void;
   onPrintPDF: () => void;
@@ -86,6 +87,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   onOpenPremiumExportModal,
   onOpenRecentFile,
   onSelectSavedSignature,
+  onRotatePage,
   onSavePDF,
   onExportPDF,
   onPrintPDF,
@@ -425,7 +427,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
       {/* Center Toolbar Tool Modes */}
       {hasDocument && (
-        <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-950/80 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative max-w-[42vw] sm:max-w-none overflow-x-auto no-scrollbar flex-shrink-0">
+        <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-950/80 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative flex-shrink-0">
           {/* Select Mode */}
           <button
             onClick={() => handleToolSelect('select')}
@@ -454,61 +456,112 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <span>Edit / Redact</span>
           </button>
 
-          {/* Freehand Draw */}
-          <button
-            onClick={() => handleToolSelect('draw')}
-            title="Freehand Draw & Highlight"
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              toolMode === 'draw'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Pencil className="w-3.5 h-3.5 text-yellow-400" />
-            <span>Draw</span>
-          </button>
+          {/* Annotate & Markups Dropdown */}
+          <div className="relative" ref={annotateDropdownRef}>
+            <button
+              onClick={() => setIsAnnotateDropdownOpen(!isAnnotateDropdownOpen)}
+              title="Annotations, Markups, Stamps & Forms"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                isAnnotateActive || isAnnotateDropdownOpen
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              {toolMode === 'draw' && <Pencil className="w-3.5 h-3.5 text-yellow-400" />}
+              {toolMode === 'strikeout' && <Strikethrough className="w-3.5 h-3.5 text-rose-400" />}
+              {toolMode === 'checkmark' && <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />}
+              {toolMode === 'crossmark' && <XSquare className="w-3.5 h-3.5 text-rose-400" />}
+              {toolMode === 'form' && <FormInput className="w-3.5 h-3.5 text-cyan-400" />}
+              {!isAnnotateActive && <Pencil className="w-3.5 h-3.5 text-cyan-400" />}
+              <span>
+                {toolMode === 'draw'
+                  ? 'Draw'
+                  : toolMode === 'strikeout'
+                  ? 'Cross Out'
+                  : toolMode === 'checkmark'
+                  ? 'Check ✓'
+                  : toolMode === 'crossmark'
+                  ? 'Cross ✕'
+                  : toolMode === 'form'
+                  ? 'Fill Form'
+                  : 'Annotate'}
+              </span>
+              <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
+            </button>
 
-          {/* Strikeout */}
-          <button
-            onClick={() => handleToolSelect('strikeout')}
-            title="Cross Out (Strikeout)"
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              toolMode === 'strikeout'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Strikethrough className="w-3.5 h-3.5 text-rose-400" />
-            <span>Cross Out</span>
-          </button>
+            {/* Annotate Dropdown Popover */}
+            {isAnnotateDropdownOpen && (
+              <div className="absolute top-full left-0 mt-2 w-60 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 flex flex-col space-y-1">
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
+                  Markups & Stamps
+                </div>
 
-          {/* Checkmark Stamp */}
-          <button
-            onClick={() => handleToolSelect('checkmark')}
-            title="Stamp Checkmark (✓)"
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              toolMode === 'checkmark'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Check ✓</span>
-          </button>
+                <button
+                  onClick={() => {
+                    handleToolSelect('draw');
+                    setIsAnnotateDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl transition ${
+                    toolMode === 'draw' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Pencil className="w-4 h-4 text-yellow-400" />
+                    <span>Freehand Draw & Highlight</span>
+                  </div>
+                  {toolMode === 'draw' && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
+                </button>
 
-          {/* Crossmark Stamp */}
-          <button
-            onClick={() => handleToolSelect('crossmark')}
-            title="Stamp Crossmark (✕)"
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              toolMode === 'crossmark'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <XSquare className="w-3.5 h-3.5 text-rose-400" />
-            <span>Cross ✕</span>
-          </button>
+                <button
+                  onClick={() => {
+                    handleToolSelect('strikeout');
+                    setIsAnnotateDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl transition ${
+                    toolMode === 'strikeout' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Strikethrough className="w-4 h-4 text-rose-400" />
+                    <span>Cross Out (Strikeout)</span>
+                  </div>
+                  {toolMode === 'strikeout' && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleToolSelect('checkmark');
+                    setIsAnnotateDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl transition ${
+                    toolMode === 'checkmark' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <CheckSquare className="w-4 h-4 text-emerald-400" />
+                    <span>Stamp Checkmark (✓)</span>
+                  </div>
+                  {toolMode === 'checkmark' && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleToolSelect('crossmark');
+                    setIsAnnotateDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl transition ${
+                    toolMode === 'crossmark' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <XSquare className="w-4 h-4 text-rose-400" />
+                    <span>Stamp Crossmark (✕)</span>
+                  </div>
+                  {toolMode === 'crossmark' && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Sign Dropdown Button */}
           <div className="relative" ref={dropdownRef}>
@@ -586,17 +639,29 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             )}
           </div>
 
+          {/* Rotate Current Page */}
           <button
-            onClick={() => handleToolSelect('rotate')}
-            title="Rotate / Manage Pages"
-            className={`flex items-center space-x-1 sm:space-x-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium transition-all ${
-              toolMode === 'rotate'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            }`}
+            onClick={() => {
+              if (onRotatePage) {
+                // Rotate active page (currentPage is 1-indexed)
+                onRotatePage(currentPage - 1);
+              }
+            }}
+            title="Rotate Current Page 90° Clockwise"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
           >
-            <RotateCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Pages</span>
+            <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Rotate ↻</span>
+          </button>
+
+          {/* Manage Pages / Reorder */}
+          <button
+            onClick={onOpenPageManager}
+            title="Manage, Split & Reorder Pages"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+          >
+            <Grid className="w-3.5 h-3.5 text-purple-400" />
+            <span>Pages</span>
           </button>
         </div>
       )}

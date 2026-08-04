@@ -261,10 +261,15 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       {activePages.map((origIdx, seqIdx) => {
         const pageNum = seqIdx + 1;
         const dims = pageDims[origIdx];
-        const w = dims?.width ?? 612;
-        const h = dims?.height ?? 792;
-        const origW = dims?.originalWidth ?? 612;
-        const origH = dims?.originalHeight ?? 792;
+        const rot = state.pageRotations[origIdx] || 0;
+        const isSwapped = rot % 180 !== 0;
+        const pageObj = state.pages[origIdx];
+        const baseW = pageObj?.width || 612;
+        const baseH = pageObj?.height || 792;
+        const origW = dims?.originalWidth ?? (isSwapped ? baseH : baseW);
+        const origH = dims?.originalHeight ?? (isSwapped ? baseW : baseH);
+        const w = dims?.width ?? (origW * zoom);
+        const h = dims?.height ?? (origH * zoom);
 
         return (
           <div

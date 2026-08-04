@@ -552,6 +552,7 @@ export const App: React.FC = () => {
         onOpenPremiumExportModal={handleOpenPremiumExportModal}
         onOpenRecentFile={handleOpenRecentFile}
         onSelectSavedSignature={handleSelectSavedSignature}
+        onRotatePage={handleRotatePage}
         onSavePDF={handleSavePDF}
         onExportPDF={handleExportPDF}
         onPrintPDF={handlePrintPDF}
