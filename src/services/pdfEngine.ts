@@ -127,38 +127,42 @@ export class PDFEngineService {
       console.warn('Form updating warning:', formErr);
     }
 
-    // 3. Render Text Annotations
+    // 3. Render Text Annotations (Multi-line & Pasted Text Support)
     for (const textAnn of state.textAnnotations) {
       if (textAnn.pageIndex < 0 || textAnn.pageIndex >= pdfDoc.getPageCount()) continue;
 
       const targetPage = pdfDoc.getPage(textAnn.pageIndex);
       const { height: pageH } = targetPage.getSize();
-      const textColor = parseHexColor(textAnn.color);
+      const textColor = parseHexColor(textAnn.color || '#000000');
 
-      const measuredWidth = textAnn.width || (textAnn.text.length * textAnn.fontSize * 0.6 + 12);
-      const measuredHeight = textAnn.height || (textAnn.fontSize * 1.4 + 8);
-      const pdfY = pageH - textAnn.y - measuredHeight;
+      const lines = (textAnn.text || '').split(/\r?\n/);
+      const lineHeight = textAnn.fontSize * 1.35;
+      const totalHeight = textAnn.height || Math.max(lines.length * lineHeight + 8, textAnn.fontSize * 1.4 + 8);
+      const totalWidth = textAnn.width || 320;
+      const pdfY = pageH - textAnn.y - totalHeight;
 
       if (textAnn.isRedact) {
         targetPage.drawRectangle({
           x: textAnn.x,
           y: pdfY,
-          width: measuredWidth,
-          height: measuredHeight,
+          width: totalWidth,
+          height: totalHeight,
           color: rgb(1, 1, 1),
           borderWidth: 0,
         });
       }
 
-      const cleanText = textAnn.text.replace(/[^\x00-\x7F]/g, '');
-      if (cleanText) {
-        targetPage.drawText(cleanText, {
-          x: textAnn.x + 4,
-          y: pdfY + (measuredHeight - textAnn.fontSize) / 2 + 2,
-          size: textAnn.fontSize,
-          font: font,
-          color: textColor,
-        });
+      for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+        const cleanLine = lines[lineIdx].replace(/[^\x00-\x7F]/g, '');
+        if (cleanLine) {
+          targetPage.drawText(cleanLine, {
+            x: textAnn.x + 4,
+            y: pdfY + totalHeight - (lineIdx + 1) * lineHeight + 2,
+            size: textAnn.fontSize,
+            font: font,
+            color: textColor,
+          });
+        }
       }
     }
 

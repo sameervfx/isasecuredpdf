@@ -256,7 +256,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     <main
       ref={containerRef}
       tabIndex={0}
-      className="flex-1 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-auto bg-slate-950 p-8 flex flex-col items-center space-y-8 relative scroll-smooth focus:outline-none"
+      className="flex-1 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-auto max-w-[100vw] bg-slate-950 p-2 sm:p-8 flex flex-col items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none touch-pan-x touch-pan-y"
     >
       {activePages.map((origIdx, seqIdx) => {
         const pageNum = seqIdx + 1;

@@ -50,18 +50,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
   };
 
   return (
-    <div className="h-screen w-full overflow-y-auto overflow-x-hidden scroll-smooth bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-white flex flex-col">
+    <div className="min-h-screen w-full max-w-[100vw] overflow-y-auto overflow-x-hidden scroll-smooth bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-white flex flex-col">
       {/* 1. Navigation Bar */}
-      <nav className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center space-x-3 cursor-pointer" onClick={onLaunchEditor}>
-          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900">
+      <nav className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between max-w-[100vw] overflow-x-hidden">
+        <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer flex-shrink-0" onClick={onLaunchEditor}>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
             <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
           </div>
           <div>
-            <span className="text-lg font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent tracking-tight">
+            <span className="text-sm sm:text-lg font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent tracking-tight">
               PDF Engine Studio
             </span>
-            <span className="ml-2 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-full">
+            <span className="hidden sm:inline-block ml-2 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-full">
               SaaS Edition
             </span>
           </div>
@@ -74,7 +74,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
           <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="hover:text-cyan-400 transition">FAQ</a>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           <button
             onClick={() => setIsDownloadModalOpen(true)}
             className="hidden sm:flex items-center space-x-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition"
@@ -85,22 +85,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
 
           <button
             onClick={onLaunchEditor}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
+            className="flex items-center space-x-1.5 sm:space-x-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
           >
             <span>Launch Web Editor</span>
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </nav>
 
       {/* 2. Hero Section */}
-      <section className="relative pt-16 pb-20 px-4 lg:px-8 max-w-7xl mx-auto text-center flex-1">
-        <div className="inline-flex items-center space-x-2 px-4 py-1.5 bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border border-cyan-500/30 rounded-full text-xs font-semibold text-cyan-300 mb-8 animate-pulse">
-          <Lock className="w-3.5 h-3.5" />
-          <span>🔒 100% Client-Side Processing • Zero Data Transmission • Offline Ready</span>
+      <section className="relative pt-10 sm:pt-16 pb-16 sm:pb-20 px-4 lg:px-8 max-w-7xl mx-auto text-center flex-1 w-full overflow-x-hidden">
+        <div className="inline-flex items-center space-x-2 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border border-cyan-500/30 rounded-full text-[10px] sm:text-xs font-semibold text-cyan-300 mb-6 sm:mb-8 max-w-full text-center flex-wrap justify-center">
+          <Lock className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>🔒 100% Client-Side • Zero Data Transmission • Offline Ready</span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-none max-w-5xl mx-auto">
+        <h1 className="text-2xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-5xl mx-auto px-2">
           The 100% On-Device, <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">Privacy-First PDF Suite</span> for Modern Teams.
         </h1>
 
