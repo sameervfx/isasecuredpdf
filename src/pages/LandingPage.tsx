@@ -421,9 +421,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
 
             <div className="p-6 text-xs text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto space-y-4">
               {activeModal === 'privacy' && (
-                <p>
-                  <b>Privacy Policy:</b> PDF Engine Studio operates 100% client-side. We do NOT collect, store, transmit, or process your PDF files, document text, signatures, or metadata on external cloud servers. All document manipulation happens entirely in your local browser memory or desktop operating system. Any billing details provided during purchase are processed securely by our Merchant of Record (Lemon Squeezy/Paddle) and are subject to their respective privacy standards.
-                </p>
+                <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
+                  <div>
+                    <h4 className="font-bold text-white mb-1">1. Zero Document Data Collection</h4>
+                    <p>
+                      ISASecuredPDF (PDF Engine Studio) operates 100% client-side. We do NOT collect, store, transmit, or process your PDF files, document text, signatures, form entries, or metadata on external cloud servers. All document rendering and manipulation happen entirely in your local browser memory or desktop operating system RAM.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-white mb-1">2. Local Data Storage</h4>
+                    <p>
+                      Temporary workspace preferences or cached file states may be saved locally within your device's browser memory (via Local Storage or IndexedDB). This data never leaves your workstation and can be cleared at any time by clearing your browser cache.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-white mb-1">3. Billing & Payments</h4>
+                    <p>
+                      Any payment or subscription details provided during purchase are processed securely by our Merchant of Record and are subject to their respective privacy standards and PCI-DSS compliance. We do not store or process payment card numbers on our servers.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-white mb-1">4. Third-Party Analytics & Advertising</h4>
+                    <p>
+                      We may utilize privacy-compliant third-party analytics and advertising networks (such as Google AdSense) that collect non-personally identifiable usage metrics using browser cookies to display contextual advertisements.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-white mb-1">5. Contact Us</h4>
+                    <p>
+                      If you have any questions regarding this Privacy Policy, please contact us at <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a>.
+                    </p>
+                  </div>
+                </div>
               )}
 
               {activeModal === 'terms' && (
