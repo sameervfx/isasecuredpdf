@@ -246,30 +246,14 @@ export const App: React.FC = () => {
     if (saveLocally) {
       saveSignatureToStorage(dataUrl);
     }
-    const activePageIndices = docState.pageOrder.filter((idx) => !docState.deletedPages.has(idx));
-    const activePageIndex = activePageIndices[currentPage - 1] ?? 0;
-    const pageObj = docState.pages[activePageIndex];
-    const pageW = pageObj?.width || 612;
-    const pageH = pageObj?.height || 792;
-
-    const newSig: SignatureAnnotation = {
-      id: `sig_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      pageIndex: activePageIndex,
-      x: Math.max(20, Math.round(pageW / 2 - 80)),
-      y: Math.max(20, Math.round(pageH - 180)),
-      width: 160,
-      height: 70,
-      dataUrl,
-    };
-
-    setDocState((prev) => ({ ...prev, signatures: [...prev.signatures, newSig] }));
     setPendingSignatureDataUrl(dataUrl);
-    setToolMode('select');
+    setToolMode('sign');
     setIsSignatureModalOpen(false);
   };
 
   const handleSelectSavedSignature = (dataUrl: string) => {
-    handleSaveSignature(dataUrl, false);
+    setPendingSignatureDataUrl(dataUrl);
+    setToolMode('sign');
   };
 
   const handleAddSignatureAtCoords = (sigData: Omit<SignatureAnnotation, 'id'>) => {

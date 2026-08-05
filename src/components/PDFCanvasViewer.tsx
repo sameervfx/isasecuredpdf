@@ -75,6 +75,20 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const renderingRef = useRef(false);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+
+  // Mouse tracking when in signature placement mode
+  useEffect(() => {
+    if (toolMode === 'sign' && pendingSignatureDataUrl) {
+      const handleMouseMove = (e: MouseEvent) => {
+        setMousePos({ x: e.clientX, y: e.clientY });
+      };
+      window.addEventListener('mousemove', handleMouseMove);
+      return () => window.removeEventListener('mousemove', handleMouseMove);
+    } else {
+      setMousePos(null);
+    }
+  }, [toolMode, pendingSignatureDataUrl]);
 
   const activePages = state.pageOrder.filter((idx) => !state.deletedPages.has(idx));
 
@@ -390,6 +404,18 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           Fit Width
         </button>
       </div>
+      {/* Real-Time Signature Mouse Follower */}
+      {toolMode === 'sign' && pendingSignatureDataUrl && mousePos && (
+        <div
+          className="fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 p-2 bg-white/95 rounded-xl shadow-2xl border-2 border-cyan-500 backdrop-blur-md flex flex-col items-center animate-pulse"
+          style={{ left: `${mousePos.x}px`, top: `${mousePos.y}px` }}
+        >
+          <img src={pendingSignatureDataUrl} alt="Drop Signature" className="h-12 max-w-[160px] object-contain" />
+          <span className="text-[10px] bg-slate-900 text-cyan-300 font-bold px-2 py-0.5 rounded shadow mt-1 whitespace-nowrap">
+            Click target page to drop signature
+          </span>
+        </div>
+      )}
     </main>
   );
 };
