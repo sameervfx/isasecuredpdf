@@ -261,18 +261,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
             <p className="text-sm text-slate-400 mt-3">No hidden subscriptions. 14-Day Money-Back Guarantee.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Free Tier */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* 1. Free Starter Plan */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition">
               <div>
-                <h3 className="text-lg font-bold text-white mb-2">Free Starter</h3>
-                <p className="text-xs text-slate-400 mb-6">For casual PDF viewing & basic form filling.</p>
-                <div className="text-4xl font-extrabold text-white mb-6">$0 <span className="text-xs text-slate-500 font-normal">/ forever</span></div>
+                <h3 className="text-base font-bold text-white mb-1">Free Starter</h3>
+                <p className="text-xs text-slate-400 mb-4">For casual web viewing & editing.</p>
+                <div className="text-3xl font-extrabold text-white mb-6">$0 <span className="text-xs text-slate-500 font-normal">/ forever</span></div>
 
                 <ul className="space-y-3 text-xs text-slate-300">
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /><span>PDF Viewing & Rendering</span></li>
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /><span>Page Rotation & Deletion</span></li>
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /><span>Basic Form Filling</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Tools</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Annotation</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" /><span>Standard Local Processing Limits</span></li>
                 </ul>
               </div>
 
@@ -284,22 +284,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               </button>
             </div>
 
-            {/* Pro License */}
-            <div className="bg-slate-900 border-2 border-cyan-500 rounded-3xl p-8 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-lg">
+            {/* 2. Pro Monthly Plan */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition">
+              <div>
+                <h3 className="text-base font-bold text-white mb-1">Pro Monthly</h3>
+                <p className="text-xs text-slate-400 mb-4">For active power users & creators.</p>
+                <div className="text-3xl font-extrabold text-white mb-6">$2.99 <span className="text-xs text-slate-400 font-normal">/ month</span></div>
+
+                <ul className="space-y-3 text-xs text-slate-300">
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Zero Ads & Unlimited Web Tools</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>High-DPI 4K Vector Supersampling</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Batch PDF Processing & ZIP Export</span></li>
+                </ul>
+              </div>
+
+              <button
+                onClick={() => setIsDownloadModalOpen(true)}
+                className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 hover:border-cyan-500/50 transition"
+              >
+                Start Monthly ($2.99/mo)
+              </button>
+            </div>
+
+            {/* 3. Pro Annual Plan (Most Popular) */}
+            <div className="bg-slate-900 border-2 border-cyan-500 rounded-3xl p-6 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10 transform lg:-translate-y-2">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-lg whitespace-nowrap">
                 Most Popular
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-white mb-2">Pro License</h3>
-                <p className="text-xs text-slate-400 mb-6">For power users, freelancers & professionals.</p>
-                <div className="text-4xl font-extrabold text-white mb-6">$39 <span className="text-xs text-slate-400 font-normal">one-time lifetime</span></div>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-base font-bold text-white">Pro Annual</h3>
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">Save 20%</span>
+                </div>
+                <p className="text-xs text-slate-400 mb-4">Complete web & desktop freedom.</p>
+                <div className="text-3xl font-extrabold text-white mb-6">$29.99 <span className="text-xs text-slate-400 font-normal">/ year</span></div>
 
                 <ul className="space-y-3 text-xs text-slate-200">
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400" /><span>Text Overwriting & Redaction</span></li>
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400" /><span>Signature Stamping & Flattening</span></li>
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400" /><span>Batch PDF Splitting & ZIP Export</span></li>
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400" /><span>Unlimited Standalone Desktop Usage</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Everything in Monthly Plan</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Download Standalone Desktop App (.exe / .dmg)</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Air-Gapped Offline Execution</span></li>
                 </ul>
               </div>
 
@@ -307,29 +331,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
                 onClick={() => setIsDownloadModalOpen(true)}
                 className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition"
               >
-                Get Pro License
+                Get Annual Plan
               </button>
             </div>
 
-            {/* Team / Enterprise */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col justify-between">
+            {/* 4. Lifetime License */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition">
               <div>
-                <h3 className="text-lg font-bold text-white mb-2">Team Enterprise</h3>
-                <p className="text-xs text-slate-400 mb-6">For companies requiring centralized licenses.</p>
-                <div className="text-4xl font-extrabold text-white mb-6">$299 <span className="text-xs text-slate-500 font-normal">/ year</span></div>
+                <h3 className="text-base font-bold text-white mb-1">Lifetime License</h3>
+                <p className="text-xs text-slate-400 mb-4">One-time investment forever.</p>
+                <div className="text-3xl font-extrabold text-white mb-6">$99.00 <span className="text-xs text-slate-500 font-normal">/ one-time</span></div>
 
                 <ul className="space-y-3 text-xs text-slate-300">
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /><span>Multi-seat Company Deployment</span></li>
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /><span>MSI Silent Installers</span></li>
-                  <li className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400" /><span>Priority 24/7 IT Support</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" /><span>All future Pro Web & Desktop App updates included</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" /><span>Priority IT & Compliance Support</span></li>
                 </ul>
               </div>
 
               <button
-                onClick={() => setActiveModal('contact')}
-                className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition"
+                onClick={() => setIsDownloadModalOpen(true)}
+                className="mt-8 w-full py-3 bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 hover:border-purple-500/60 transition"
               >
-                Contact Enterprise Sales
+                Buy Lifetime ($99)
               </button>
             </div>
           </div>
