@@ -28,6 +28,7 @@ import {
   History,
   FileText,
   FileSpreadsheet,
+  Mail,
   Image as ImageIcon,
   Presentation,
   Sparkles,
@@ -402,6 +403,17 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     <Presentation className="w-4 h-4 text-amber-400" />
                     <span>Export to PowerPoint (.pptx)...</span>
                   </button>
+
+                  <div className="my-1 border-t border-slate-800" />
+
+                  <a
+                    href="mailto:support@isasecuredpdf.com"
+                    onClick={() => setIsFileMenuOpen(false)}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 text-left font-semibold text-cyan-300 hover:bg-slate-800 rounded-xl transition"
+                  >
+                    <Mail className="w-4 h-4 text-cyan-400" />
+                    <span>Support: support@isasecuredpdf.com</span>
+                  </a>
                 </div>
               )}
             </div>

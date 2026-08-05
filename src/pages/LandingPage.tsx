@@ -434,14 +434,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
 
               {activeModal === 'refund' && (
                 <p>
-                  <b>Refund Policy:</b> We offer a 14-day no-questions-asked money-back guarantee for all individual Pro licenses. If the software does not meet your workflow requirements or fails to render your specific PDF files properly, contact support@yourdomain.com within 14 days of purchase for a 100% refund.
+                  <b>Refund Policy:</b> We offer a 14-day no-questions-asked money-back guarantee for all individual Pro licenses. If the software does not meet your workflow requirements or fails to render your specific PDF files properly, contact <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a> within 14 days of purchase for a 100% refund.
                 </p>
               )}
 
               {activeModal === 'contact' && (
-                <p>
-                  <b>Support & Inquiries:</b> For enterprise licensing, IT security documentation, or software support, email us directly at support@yourdomain.com. Response times are within 24 business hours.
-                </p>
+                <div className="space-y-3">
+                  <p>
+                    <b>Support & Inquiries:</b> For enterprise licensing, IT security documentation, desktop installation, or software support, email our team directly at:
+                  </p>
+                  <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center space-x-3 w-fit">
+                    <Mail className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+                    <a href="mailto:support@isasecuredpdf.com" className="text-sm font-bold text-cyan-400 hover:underline">
+                      support@isasecuredpdf.com
+                    </a>
+                  </div>
+                  <p className="text-slate-400 text-[11px]">
+                    Official support response time is within 24 business hours.
+                  </p>
+                </div>
               )}
             </div>
 
