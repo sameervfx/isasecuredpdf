@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ command }) => ({
   plugins: [react()],
-  // Use relative base so Electron can load dist/index.html as a local file
-  base: command === 'build' ? './' : '/',
+  // Use '/' base for web/Vercel deployments, './' only for Electron standalone
+  base: process.env.ELECTRON_BUILD === 'true' ? './' : '/',
   server: {
     port: 3000,
     host: '0.0.0.0',
