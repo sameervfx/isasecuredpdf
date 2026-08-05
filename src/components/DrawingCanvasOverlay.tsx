@@ -59,6 +59,13 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   const pageStamps = stamps.filter((s) => s.pageIndex === pageIndex);
   const pageStrikeouts = strikeouts.filter((s) => s.pageIndex === pageIndex);
 
+  const activeMode =
+    toolMode === 'draw' ||
+    toolMode === 'checkmark' ||
+    toolMode === 'crossmark' ||
+    toolMode === 'strikeout' ||
+    (toolMode === 'sign' && Boolean(pendingSignatureDataUrl));
+
   const getPdfCoords = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const screenX = e.clientX - rect.left;
@@ -133,8 +140,6 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
     setIsDrawing(false);
     setCurrentPoints([]);
   };
-
-  const activeMode = toolMode === 'draw' || toolMode === 'checkmark' || toolMode === 'crossmark' || toolMode === 'strikeout';
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}>
