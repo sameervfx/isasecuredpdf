@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, FilePlus, Check, BookOpen, FileText, Receipt, Shield, Building } from 'lucide-react';
+import { X, FilePlus, Check, BookOpen, FileText, Receipt, Shield, Building, Home, Car, FileCheck } from 'lucide-react';
 import { CreatePDFOptions, TemplateType } from '../utils/blankPdf';
 
 interface CreatePDFModalProps {
@@ -37,30 +37,58 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
     {
       id: 'nda',
       title: 'Mutual NDA Agreement',
-      desc: 'Non-Disclosure Agreement with Party A/B signature lines',
+      desc: 'Fillable Non-Disclosure Agreement with Party A/B fields',
       icon: Shield,
       category: 'Legal',
     },
     {
       id: 'invoice',
       title: 'Commercial Business Invoice',
-      desc: 'Itemized billing table, subtotal, tax & payment notes',
+      desc: 'Fillable itemized table, subtotal, tax & payment notes',
       icon: Receipt,
       category: 'Finance',
     },
     {
       id: 'contractor',
       title: 'Independent Contractor Agreement',
-      desc: 'Service terms, IP ownership & execution block',
+      desc: 'Fillable service terms, IP ownership & execution block',
       icon: FileText,
       category: 'Business',
+    },
+    {
+      id: 'canada_t4',
+      title: '🇨🇦 Canadian T4 Tax Form',
+      desc: 'CRA Statement of Remuneration Paid with SIN & Income boxes',
+      icon: Building,
+      category: 'Canada CRA',
+    },
+    {
+      id: 'canada_lease',
+      title: '🇨🇦 Canadian Lease Agreement',
+      desc: 'Residential Tenancy Agreement with Landlord/Tenant fields',
+      icon: Home,
+      category: 'Canada Legal',
+    },
+    {
+      id: 'canada_bill_of_sale',
+      title: '🇨🇦 Canadian Bill of Sale',
+      desc: 'Vehicle & Equipment Sale transfer form with VIN/Odometer',
+      icon: Car,
+      category: 'Canada Transfer',
+    },
+    {
+      id: 'offer_letter',
+      title: 'Employment Offer Letter',
+      desc: 'Job offer letter with salary, position & candidate acceptance',
+      icon: FileCheck,
+      category: 'HR / Jobs',
     },
     {
       id: 'w9',
       title: 'Form W-9 (Taxpayer ID Request)',
       desc: 'IRS Taxpayer Identification & Certification form',
       icon: Building,
-      category: 'Government',
+      category: 'US Government',
     },
   ];
 

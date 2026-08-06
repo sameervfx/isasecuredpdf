@@ -121,6 +121,16 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     renderingRef.current = true;
 
     const renderAll = async () => {
+      // Retry for up to 10 frames until DOM canvas elements are attached to refs
+      let retries = 0;
+      while (retries < 10 && !cancelled) {
+        const hasAllCanvases = activePages.every((idx) => Boolean(canvasRefs.current.get(idx)));
+        if (hasAllCanvases) break;
+        await new Promise((r) => requestAnimationFrame(r));
+        retries++;
+      }
+      if (cancelled) return;
+
       const newDims: Record<number, PageDims> = {};
       for (const origIdx of activePages) {
         if (cancelled) break;
@@ -128,7 +138,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         if (!canvas) continue;
         try {
           const rot = state.pageRotations[origIdx] || 0;
-          const dims = await pdfRenderer.renderPageToCanvas(origIdx, canvas, zoom, rot);
+          const dims = await pdfRenderer.renderPageToCanvas(origIdx, canvas, zoom, rot, state.fileBytes);
           if (!cancelled) newDims[origIdx] = dims;
         } catch (err) {
           console.error(`Error rendering page ${origIdx}:`, err);

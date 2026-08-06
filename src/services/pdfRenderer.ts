@@ -28,8 +28,12 @@ export class PDFRendererService {
     pageIndex: number,
     canvas: HTMLCanvasElement,
     scale: number = 1.0,
-    rotationAngle: number = 0
+    rotationAngle: number = 0,
+    fallbackFileBytes?: Uint8Array | null
   ): Promise<{ width: number; height: number; originalWidth: number; originalHeight: number }> {
+    if (!this.pdfDoc && fallbackFileBytes) {
+      await this.loadDocument(fallbackFileBytes);
+    }
     if (!this.pdfDoc) throw new Error('PDF document not loaded');
 
     const page = await this.pdfDoc.getPage(pageIndex + 1);
