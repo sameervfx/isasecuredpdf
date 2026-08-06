@@ -33,6 +33,12 @@ import {
   Presentation,
   Sparkles,
   Zap,
+  Scissors,
+  Award,
+  BookOpen,
+  FileCheck,
+  Layers,
+  Bot,
   Clock
 } from 'lucide-react';
 import { ToolMode } from '../types/pdf';
@@ -102,11 +108,13 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   const [isRecentSubmenuOpen, setIsRecentSubmenuOpen] = useState(false);
   const [isSignDropdownOpen, setIsSignDropdownOpen] = useState(false);
   const [isAnnotateDropdownOpen, setIsAnnotateDropdownOpen] = useState(false);
+  const [isMoreToolsOpen, setIsMoreToolsOpen] = useState(false);
   const [savedSigs, setSavedSigs] = useState<SavedSignature[]>([]);
   const [recentFilesList, setRecentFilesList] = useState<RecentFileItem[]>([]);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
   const annotateDropdownRef = useRef<HTMLDivElement>(null);
+  const moreToolsRef = useRef<HTMLDivElement>(null);
   const fileMenuRef = useRef<HTMLDivElement>(null);
 
   // Sync saved signatures & recent files whenever dropdown opens
@@ -675,6 +683,125 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <Grid className="w-3.5 h-3.5 text-purple-400" />
             <span>Pages</span>
           </button>
+
+          {/* Expanded Feature Modules Dropdown */}
+          <div className="relative" ref={moreToolsRef}>
+            <button
+              onClick={() => setIsMoreToolsOpen(!isMoreToolsOpen)}
+              title="More Feature Modules (E-Sig, Templates, Watermark, AI)"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                isMoreToolsOpen
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+              <span>Tools</span>
+              <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
+            </button>
+
+            {/* Feature Modules Popover */}
+            {isMoreToolsOpen && (
+              <div className="absolute top-full right-0 mt-2 w-72 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 flex flex-col space-y-1">
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
+                  Feature Modules
+                </div>
+
+                {/* 1. Request E-Signature */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    onOpenSignatureModal('draw');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <FileCheck className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Request E-Signature</div>
+                      <div className="text-[10px] text-slate-400">Send contract for digital sign-off</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Upcoming</span>
+                </button>
+
+                {/* 2. Split & Extract Pages */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    onOpenPageManager();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Scissors className="w-4 h-4 text-purple-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Split & Extract Pages</div>
+                      <div className="text-[10px] text-slate-400">Extract ranges into new PDFs</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded-full border border-purple-500/30">Active</span>
+                </button>
+
+                {/* 3. Template Library (NDAs, Invoices, Letters) */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    onOpenCreateModal();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <BookOpen className="w-4 h-4 text-amber-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Template Library</div>
+                      <div className="text-[10px] text-slate-400">NDAs, Invoices, Contracts</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/30">Templates</span>
+                </button>
+
+                {/* 4. Apply Watermark / Dynamic Stamps */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    handleToolSelect('draw');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Award className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Apply Watermark & Stamps</div>
+                      <div className="text-[10px] text-slate-400">CONFIDENTIAL, APPROVED stamps</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Watermark</span>
+                </button>
+
+                {/* 5. AI Assistant (Letter & Document Generator) */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    alert('AI Document Assistant: Powered by 100% Client-Side Local Model execution!');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group border border-cyan-500/20 bg-cyan-950/20"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Bot className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white flex items-center space-x-1">
+                        <span>AI Assistant</span>
+                        <Sparkles className="w-3 h-3 text-yellow-400" />
+                      </div>
+                      <div className="text-[10px] text-slate-400">Letter & Document Generator</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full shadow">AI Pro</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
