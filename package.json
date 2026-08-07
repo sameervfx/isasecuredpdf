@@ -18,6 +18,7 @@
   "build": {
     "appId": "com.isasecurepdf.editor",
     "productName": "Isa Secure PDF Suite",
+    "npmRebuild": false,
     "fileAssociations": [
       {
         "ext": "pdf",
@@ -37,6 +38,7 @@
       "package.json"
     ],
     "win": {
+      "forceCodeSigning": false,
       "target": [
         {
           "target": "dir",
@@ -44,8 +46,7 @@
             "x64"
           ]
         }
-      ],
-      "differentialPackage": false
+      ]
     },
     "nsis": {
       "oneClick": false,
