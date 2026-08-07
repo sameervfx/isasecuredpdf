@@ -722,17 +722,18 @@ export const App: React.FC = () => {
     };
   }, [handleExportPDF, handleOpenPayloadData]);
 
-  // localStorage Mandatory Registration Access Gate check on mount
+  // Ensure Homepage always shows Landing Page by default on page load
   useEffect(() => {
     try {
-      const isRegistered = localStorage.getItem('isa_editor_registered') === 'true';
-      if (isRegistered) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasEditorQuery = urlParams.get('editor') === 'true' || window.location.hash.includes('editor');
+      if (hasEditorQuery) {
         setCurrentView('editor');
       } else {
         setCurrentView('landing');
       }
     } catch (e) {
-      console.warn('Gate check fallback:', e);
+      setCurrentView('landing');
     }
   }, []);
 

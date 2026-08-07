@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Download,
@@ -46,13 +46,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
   const [userCountry, setUserCountry] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Load saved user profile details into form state if available
+  useEffect(() => {
+    try {
+      const savedProfile = localStorage.getItem('isa_user_profile');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed.name) setUserName(parsed.name);
+        if (parsed.email) setUserEmail(parsed.email);
+        if (parsed.profession) setUserProfession(parsed.profession);
+        if (parsed.country) setUserCountry(parsed.country);
+      }
+    } catch (e) {}
+  }, []);
+
   const handleGateCheckAndLaunch = () => {
-    const isRegistered = localStorage.getItem('isa_editor_registered') === 'true';
-    if (isRegistered) {
-      onLaunchEditor();
-    } else {
-      setIsFreeUnlockModalOpen(true);
-    }
+    // Always present mandatory registration form modal to unlock Web Editor
+    setIsFreeUnlockModalOpen(true);
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
