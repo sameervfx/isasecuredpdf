@@ -35,6 +35,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isFreeUnlockModalOpen, setIsFreeUnlockModalOpen] = useState(false);
+  const [isProMonthlyModalOpen, setIsProMonthlyModalOpen] = useState(false);
+  const [isProAnnualModalOpen, setIsProAnnualModalOpen] = useState(false);
+  const [isLifetimeModalOpen, setIsLifetimeModalOpen] = useState(false);
 
   // Mandatory Sign-Up Form Fields
   const [userName, setUserName] = useState('');
@@ -337,10 +340,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               </div>
 
               <button
-                onClick={() => setIsDownloadModalOpen(true)}
+                onClick={() => setIsProMonthlyModalOpen(true)}
                 className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 hover:border-cyan-500/50 transition"
               >
-                Start Monthly ($2.99/mo)
+                Start 7-Day Free Trial ($2.99/mo)
               </button>
             </div>
 
@@ -365,10 +368,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               </div>
 
               <button
-                onClick={() => setIsDownloadModalOpen(true)}
+                onClick={() => setIsProAnnualModalOpen(true)}
                 className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition"
               >
-                Get Annual Plan
+                Get Annual Plan ($29.99/yr)
               </button>
             </div>
 
@@ -386,10 +389,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               </div>
 
               <button
-                onClick={() => setIsDownloadModalOpen(true)}
+                onClick={() => setIsLifetimeModalOpen(true)}
                 className="mt-8 w-full py-3 bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 hover:border-purple-500/60 transition"
               >
-                Buy Lifetime ($99)
+                Buy Lifetime License ($99)
               </button>
             </div>
           </div>
@@ -717,7 +720,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               <button
                 onClick={() => {
                   setIsDownloadModalOpen(false);
-                  onLaunchEditor();
+                  handleGateCheckAndLaunch();
                 }}
                 className="text-xs text-cyan-400 hover:underline font-medium"
               >
@@ -726,6 +729,152 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
             </div>
           </div>
         </div>
-      )}    </div>
+      )}
+
+      {/* PRO MONTHLY CHECKOUT / 7-DAY FREE TRIAL MODAL */}
+      {isProMonthlyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-cyan-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
+            <button onClick={() => setIsProMonthlyModalOpen(false)} className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition">
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-3 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl shadow-lg shadow-cyan-500/20">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">Pro Monthly Subscription</h3>
+                <p className="text-xs text-cyan-400 font-semibold">$2.99 / month • Cancel Anytime</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 my-6">
+              <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2.5 text-xs text-slate-300">
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" /><span>7-Day Free Trial included</span></div>
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" /><span>Zero ads & unlimited PDF web tools</span></div>
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" /><span>High-DPI 4K supersampling & batch processing</span></div>
+              </div>
+
+              <div className="space-y-2.5">
+                <button
+                  onClick={() => {
+                    setIsProMonthlyModalOpen(false);
+                    try {
+                      localStorage.setItem('isa_pro_trial_active', 'true');
+                      localStorage.setItem('isa_trial_start', Date.now().toString());
+                    } catch (e) {}
+                    handleGateCheckAndLaunch();
+                  }}
+                  className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition"
+                >
+                  🚀 Activate 7-Day Free Trial & Start
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsProMonthlyModalOpen(false);
+                    try {
+                      localStorage.setItem('isa_pro_active', 'true');
+                    } catch (e) {}
+                    handleGateCheckAndLaunch();
+                  }}
+                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition"
+                >
+                  💳 Subscribe Now ($2.99/month)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRO ANNUAL CHECKOUT & DESKTOP DOWNLOAD MODAL */}
+      {isProAnnualModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-cyan-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
+            <button onClick={() => setIsProAnnualModalOpen(false)} className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition">
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-3 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl shadow-lg shadow-cyan-500/20">
+                <ShieldCheck className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">Pro Annual Plan ($29.99/yr)</h3>
+                <p className="text-xs text-emerald-400 font-bold">Save 20% • Web & Desktop Access</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 my-6">
+              <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2 text-xs text-slate-300">
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /><span>Full Web Editor & Desktop App download binaries</span></div>
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /><span>Offline air-gapped PDF processing</span></div>
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /><span>14-Day Money-Back Guarantee</span></div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsProAnnualModalOpen(false);
+                  try {
+                    localStorage.setItem('isa_pro_annual_active', 'true');
+                  } catch (e) {}
+                  setIsDownloadModalOpen(true);
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition"
+              >
+                💳 Complete Annual Checkout ($29.99/yr) →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIFETIME VIP CHECKOUT & DESKTOP DOWNLOAD MODAL */}
+      {isLifetimeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-purple-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -z-10" />
+            <button onClick={() => setIsLifetimeModalOpen(false)} className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition">
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-3 bg-gradient-to-tr from-purple-500 to-indigo-600 rounded-2xl shadow-lg shadow-purple-500/20">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">Lifetime VIP License</h3>
+                <p className="text-xs text-purple-400 font-bold">$99.00 One-Time • Own Forever</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 my-6">
+              <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2 text-xs text-slate-300">
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Zero recurring fees forever</span></div>
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Lifetime access to Web & Desktop App updates</span></div>
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Priority IT Support & Enterprise Specs</span></div>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsLifetimeModalOpen(false);
+                  try {
+                    localStorage.setItem('isa_lifetime_vip', 'true');
+                  } catch (e) {}
+                  setIsDownloadModalOpen(true);
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition"
+              >
+                💎 Pay Once $99.00 - Unlock Lifetime VIP →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
