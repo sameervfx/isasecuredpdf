@@ -155,12 +155,32 @@ export class PDFEngineService {
       for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
         const cleanLine = lines[lineIdx].replace(/[^\x00-\x7F]/g, '');
         if (cleanLine) {
+          let drawX = textAnn.x + 4;
+          let drawY = pdfY + totalHeight - (lineIdx + 1) * lineHeight + 2;
+
+          if (textAnn.rotation && textAnn.rotation !== 0) {
+            const rotDeg = -textAnn.rotation;
+            const rad = (rotDeg * Math.PI) / 180;
+            const estimatedWidth = font.widthOfTextAtSize(cleanLine, textAnn.fontSize);
+            const estimatedHeight = textAnn.fontSize;
+            const pdfCx = textAnn.x;
+            const pdfCy = pageH - textAnn.y;
+            const halfW = estimatedWidth / 2;
+            const halfH = estimatedHeight / 2;
+            const rotatedDx = halfW * Math.cos(rad) - halfH * Math.sin(rad);
+            const rotatedDy = halfW * Math.sin(rad) + halfH * Math.cos(rad);
+            drawX = pdfCx - rotatedDx;
+            drawY = pdfCy - rotatedDy;
+          }
+
           targetPage.drawText(cleanLine, {
-            x: textAnn.x + 4,
-            y: pdfY + totalHeight - (lineIdx + 1) * lineHeight + 2,
+            x: drawX,
+            y: drawY,
             size: textAnn.fontSize,
             font: font,
             color: textColor,
+            opacity: textAnn.opacity !== undefined ? textAnn.opacity : 1.0,
+            rotate: textAnn.rotation ? degrees(-textAnn.rotation) : undefined,
           });
         }
       }
@@ -246,12 +266,29 @@ export class PDFEngineService {
           }
         }
 
-        const pdfY = pageH - sig.y - sig.height;
+        let drawX = sig.x;
+        let drawY = pageH - sig.y - sig.height;
+
+        if (sig.rotation && sig.rotation !== 0) {
+          const rotDeg = -sig.rotation;
+          const rad = (rotDeg * Math.PI) / 180;
+          const pdfCx = sig.x;
+          const pdfCy = pageH - sig.y;
+          const halfW = sig.width / 2;
+          const halfH = sig.height / 2;
+          const rotatedDx = halfW * Math.cos(rad) - halfH * Math.sin(rad);
+          const rotatedDy = halfW * Math.sin(rad) + halfH * Math.cos(rad);
+          drawX = pdfCx - rotatedDx;
+          drawY = pdfCy - rotatedDy;
+        }
+
         targetPage.drawImage(embeddedImage, {
-          x: sig.x,
-          y: pdfY,
+          x: drawX,
+          y: drawY,
           width: sig.width,
           height: sig.height,
+          opacity: sig.opacity !== undefined ? sig.opacity : 1.0,
+          rotate: sig.rotation ? degrees(-sig.rotation) : undefined,
         });
       } catch (sigErr) {
         console.error('Failed to embed signature image:', sigErr);

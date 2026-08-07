@@ -5,7 +5,7 @@ import { AcroFormOverlay } from './AcroFormOverlay';
 import { TextAnnotationEditor } from './TextAnnotationEditor';
 import { SignatureOverlay } from './SignatureOverlay';
 import { DrawingCanvasOverlay } from './DrawingCanvasOverlay';
-import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, RotateCcw } from 'lucide-react';
+import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, RotateCcw, XCircle, X } from 'lucide-react';
 import appLogo from '../assets/app_logo.jpg';
 
 interface PDFCanvasViewerProps {
@@ -16,6 +16,7 @@ interface PDFCanvasViewerProps {
   onZoomChange: (zoom: number) => void;
   toolMode: ToolMode;
   pendingSignatureDataUrl?: string | null;
+  onCloseDocument?: () => void;
   onUpdateFieldValue: (fieldName: string, value: string | boolean) => void;
   onAddAnnotation: (ann: Omit<TextAnnotation, 'id'>) => void;
   onUpdateAnnotation: (id: string, updated: Partial<TextAnnotation>) => void;
@@ -50,6 +51,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   onZoomChange,
   toolMode,
   pendingSignatureDataUrl,
+  onCloseDocument,
   onUpdateFieldValue,
   onAddAnnotation,
   onUpdateAnnotation,
@@ -282,6 +284,18 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       tabIndex={0}
       className="flex-1 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-auto max-w-[100vw] bg-slate-950 p-2 sm:p-8 flex flex-col items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none touch-pan-x touch-pan-y"
     >
+      {onCloseDocument && (
+        <div className="sticky top-2 sm:top-4 self-end z-30 mr-2 sm:mr-6 -mb-10 sm:-mb-12">
+          <button
+            onClick={onCloseDocument}
+            className="p-2 sm:p-2.5 bg-slate-900/90 hover:bg-rose-950/90 text-slate-300 hover:text-rose-200 border border-slate-700 hover:border-rose-700/80 rounded-xl shadow-2xl backdrop-blur-md transition active:scale-95 group"
+            title="Close document"
+          >
+            <X className="w-4 h-4 text-rose-400 group-hover:scale-110 transition duration-200" />
+          </button>
+        </div>
+      )}
+
       {activePages.map((origIdx, seqIdx) => {
         const pageNum = seqIdx + 1;
         const dims = pageDims[origIdx];

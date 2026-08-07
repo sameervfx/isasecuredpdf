@@ -157,7 +157,10 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         const scaledX = ann.x * scaleX;
         const scaledY = ann.y * scaleY;
         const isSelected = selectedId === ann.id;
-        const lineCount = Math.max(1, ann.text.split('\n').length);
+        const lines = (ann.text || '').split('\n');
+        const lineCount = Math.max(1, lines.length);
+        const maxCharCount = Math.max(...lines.map((l) => l.length), 1);
+        const calculatedWidth = Math.max(80, maxCharCount * (ann.fontSize * 0.62) + 24);
 
         return (
           <div
@@ -166,94 +169,33 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
               e.stopPropagation();
               setSelectedId(ann.id);
             }}
-            className={`text-annotation-element absolute pointer-events-auto group p-1 rounded transition-shadow border ${
+            className={`text-annotation-element absolute pointer-events-auto p-0 border-0 outline-none select-text ${
               ann.isRedact
-                ? 'bg-white text-slate-900 border-slate-300 shadow-md'
-                : 'bg-slate-900/80 text-white border-cyan-500/40 backdrop-blur'
-            } ${isSelected ? 'ring-2 ring-cyan-500 z-30' : 'z-20'}`}
+                ? 'bg-white p-1 rounded shadow-sm'
+                : 'bg-transparent'
+            } ${isSelected ? 'ring-1 ring-cyan-400/60 ring-dashed z-30' : 'z-20'}`}
             style={{
               left: `${scaledX}px`,
               top: `${scaledY}px`,
-              minWidth: '140px',
+              opacity: ann.opacity !== undefined ? ann.opacity : 1.0,
+              transform: ann.rotation ? `translate(-50%, -50%) rotate(${ann.rotation}deg)` : undefined,
+              transformOrigin: 'center center',
             }}
           >
-            {/* Controls Bar for Selected Text */}
-            {isSelected && (
-              <div className="absolute -top-10 left-0 bg-slate-900 border border-slate-700 rounded-lg p-1 flex items-center space-x-1.5 shadow-xl text-xs z-40">
-                {/* Drag Move Handle */}
-                <div
-                  onMouseDown={(e) => handleMouseDownDrag(e, ann)}
-                  className="cursor-grab active:cursor-grabbing p-1 text-cyan-400 hover:text-cyan-300 rounded hover:bg-slate-800"
-                  title="Drag to reposition text"
-                >
-                  <Move className="w-3.5 h-3.5" />
-                </div>
-
-                {/* Paste from Clipboard */}
-                <button
-                  onClick={() => handlePasteClipboard(ann.id)}
-                  title="Paste copied text from clipboard (Ctrl+V)"
-                  className="p-1 rounded bg-slate-800 text-cyan-300 hover:bg-slate-700 flex items-center space-x-1"
-                >
-                  <Clipboard className="w-3 h-3 text-cyan-400" />
-                  <span className="text-[10px]">Paste</span>
-                </button>
-
-                {/* Redact White Background Toggle */}
-                <button
-                  onClick={() => onUpdateAnnotation(ann.id, { isRedact: !ann.isRedact })}
-                  title={ann.isRedact ? 'Solid White Background (Redacting active)' : 'Transparent Background'}
-                  className={`p-1 rounded flex items-center space-x-1 ${
-                    ann.isRedact ? 'bg-white text-slate-900 font-bold' : 'bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  {ann.isRedact ? <EyeOff className="w-3 h-3 text-red-600" /> : <Eye className="w-3 h-3" />}
-                  <span className="text-[10px]">{ann.isRedact ? 'Redact On' : 'Transparent'}</span>
-                </button>
-
-                {/* Font Size Selector */}
-                <select
-                  value={ann.fontSize}
-                  onChange={(e) => onUpdateAnnotation(ann.id, { fontSize: Number(e.target.value) })}
-                  className="bg-slate-800 text-slate-200 border border-slate-700 rounded px-1 text-[11px]"
-                >
-                  {[8, 9, 10, 11, 12, 14, 16, 18, 24, 32, 40].map((size) => (
-                    <option key={size} value={size}>
-                      {size}pt
-                    </option>
-                  ))}
-                </select>
-
-                {/* Color Palette */}
-                <input
-                  type="color"
-                  value={ann.color || '#000000'}
-                  onChange={(e) => onUpdateAnnotation(ann.id, { color: e.target.value })}
-                  className="w-5 h-5 rounded cursor-pointer border-0 p-0 bg-transparent"
-                  title="Text Color"
-                />
-
-                {/* Delete Button */}
-                <button
-                  onClick={() => onDeleteAnnotation(ann.id)}
-                  className="p-1 text-slate-400 hover:text-red-400 rounded transition"
-                  title="Delete Text Box"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Editable Multi-Line Text Area */}
+            {/* Plain Text Area - Auto Expands Horizontally Until Enter Key */}
             <textarea
               value={ann.text}
               onChange={(e) => onUpdateAnnotation(ann.id, { text: e.target.value })}
-              placeholder="Type or paste text here..."
+              placeholder="Type text here..."
               rows={lineCount}
-              className="bg-transparent border-none outline-none font-sans font-medium w-full focus:ring-0 resize-both min-w-[140px] min-h-[30px] p-1 leading-normal"
+              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none font-sans font-semibold p-0 m-0 leading-normal"
               style={{
                 fontSize: `${ann.fontSize * scaleY}px`,
                 color: ann.color || '#000000',
+                width: `${calculatedWidth * scaleX}px`,
+                whiteSpace: 'pre',
+                overflow: 'hidden',
+                resize: 'none',
               }}
             />
           </div>

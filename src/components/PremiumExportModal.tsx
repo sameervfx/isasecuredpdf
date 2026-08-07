@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { PDFDocumentState } from '../types/pdf';
 import { pdfRenderer } from '../services/pdfRenderer';
+import { pdfEngine } from '../services/pdfEngine';
 import { createZipBundle, ZipFileEntry } from '../utils/zipBuilder';
 
 export type ExportFormatType = 'docx' | 'xlsx' | 'jpg' | 'png' | 'tiff' | 'pptx';
@@ -45,17 +46,30 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
     setIsProcessing(true);
     setProgress(10);
 
+    const finishExport = () => {
+      setProgress(100);
+      setTimeout(() => {
+        setIsProcessing(false);
+        onClose();
+      }, 300);
+    };
+
     try {
       if (selectedFormat === 'jpg' || selectedFormat === 'png' || selectedFormat === 'tiff') {
         const mimeType = selectedFormat === 'png' ? 'image/png' : 'image/jpeg';
         const zipEntries: ZipFileEntry[] = [];
 
-        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-          setProgress(Math.round((pageNum / totalPages) * 80));
+        // 1. Compile full document state (including watermarks, drawings, text, signatures, form values)
+        const compiledPdfBytes = await pdfEngine.exportDocument(state);
+        const compiledPdfjsDoc = await pdfRenderer.loadDocument(compiledPdfBytes);
+        const numPages = compiledPdfjsDoc.numPages;
+
+        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+          setProgress(Math.round((pageNum / numPages) * 75));
           const canvas = document.createElement('canvas');
-          await pdfRenderer.renderPageToCanvas(pageNum - 1, canvas, 2.0); // 2K/4K supersampled quality
+          await pdfRenderer.renderPageToCanvas(pageNum - 1, canvas, 1.5);
           
-          const dataUrl = canvas.toDataURL(mimeType, 0.95);
+          const dataUrl = canvas.toDataURL(mimeType, 0.92);
           const base64Data = dataUrl.split(',')[1];
           const binaryString = atob(base64Data);
           const bytes = new Uint8Array(binaryString.length);
@@ -70,17 +84,69 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
           });
         }
 
-        setProgress(95);
-        const zipBuffer = createZipBundle(zipEntries);
-        const blob = new Blob([new Uint8Array(zipBuffer)], { type: 'application/zip' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${fileNameWithoutExt}_${selectedFormat.toUpperCase()}_Images.zip`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setProgress(90);
+
+        // If single page document, offer direct single JPG/PNG image download
+        if (zipEntries.length === 1) {
+          const single = zipEntries[0];
+          const blob = new Blob([single.data as any], { type: mimeType });
+          if ('showSaveFilePicker' in window) {
+            try {
+              const handle = await (window as any).showSaveFilePicker({
+                suggestedName: single.name,
+                types: [{ description: `${selectedFormat.toUpperCase()} Image`, accept: { [mimeType]: [`.${single.name.split('.').pop()}`] } }],
+              });
+              const writable = await handle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+              finishExport();
+              return;
+            } catch (pickerErr: any) {
+              setIsProcessing(false);
+              if (pickerErr.name === 'AbortError') return;
+            }
+          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = single.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          finishExport();
+          return;
+        } else {
+          // Multiple pages: package into ZIP file
+          const zipBuffer = createZipBundle(zipEntries);
+          const blob = new Blob([zipBuffer as any], { type: 'application/zip' });
+          if ('showSaveFilePicker' in window) {
+            try {
+              const handle = await (window as any).showSaveFilePicker({
+                suggestedName: `${fileNameWithoutExt}_${selectedFormat.toUpperCase()}_Images.zip`,
+                types: [{ description: 'ZIP Archive', accept: { 'application/zip': ['.zip'] } }],
+              });
+              const writable = await handle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+              finishExport();
+              return;
+            } catch (pickerErr: any) {
+              setIsProcessing(false);
+              if (pickerErr.name === 'AbortError') return;
+            }
+          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${fileNameWithoutExt}_${selectedFormat.toUpperCase()}_Images.zip`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          finishExport();
+          return;
+        }
       } else {
         // Document formats (Word .docx, Excel .xlsx, PowerPoint .pptx)
         let contentStr = `# ${state.fileName}\nExported via ISA Secure PDF Suite Premium Conversion\n\n`;
@@ -115,14 +181,9 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        finishExport();
       }
-
-      setProgress(100);
-      setTimeout(() => {
-        setIsProcessing(false);
-        onClose();
-      }, 500);
     } catch (err) {
       console.error('Export failed:', err);
       alert(`Export conversion failed: ${err instanceof Error ? err.message : String(err)}`);

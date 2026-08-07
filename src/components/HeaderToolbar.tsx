@@ -39,7 +39,12 @@ import {
   FileCheck,
   Layers,
   Bot,
-  Clock
+  XCircle,
+  Clock,
+  Highlighter,
+  RotateCcw,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
@@ -49,6 +54,11 @@ import appLogo from '../assets/app_logo.jpg';
 
 interface HeaderToolbarProps {
   onGoToLandingPage?: () => void;
+  onCloseDocument?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   toolMode: ToolMode;
   setToolMode: (mode: ToolMode) => void;
   currentPage: number;
@@ -59,6 +69,7 @@ interface HeaderToolbarProps {
   onOpenFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onLoadSample: () => void;
   onOpenSignatureModal: (tab?: 'draw' | 'upload') => void;
+  onOpenWatermarkModal?: () => void;
   onOpenPageManager: () => void;
   onOpenCreateModal: () => void;
   onOpenMergeModal: () => void;
@@ -74,10 +85,21 @@ interface HeaderToolbarProps {
   isExporting: boolean;
   isPrinting: boolean;
   hasDocument: boolean;
+  textFontSize?: number;
+  setTextFontSize?: (size: number) => void;
+  textColor?: string;
+  setTextColor?: (color: string) => void;
+  textIsRedact?: boolean;
+  setTextIsRedact?: (isRedact: boolean) => void;
 }
 
 export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   onGoToLandingPage,
+  onCloseDocument,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
   toolMode,
   setToolMode,
   currentPage,
@@ -86,7 +108,9 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   zoom,
   onZoomChange,
   onOpenFile,
+  onLoadSample,
   onOpenSignatureModal,
+  onOpenWatermarkModal,
   onOpenPageManager,
   onOpenCreateModal,
   onOpenMergeModal,
@@ -102,6 +126,12 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   isExporting,
   isPrinting,
   hasDocument,
+  textFontSize = 14,
+  setTextFontSize,
+  textColor = '#000000',
+  setTextColor,
+  textIsRedact = false,
+  setTextIsRedact,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
@@ -356,6 +386,21 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     </div>
                   </button>
 
+                  <button
+                    disabled={!hasDocument}
+                    onClick={() => {
+                      setIsFileMenuOpen(false);
+                      if (onCloseDocument) onCloseDocument();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-rose-400 hover:bg-rose-950/40 rounded-xl transition disabled:opacity-40 group"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <XCircle className="w-4 h-4 text-rose-400 group-hover:scale-110 transition" />
+                      <span>Close Document</span>
+                    </div>
+                    <span className="text-[10px] text-rose-400/70">Discard/Exit</span>
+                  </button>
+
                   <div className="my-1 border-t border-slate-800" />
 
                   {/* Premium Export Suite Section */}
@@ -465,7 +510,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           {/* Edit / Redact Text */}
           <button
             onClick={() => handleToolSelect('text')}
-            title="Redact & Overwrite Text (T)"
+            title="Edit & Add Text (T)"
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               toolMode === 'text'
                 ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
@@ -473,8 +518,63 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             }`}
           >
             <Type className="w-3.5 h-3.5 text-blue-400" />
-            <span>Edit / Redact</span>
+            <span>Edit / Add Text</span>
           </button>
+
+          {/* Inline Text Formatting Controls when Text Tool is active */}
+          {toolMode === 'text' && (
+            <div className="flex items-center space-x-1.5 pl-2 border-l border-slate-800 animate-fadeIn">
+              {/* Font Size Selector */}
+              <select
+                value={textFontSize || 14}
+                onChange={(e) => setTextFontSize && setTextFontSize(Number(e.target.value))}
+                className="bg-slate-900 text-slate-200 border border-slate-700/80 rounded-lg px-2 py-1 text-xs font-mono font-semibold hover:border-cyan-500 transition"
+                title="Text Font Size"
+              >
+                {[8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64].map((size) => (
+                  <option key={size} value={size}>
+                    {size}pt
+                  </option>
+                ))}
+              </select>
+
+              {/* Color Chips Palette */}
+              <div className="flex items-center space-x-1 bg-slate-900 border border-slate-700/80 rounded-lg p-1">
+                {['#000000', '#1e3a8a', '#dc2626', '#15803d', '#7e22ce', '#ffffff'].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setTextColor && setTextColor(c)}
+                    style={{ backgroundColor: c }}
+                    className={`w-3.5 h-3.5 rounded-full border transition ${
+                      textColor === c ? 'border-cyan-400 scale-125 shadow-sm ring-1 ring-cyan-400' : 'border-slate-600 opacity-80'
+                    }`}
+                    title={`Text Color: ${c}`}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={textColor || '#000000'}
+                  onChange={(e) => setTextColor && setTextColor(e.target.value)}
+                  className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
+                  title="Custom Color"
+                />
+              </div>
+
+              {/* Background Fill / White Cover Toggle */}
+              <button
+                onClick={() => setTextIsRedact && setTextIsRedact(!textIsRedact)}
+                title={textIsRedact ? 'White Cover Box Active' : 'Plain Transparent Text'}
+                className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1 transition border ${
+                  textIsRedact
+                    ? 'bg-white text-slate-900 border-white shadow'
+                    : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-white'
+                }`}
+              >
+                {textIsRedact ? <EyeOff className="w-3 h-3 text-red-600" /> : <Eye className="w-3 h-3 text-cyan-400" />}
+                <span>{textIsRedact ? 'White Fill' : 'Plain Text'}</span>
+              </button>
+            </div>
+          )}
 
           {/* Annotate & Markups Dropdown */}
           <div className="relative" ref={annotateDropdownRef}>
@@ -488,6 +588,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               }`}
             >
               {toolMode === 'draw' && <Pencil className="w-3.5 h-3.5 text-yellow-400" />}
+              {toolMode === 'highlight' && <Highlighter className="w-3.5 h-3.5 text-yellow-400" />}
               {toolMode === 'strikeout' && <Strikethrough className="w-3.5 h-3.5 text-rose-400" />}
               {toolMode === 'checkmark' && <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />}
               {toolMode === 'crossmark' && <XSquare className="w-3.5 h-3.5 text-rose-400" />}
@@ -496,6 +597,8 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               <span>
                 {toolMode === 'draw'
                   ? 'Draw'
+                  : toolMode === 'highlight'
+                  ? 'Highlight'
                   : toolMode === 'strikeout'
                   ? 'Cross Out'
                   : toolMode === 'checkmark'
@@ -527,9 +630,25 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 >
                   <div className="flex items-center space-x-2.5">
                     <Pencil className="w-4 h-4 text-yellow-400" />
-                    <span>Freehand Draw & Highlight</span>
+                    <span>Freehand Pencil / Pen</span>
                   </div>
                   {toolMode === 'draw' && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleToolSelect('highlight');
+                    setIsAnnotateDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl transition ${
+                    toolMode === 'highlight' ? 'bg-amber-500/20 text-yellow-300 font-bold' : 'text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Highlighter className="w-4 h-4 text-yellow-400" />
+                    <span>Highlight Text & Passages</span>
+                  </div>
+                  {toolMode === 'highlight' && <span className="w-2 h-2 rounded-full bg-yellow-400" />}
                 </button>
 
                 <button
@@ -684,6 +803,28 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <span>Pages</span>
           </button>
 
+          {/* Undo & Redo Controls */}
+          <div className="flex items-center space-x-1 border-l border-slate-800 pl-1.5">
+            <button
+              disabled={!canUndo}
+              onClick={onUndo}
+              title="Undo Action (Ctrl+Z)"
+              className="flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Undo</span>
+            </button>
+            <button
+              disabled={!canRedo}
+              onClick={onRedo}
+              title="Redo Action (Ctrl+Y / Ctrl+Shift+Z)"
+              className="flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Redo</span>
+            </button>
+          </div>
+
           {/* Expanded Feature Modules Dropdown */}
           <div className="relative" ref={moreToolsRef}>
             <button
@@ -765,7 +906,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 <button
                   onClick={() => {
                     setIsMoreToolsOpen(false);
-                    handleToolSelect('draw');
+                    if (onOpenWatermarkModal) onOpenWatermarkModal();
                   }}
                   className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
                 >
@@ -807,65 +948,6 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
       {/* Right Controls & Actions */}
       <div className="flex items-center space-x-1.5 sm:space-x-3">
-        {hasDocument && (
-          <>
-            {/* Page Navigation */}
-            <div className="flex items-center bg-slate-950/60 border border-slate-800 rounded-lg p-0.5 sm:p-1 space-x-0.5 sm:space-x-1 text-xs">
-              <button
-                disabled={currentPage <= 1}
-                onClick={() => onPageChange(currentPage - 1)}
-                className="p-1 text-slate-400 hover:text-white disabled:opacity-30 rounded hover:bg-slate-800 transition"
-              >
-                <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
-
-              <span className="font-mono text-slate-300 px-1 sm:px-2 font-semibold text-[11px] sm:text-xs">
-                {currentPage} / {totalPages}
-              </span>
-
-              <button
-                disabled={currentPage >= totalPages}
-                onClick={() => onPageChange(currentPage + 1)}
-                className="p-1 text-slate-400 hover:text-white disabled:opacity-30 rounded hover:bg-slate-800 transition"
-              >
-                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
-            </div>
-
-            {/* Zoom Controls (Hidden on narrow mobile < 640px) */}
-            <div className="hidden sm:flex items-center bg-slate-950/60 border border-slate-800 rounded-lg p-1 space-x-1">
-              <button
-                onClick={() => onZoomChange(Math.max(0.5, zoom - 0.15))}
-                className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-
-              <span className="text-xs font-semibold px-1 text-slate-300 w-12 text-center">
-                {Math.round(zoom * 100)}%
-              </span>
-
-              <button
-                onClick={() => onZoomChange(Math.min(2.5, zoom + 0.15))}
-                className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Page Grid Manager */}
-            <button
-              onClick={onOpenPageManager}
-              title="Organize Pages Grid"
-              className="p-1.5 sm:p-2 text-slate-400 hover:text-white bg-slate-950/60 border border-slate-800 rounded-lg hover:bg-slate-800 transition"
-            >
-              <Grid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-          </>
-        )}
-
         {/* Document Action Buttons: Primary Export CTA */}
         {hasDocument && (
           <div className="flex items-center space-x-2">

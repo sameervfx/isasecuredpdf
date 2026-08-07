@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { Sidebar } from './components/Sidebar';
@@ -8,6 +8,7 @@ import { PageManagerModal } from './components/PageManagerModal';
 import { CreatePDFModal } from './components/CreatePDFModal';
 import { MergePDFModal } from './components/MergePDFModal';
 import { SaveMultiplePDFsModal } from './components/SaveMultiplePDFsModal';
+import { WatermarkModal, WatermarkOptions } from './components/WatermarkModal';
 import { PremiumExportModal, ExportFormatType } from './components/PremiumExportModal';
 import { LandingPage } from './pages/LandingPage';
 import { pdfRenderer } from './services/pdfRenderer';
@@ -55,6 +56,7 @@ export const App: React.FC = () => {
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState<boolean>(false);
+  const [isWatermarkModalOpen, setIsWatermarkModalOpen] = useState<boolean>(false);
   const [isPageManagerOpen, setIsPageManagerOpen] = useState<boolean>(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState<boolean>(false);
@@ -69,10 +71,92 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Text Tool Formatting Defaults
+  const [textFontSize, setTextFontSize] = useState<number>(14);
+  const [textColor, setTextColor] = useState<string>('#000000');
+  const [textIsRedact, setTextIsRedact] = useState<boolean>(false);
+
   const handleOpenPremiumExportModal = (format: ExportFormatType = 'docx') => {
     setPremiumExportFormat(format);
     setIsPremiumExportModalOpen(true);
   };
+
+  const historyRef = useRef<PDFDocumentState[]>([]);
+  const futureRef = useRef<PDFDocumentState[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const updateHistoryState = () => {
+    setCanUndo(historyRef.current.length > 0);
+    setCanRedo(futureRef.current.length > 0);
+  };
+
+  const pushToHistory = useCallback((previousState: PDFDocumentState) => {
+    if (!previousState.fileBytes) return;
+    historyRef.current.push(JSON.parse(JSON.stringify({
+      ...previousState,
+      deletedPages: Array.from(previousState.deletedPages),
+    })));
+    if (historyRef.current.length > 40) {
+      historyRef.current.shift();
+    }
+    futureRef.current = [];
+    updateHistoryState();
+  }, []);
+
+  const restoreState = (st: any): PDFDocumentState => ({
+    ...st,
+    deletedPages: new Set(st.deletedPages || []),
+  });
+
+  const handleUndo = useCallback(() => {
+    if (historyRef.current.length === 0) return;
+    const prevRaw = historyRef.current.pop();
+    if (!prevRaw) return;
+    setDocState((current) => {
+      futureRef.current.push(JSON.parse(JSON.stringify({
+        ...current,
+        deletedPages: Array.from(current.deletedPages),
+      })));
+      return restoreState(prevRaw);
+    });
+    updateHistoryState();
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    if (futureRef.current.length === 0) return;
+    const nextRaw = futureRef.current.pop();
+    if (!nextRaw) return;
+    setDocState((current) => {
+      historyRef.current.push(JSON.parse(JSON.stringify({
+        ...current,
+        deletedPages: Array.from(current.deletedPages),
+      })));
+      return restoreState(nextRaw);
+    });
+    updateHistoryState();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        if (e.key.toLowerCase() === 'z') {
+          if (e.shiftKey) {
+            e.preventDefault();
+            handleRedo();
+          } else {
+            e.preventDefault();
+            handleUndo();
+          }
+        } else if (e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          handleRedo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
 
   const handleOpenRecentFile = (fileItem: RecentFileItem) => {
     if (fileItem.dataUrl) {
@@ -172,11 +256,23 @@ export const App: React.FC = () => {
     await loadPDFData(blankBytes, `New_Document_${options.pageSize}.pdf`);
   };
 
+  const handleCloseDocument = () => {
+    setDocState(EMPTY_STATE);
+    setCurrentPage(1);
+    setToolMode('select');
+    setPendingSignatureDataUrl(null);
+    setThumbnails([]);
+    historyRef.current = [];
+    futureRef.current = [];
+    updateHistoryState();
+  };
+
   const handleMergeComplete = async (mergedBytes: Uint8Array, fileName: string) => {
     await loadPDFData(mergedBytes, fileName);
   };
 
   const handleRotatePage = (pageIndex: number) => {
+    pushToHistory(docState);
     setDocState((prev) => ({
       ...prev,
       pageRotations: {
@@ -187,6 +283,7 @@ export const App: React.FC = () => {
   };
 
   const handleDeletePage = (pageIndex: number) => {
+    pushToHistory(docState);
     setDocState((prev) => {
       const newDeleted = new Set(prev.deletedPages);
       newDeleted.add(pageIndex);
@@ -195,6 +292,7 @@ export const App: React.FC = () => {
   };
 
   const handleMovePage = (fromSeqIdx: number, toSeqIdx: number) => {
+    pushToHistory(docState);
     setDocState((prev) => {
       const activeIndices = prev.pageOrder.filter((idx) => !prev.deletedPages.has(idx));
       if (toSeqIdx < 0 || toSeqIdx >= activeIndices.length) return prev;
@@ -207,6 +305,7 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateFieldValue = (fieldName: string, value: string | boolean) => {
+    pushToHistory(docState);
     setDocState((prev) => ({
       ...prev,
       formFields: prev.formFields.map((f) => (f.name === fieldName ? { ...f, value } : f)),
@@ -214,6 +313,7 @@ export const App: React.FC = () => {
   };
 
   const handleAddAnnotation = (ann: Omit<TextAnnotation, 'id'>) => {
+    pushToHistory(docState);
     const newAnn: TextAnnotation = {
       ...ann,
       id: `text_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -222,6 +322,7 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateAnnotation = (id: string, updated: Partial<TextAnnotation>) => {
+    pushToHistory(docState);
     setDocState((prev) => ({
       ...prev,
       textAnnotations: prev.textAnnotations.map((a) => (a.id === id ? { ...a, ...updated } : a)),
@@ -229,6 +330,7 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteAnnotation = (id: string) => {
+    pushToHistory(docState);
     setDocState((prev) => ({
       ...prev,
       textAnnotations: prev.textAnnotations.filter((a) => a.id !== id),
@@ -257,6 +359,7 @@ export const App: React.FC = () => {
   };
 
   const handleAddSignatureAtCoords = (sigData: Omit<SignatureAnnotation, 'id'>) => {
+    pushToHistory(docState);
     const newSig: SignatureAnnotation = {
       ...sigData,
       id: `sig_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -267,6 +370,7 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateSignature = (id: string, updated: Partial<SignatureAnnotation>) => {
+    pushToHistory(docState);
     setDocState((prev) => ({
       ...prev,
       signatures: prev.signatures.map((s) => (s.id === id ? { ...s, ...updated } : s)),
@@ -274,10 +378,12 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteSignature = (id: string) => {
+    pushToHistory(docState);
     setDocState((prev) => ({ ...prev, signatures: prev.signatures.filter((s) => s.id !== id) }));
   };
 
   const handleAddDrawing = (drawing: Omit<FreehandDrawing, 'id'>) => {
+    pushToHistory(docState);
     const newDraw: FreehandDrawing = {
       ...drawing,
       id: `draw_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -286,10 +392,12 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteDrawing = (id: string) => {
+    pushToHistory(docState);
     setDocState((prev) => ({ ...prev, drawings: prev.drawings.filter((d) => d.id !== id) }));
   };
 
   const handleAddStamp = (stamp: Omit<StampAnnotation, 'id'>) => {
+    pushToHistory(docState);
     const newStamp: StampAnnotation = {
       ...stamp,
       id: `stamp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -298,10 +406,12 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteStamp = (id: string) => {
+    pushToHistory(docState);
     setDocState((prev) => ({ ...prev, stamps: prev.stamps.filter((s) => s.id !== id) }));
   };
 
   const handleAddStrikeout = (strike: Omit<StrikeoutAnnotation, 'id'>) => {
+    pushToHistory(docState);
     const newStrike: StrikeoutAnnotation = {
       ...strike,
       id: `strike_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -310,7 +420,90 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteStrikeout = (id: string) => {
+    pushToHistory(docState);
     setDocState((prev) => ({ ...prev, strikeouts: prev.strikeouts.filter((s) => s.id !== id) }));
+  };
+
+  const handleApplyWatermark = (options: WatermarkOptions) => {
+    if (!docState.fileBytes || docState.pages.length === 0) return;
+    pushToHistory(docState);
+
+    const activePageIndices = docState.pageOrder.filter((idx) => !docState.deletedPages.has(idx));
+
+    if (options.type === 'text' && options.text) {
+      const newTextAnns: TextAnnotation[] = [];
+      activePageIndices.forEach((pageIdx) => {
+        const pageInfo = docState.pages.find((p) => p.pageIndex === pageIdx);
+        const w = pageInfo?.width || 612;
+        const h = pageInfo?.height || 792;
+
+        let x = (w - (options.text!.length * (options.fontSize || 48) * 0.45)) / 2;
+        let y = h / 2 - 20;
+
+        if (options.position === 'top-left') {
+          x = 40;
+          y = 50;
+        } else if (options.position === 'bottom-right') {
+          x = w - 250;
+          y = h - 80;
+        }
+
+        newTextAnns.push({
+          id: `wm_text_${Date.now()}_${pageIdx}_${Math.random().toString(36).substring(2, 6)}`,
+          pageIndex: pageIdx,
+          x: Math.max(10, x),
+          y: Math.max(10, y),
+          text: options.text!,
+          color: options.color || '#ef4444',
+          fontSize: options.fontSize || 48,
+          isRedact: false,
+          opacity: options.opacity,
+          rotation: options.rotation,
+        });
+      });
+
+      setDocState((prev) => ({
+        ...prev,
+        textAnnotations: [...prev.textAnnotations, ...newTextAnns],
+      }));
+    } else if (options.type === 'image' && options.dataUrl) {
+      const newSigs: SignatureAnnotation[] = [];
+      activePageIndices.forEach((pageIdx) => {
+        const pageInfo = docState.pages.find((p) => p.pageIndex === pageIdx);
+        const w = pageInfo?.width || 612;
+        const h = pageInfo?.height || 792;
+        const imgW = 240;
+        const imgH = 140;
+
+        let x = (w - imgW) / 2;
+        let y = (h - imgH) / 2;
+
+        if (options.position === 'top-left') {
+          x = 40;
+          y = 40;
+        } else if (options.position === 'bottom-right') {
+          x = w - imgW - 40;
+          y = h - imgH - 40;
+        }
+
+        newSigs.push({
+          id: `wm_img_${Date.now()}_${pageIdx}_${Math.random().toString(36).substring(2, 6)}`,
+          pageIndex: pageIdx,
+          x: Math.max(10, x),
+          y: Math.max(10, y),
+          width: imgW,
+          height: imgH,
+          dataUrl: options.dataUrl!,
+          opacity: options.opacity,
+          rotation: options.rotation,
+        });
+      });
+
+      setDocState((prev) => ({
+        ...prev,
+        signatures: [...prev.signatures, ...newSigs],
+      }));
+    }
   };
 
   const convertBytesToBase64 = (bytes: Uint8Array): string => {
@@ -338,7 +531,21 @@ export const App: React.FC = () => {
           if (!writeResult.success) throw new Error(writeResult.error);
         }
       } else {
-        const blob = new Blob([modifiedPdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+        const blob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await (window as any).showSaveFilePicker({
+              suggestedName: defaultName,
+              types: [{ description: 'PDF Document', accept: { 'application/pdf': ['.pdf'] } }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            return;
+          } catch (pickerErr: any) {
+            if (pickerErr.name === 'AbortError') return;
+          }
+        }
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -346,7 +553,7 @@ export const App: React.FC = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
       }
     } catch (err) {
       console.error('Export error:', err);
@@ -372,7 +579,21 @@ export const App: React.FC = () => {
           if (!writeResult.success) throw new Error(writeResult.error);
         }
       } else {
-        const blob = new Blob([modifiedPdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+        const blob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await (window as any).showSaveFilePicker({
+              suggestedName: saveName,
+              types: [{ description: 'PDF Document', accept: { 'application/pdf': ['.pdf'] } }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            return;
+          } catch (pickerErr: any) {
+            if (pickerErr.name === 'AbortError') return;
+          }
+        }
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -380,7 +601,7 @@ export const App: React.FC = () => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
       }
     } catch (err) {
       console.error('Save error:', err);
@@ -501,23 +722,47 @@ export const App: React.FC = () => {
     };
   }, [handleExportPDF, handleOpenPayloadData]);
 
-  const activePagesCount = docState.pageOrder.filter((idx) => !docState.deletedPages.has(idx)).length;
-  const hasDocument = Boolean(docState.fileBytes);
+  // localStorage Mandatory Registration Access Gate check on mount
+  useEffect(() => {
+    try {
+      const isRegistered = localStorage.getItem('isa_editor_registered') === 'true';
+      if (isRegistered) {
+        setCurrentView('editor');
+      } else {
+        setCurrentView('landing');
+      }
+    } catch (e) {
+      console.warn('Gate check fallback:', e);
+    }
+  }, []);
+
+  const handleLaunchEditor = () => {
+    try {
+      localStorage.setItem('isa_editor_unlocked', 'true');
+    } catch (e) {}
+    setCurrentView('editor');
+  };
 
   if (currentView === 'landing') {
     return (
       <LandingPage
-        onLaunchEditor={() => {
-          setCurrentView('editor');
-        }}
+        onLaunchEditor={handleLaunchEditor}
       />
     );
   }
+
+  const activePagesCount = docState.pageOrder.filter((idx) => !docState.deletedPages.has(idx)).length;
+  const hasDocument = Boolean(docState.fileBytes);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 overflow-hidden text-slate-100 font-sans">
       <HeaderToolbar
         onGoToLandingPage={() => setCurrentView('landing')}
+        onCloseDocument={handleCloseDocument}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         toolMode={toolMode}
         setToolMode={setToolMode}
         currentPage={currentPage}
@@ -528,6 +773,7 @@ export const App: React.FC = () => {
         onOpenFile={handleOpenFile}
         onLoadSample={handleLoadSample}
         onOpenSignatureModal={handleOpenSignatureModal}
+        onOpenWatermarkModal={() => setIsWatermarkModalOpen(true)}
         onOpenPageManager={() => setIsPageManagerOpen(true)}
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
         onOpenMergeModal={() => setIsMergeModalOpen(true)}
@@ -543,6 +789,12 @@ export const App: React.FC = () => {
         isExporting={isExporting}
         isPrinting={isPrinting}
         hasDocument={hasDocument}
+        textFontSize={textFontSize}
+        setTextFontSize={setTextFontSize}
+        textColor={textColor}
+        setTextColor={setTextColor}
+        textIsRedact={textIsRedact}
+        setTextIsRedact={setTextIsRedact}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -584,6 +836,7 @@ export const App: React.FC = () => {
           onZoomChange={setZoom}
           toolMode={toolMode}
           pendingSignatureDataUrl={pendingSignatureDataUrl}
+          onCloseDocument={handleCloseDocument}
           onUpdateFieldValue={handleUpdateFieldValue}
           onAddAnnotation={handleAddAnnotation}
           onUpdateAnnotation={handleUpdateAnnotation}
@@ -653,6 +906,13 @@ export const App: React.FC = () => {
         onClose={() => setIsPremiumExportModalOpen(false)}
         state={docState}
         initialFormat={premiumExportFormat}
+      />
+
+      {/* Custom Watermark & Logo Overlay Modal */}
+      <WatermarkModal
+        isOpen={isWatermarkModalOpen}
+        onClose={() => setIsWatermarkModalOpen(false)}
+        onApplyWatermark={handleApplyWatermark}
       />
     </div>
   );

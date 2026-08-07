@@ -7,7 +7,8 @@ export type ToolMode =
   | 'checkmark'
   | 'crossmark'
   | 'strikeout'
-  | 'draw';
+  | 'draw'
+  | 'highlight';
 
 export interface TextAnnotation {
   id: string;
@@ -20,6 +21,8 @@ export interface TextAnnotation {
   fontSize: number;
   color: string; // Hex e.g. '#000000'
   isRedact: boolean; // Solid white rectangle covering existing text before writing new text
+  opacity?: number; // Transparency 0.05 to 1.0
+  rotation?: number; // Rotation in degrees e.g. -45, 90
 }
 
 export interface SignatureAnnotation {
@@ -30,6 +33,8 @@ export interface SignatureAnnotation {
   width: number;
   height: number;
   dataUrl: string; // PNG Base64
+  opacity?: number; // Transparency 0.05 to 1.0
+  rotation?: number; // Rotation in degrees e.g. -45, 90
 }
 
 export interface StampAnnotation {

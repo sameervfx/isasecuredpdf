@@ -34,6 +34,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
   const [activeModal, setActiveModal] = useState<LegalModalType>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [isFreeUnlockModalOpen, setIsFreeUnlockModalOpen] = useState(false);
+
+  // Mandatory Sign-Up Form Fields
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userProfession, setUserProfession] = useState('');
+  const [userCountry, setUserCountry] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleGateCheckAndLaunch = () => {
+    const isRegistered = localStorage.getItem('isa_editor_registered') === 'true';
+    if (isRegistered) {
+      onLaunchEditor();
+    } else {
+      setIsFreeUnlockModalOpen(true);
+    }
+  };
+
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userName.trim() || !userEmail.trim() || !userProfession.trim()) {
+      setFormError('Please enter your Name, Email Address, and Profession to unlock the Web Editor.');
+      return;
+    }
+    setFormError(null);
+
+    const profile = {
+      name: userName.trim(),
+      email: userEmail.trim(),
+      profession: userProfession.trim(),
+      country: userCountry.trim() || 'Not specified',
+      registeredAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem('isa_user_profile', JSON.stringify(profile));
+    localStorage.setItem('isa_editor_registered', 'true');
+    localStorage.setItem('isa_editor_unlocked', 'true');
+    setIsFreeUnlockModalOpen(false);
+    onLaunchEditor();
+  };
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
@@ -53,7 +93,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
     <div className="min-h-screen w-full max-w-[100vw] overflow-y-auto overflow-x-hidden scroll-smooth bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-white flex flex-col">
       {/* 1. Navigation Bar */}
       <nav className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between max-w-[100vw] overflow-x-hidden">
-        <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer flex-shrink-0" onClick={onLaunchEditor}>
+        <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer flex-shrink-0" onClick={handleGateCheckAndLaunch}>
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
             <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
           </div>
@@ -84,7 +124,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
           </button>
 
           <button
-            onClick={onLaunchEditor}
+            onClick={handleGateCheckAndLaunch}
             className="flex items-center space-x-1.5 sm:space-x-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
           >
             <span>Launch Web Editor</span>
@@ -118,7 +158,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
           </button>
 
           <button
-            onClick={onLaunchEditor}
+            onClick={handleGateCheckAndLaunch}
             className="w-full sm:w-auto flex items-center justify-center space-x-2 px-7 py-4 bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold text-sm rounded-2xl border border-slate-800 transition"
           >
             <Sparkles className="w-5 h-5 text-cyan-400" />
@@ -151,19 +191,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
             </div>
 
             <div className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80">
-              <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center mb-3">
-                <FileCheck className="w-5 h-5" />
-              </div>
-              <h3 className="text-sm font-bold text-white mb-1">Smart AcroForms</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Auto-detects multi-line textboxes, checkmarks, and signature areas.</p>
-            </div>
-
-            <div className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80">
               <div className="w-10 h-10 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center mb-3">
                 <PenTool className="w-5 h-5" />
               </div>
-              <h3 className="text-sm font-bold text-white mb-1">Instant Drag & Drop Signatures</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Draw or upload signatures and place them anywhere on your page.</p>
+              <h3 className="text-sm font-bold text-white mb-1">AcroForms & Watermarks</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Fill interactive PDF text fields, checkboxes, and apply confidential image seals.</p>
+            </div>
+
+            <div className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80">
+              <div className="w-10 h-10 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center mb-3">
+                <Lock className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white mb-1">Zero Server Tracking</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Documents process exclusively inside your device browser memory.</p>
             </div>
           </div>
         </div>
@@ -213,7 +253,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
         </div>
       </section>
 
-      {/* 4. Security & Compliance Highlight (For Enterprise IT Review) */}
+      {/* 4. Security & Compliance Highlight */}
       <section id="security" className="scroll-mt-24 py-24 px-4 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 rounded-3xl p-8 sm:p-14 shadow-2xl relative overflow-hidden">
           <div className="max-w-4xl">
@@ -252,7 +292,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
         </div>
       </section>
 
-      {/* 5. Pricing Section (Free vs. Pro vs. Team) */}
+      {/* 5. Pricing Section */}
       <section id="pricing" className="scroll-mt-24 py-24 bg-slate-900/40 border-t border-slate-800/60 px-4 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-16">
@@ -262,7 +302,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* 1. Free Starter Plan */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition">
               <div>
                 <h3 className="text-base font-bold text-white mb-1">Free Starter</h3>
@@ -277,14 +316,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               </div>
 
               <button
-                onClick={onLaunchEditor}
-                className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition"
+                onClick={handleGateCheckAndLaunch}
+                className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition border border-slate-700/80 hover:border-cyan-500/50"
               >
                 Use Free Web Editor
               </button>
             </div>
 
-            {/* 2. Pro Monthly Plan */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition">
               <div>
                 <h3 className="text-base font-bold text-white mb-1">Pro Monthly</h3>
@@ -306,7 +344,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               </button>
             </div>
 
-            {/* 3. Pro Annual Plan (Most Popular) */}
             <div className="bg-slate-900 border-2 border-cyan-500 rounded-3xl p-6 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10 transform lg:-translate-y-2">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-lg whitespace-nowrap">
                 Most Popular
@@ -335,7 +372,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               </button>
             </div>
 
-            {/* 4. Lifetime License */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition">
               <div>
                 <h3 className="text-base font-bold text-white mb-1">Lifetime License</h3>
@@ -360,7 +396,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
         </div>
       </section>
 
-      {/* 6. Frequently Asked Questions (FAQ) Accordion */}
+      {/* 6. FAQ Section */}
       <section id="faq" className="scroll-mt-24 py-20 px-4 lg:px-8 max-w-4xl mx-auto w-full">
         <div className="text-center mb-14">
           <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-3">Got Questions?</h2>
@@ -404,7 +440,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
         </div>
       </section>
 
-      {/* 7. Comprehensive Footer with Legal Modals (CRITICAL FOR PAYMENT APPROVAL) */}
+      {/* 7. Comprehensive Footer */}
       <footer className="mt-auto bg-slate-950 border-t border-slate-800/80 px-4 lg:px-8 py-10">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-400">
           <div className="flex items-center space-x-3">
@@ -414,7 +450,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
             <span className="font-semibold text-slate-200">PDF Engine Studio © 2026</span>
           </div>
 
-          {/* Legal Links (CRITICAL FOR MERCHANT OF RECORD APPROVAL) */}
           <div className="flex flex-wrap items-center justify-center gap-6 font-medium">
             <button onClick={() => setActiveModal('privacy')} className="hover:text-cyan-400 transition">Privacy Policy</button>
             <button onClick={() => setActiveModal('terms')} className="hover:text-cyan-400 transition">Terms of Service</button>
@@ -424,7 +459,114 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
         </div>
       </footer>
 
-      {/* LEGAL MODAL OVERLAYS (EXACT REQUIRED LEGAL TEXT) */}
+      {/* Mandatory Sign-Up Registration Access Gate Modal */}
+      {isFreeUnlockModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
+            
+            <button
+              onClick={() => setIsFreeUnlockModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-3 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl shadow-lg shadow-cyan-500/20">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">Create Free Account to Access Editor</h3>
+                <p className="text-xs text-slate-400">Complete sign up to unlock full Web Editor</p>
+              </div>
+            </div>
+
+            {formError && (
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-xl font-medium">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleRegisterSubmit} className="space-y-3.5 mt-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Full Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="e.g. Alex Morgan"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Email Address <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  placeholder="alex@company.com"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Profession / Occupation <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  required
+                  value={userProfession}
+                  onChange={(e) => setUserProfession(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500 transition"
+                >
+                  <option value="">Select your profession...</option>
+                  <option value="Accountant / Finance">Accountant / Finance</option>
+                  <option value="Lawyer / Legal">Lawyer / Legal</option>
+                  <option value="Engineer / IT">Engineer / Software Developer</option>
+                  <option value="Executive / Business Manager">Executive / Business Manager</option>
+                  <option value="Educator / Student">Educator / Student</option>
+                  <option value="Healthcare Professional">Healthcare Professional</option>
+                  <option value="Real Estate Agent">Real Estate / Insurance</option>
+                  <option value="Creative / Designer">Creative / Designer</option>
+                  <option value="Other">Other Profession</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Country / Region <span className="text-slate-500">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={userCountry}
+                  onChange={(e) => setUserCountry(e.target.value)}
+                  placeholder="e.g. United States, Canada, Germany"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition active:scale-98"
+                >
+                  Complete Sign Up & Launch Web Editor →
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* LEGAL MODAL OVERLAYS */}
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
           <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
@@ -584,7 +726,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
             </div>
           </div>
         </div>
-      )}
-    </div>
+      )}    </div>
   );
 };

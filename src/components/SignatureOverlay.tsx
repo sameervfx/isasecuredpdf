@@ -177,6 +177,9 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
               top: `${scaledY}px`,
               width: `${scaledWidth}px`,
               height: `${scaledHeight}px`,
+              opacity: sig.opacity !== undefined ? sig.opacity : 1.0,
+              transform: sig.rotation ? `translate(-50%, -50%) rotate(${sig.rotation}deg)` : undefined,
+              transformOrigin: 'center center',
             }}
           >
             <img

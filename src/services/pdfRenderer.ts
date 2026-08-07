@@ -42,13 +42,16 @@ export class PDFRendererService {
     const dpr = Math.max(window.devicePixelRatio || 1, 2.0);
     const scaledViewport = page.getViewport({ scale: scale * dpr, rotation: totalRotation });
 
-    const ctx = canvas.getContext('2d', { alpha: false });
+    const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not get 2d canvas context');
 
     canvas.width = Math.floor(scaledViewport.width);
     canvas.height = Math.floor(scaledViewport.height);
     canvas.style.width = `${Math.floor(viewport.width)}px`;
     canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     await page.render({
       canvasContext: ctx,

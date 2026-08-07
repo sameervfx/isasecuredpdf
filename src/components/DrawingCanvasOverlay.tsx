@@ -40,14 +40,15 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   onDeleteStrikeout,
   onAddSignatureAtCoords,
 }) => {
-  // Draw State
+  // Draw & Highlight Options
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPoints, setCurrentPoints] = useState<{ x: number; y: number }[]>([]);
-  const [drawColor, setDrawColor] = useState<string>('#ef4444'); // Default Red
-  const [thickness, setThickness] = useState<number>(3);
-  const [isHighlighter, setIsHighlighter] = useState<boolean>(false);
+  const [drawColor, setDrawColor] = useState<string>('#ef4444'); // Default Red Pen
+  const [highlightColor, setHighlightColor] = useState<string>('#facc15'); // Default Yellow Highlighter
+  const [thickness, setThickness] = useState<number>(3); // Pen Scale
+  const [highlightThickness, setHighlightThickness] = useState<number>(18); // Highlighter Scale
 
-  // Selected Stamp / Strikeout for deletion
+  // Selected item for deletion
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   if (originalWidth <= 0 || originalHeight <= 0) return null;
@@ -61,6 +62,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
 
   const activeMode =
     toolMode === 'draw' ||
+    toolMode === 'highlight' ||
     toolMode === 'checkmark' ||
     toolMode === 'crossmark' ||
     toolMode === 'strikeout' ||
@@ -79,7 +81,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     const pt = getPdfCoords(e);
 
-    if (toolMode === 'draw') {
+    if (toolMode === 'draw' || toolMode === 'highlight') {
       setIsDrawing(true);
       setCurrentPoints([pt]);
     } else if (toolMode === 'checkmark') {
@@ -122,19 +124,24 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!isDrawing || toolMode !== 'draw') return;
+    if (!isDrawing || (toolMode !== 'draw' && toolMode !== 'highlight')) return;
     const pt = getPdfCoords(e);
     setCurrentPoints((prev) => [...prev, pt]);
   };
 
   const handleMouseUp = () => {
-    if (isDrawing && currentPoints.length > 1) {
+    if (isDrawing && currentPoints.length > 0) {
+      const isHighlight = toolMode === 'highlight';
+      const pts = currentPoints.length === 1
+        ? [currentPoints[0], { x: currentPoints[0].x + 1, y: currentPoints[0].y }]
+        : currentPoints;
+
       onAddDrawing({
         pageIndex,
-        points: currentPoints,
-        color: isHighlighter ? '#fef08a' : drawColor,
-        thickness: isHighlighter ? 12 : thickness,
-        opacity: isHighlighter ? 0.45 : 1.0,
+        points: pts,
+        color: isHighlight ? highlightColor : drawColor,
+        thickness: isHighlight ? highlightThickness : thickness,
+        opacity: isHighlight ? 0.45 : 1.0,
       });
     }
     setIsDrawing(false);
@@ -143,41 +150,77 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}>
-      {/* Floating Drawing Options Bar */}
-      {toolMode === 'draw' && (
-        <div className="absolute top-2 right-2 bg-slate-900/90 border border-slate-700/80 backdrop-blur rounded-xl p-1.5 flex items-center space-x-2 shadow-2xl pointer-events-auto z-40 text-xs">
-          <button
-            onClick={() => setIsHighlighter(!isHighlighter)}
-            className={`px-2 py-1 rounded font-semibold transition ${
-              isHighlighter ? 'bg-yellow-400 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'
-            }`}
-          >
-            {isHighlighter ? 'Highlighter' : 'Pen'}
-          </button>
-
-          {!isHighlighter && (
+      {/* Floating Brush & Pencil Scale Toolbar Overlay */}
+      {(toolMode === 'draw' || toolMode === 'highlight') && (
+        <div className="absolute top-2 right-2 bg-slate-900/95 border border-slate-700/80 backdrop-blur rounded-2xl p-2 flex items-center space-x-3 shadow-2xl pointer-events-auto z-40 text-xs">
+          {toolMode === 'draw' ? (
             <>
-              {/* Color options */}
-              {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#000000'].map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setDrawColor(c)}
-                  className={`w-5 h-5 rounded-full border-2 transition ${drawColor === c ? 'scale-125 border-white shadow' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
+              <span className="text-[10px] font-extrabold uppercase text-cyan-400">Pencil Scale</span>
+              {/* Pencil Colors */}
+              <div className="flex items-center space-x-1">
+                {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#000000'].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setDrawColor(c)}
+                    className={`w-5 h-5 rounded-full border-2 transition ${drawColor === c ? 'scale-125 border-white shadow-md' : 'border-transparent opacity-80'}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
 
-              {/* Thickness selector */}
-              <select
-                value={thickness}
-                onChange={(e) => setThickness(Number(e.target.value))}
-                className="bg-slate-800 text-slate-200 border border-slate-700 rounded px-1 text-[11px]"
-              >
-                <option value={2}>2px</option>
-                <option value={4}>4px</option>
-                <option value={8}>8px</option>
-                <option value={12}>12px</option>
-              </select>
+              {/* Stroke Scale presets */}
+              <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
+                {[
+                  { label: 'Fine', size: 2 },
+                  { label: 'Medium', size: 5 },
+                  { label: 'Bold', size: 10 },
+                  { label: 'Heavy', size: 16 },
+                ].map((s) => (
+                  <button
+                    key={s.size}
+                    onClick={() => setThickness(s.size)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                      thickness === s.size ? 'bg-cyan-500 text-white shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {s.label} ({s.size}px)
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] font-extrabold uppercase text-yellow-400">Highlighter Scale</span>
+              {/* Highlighter Colors */}
+              <div className="flex items-center space-x-1">
+                {['#facc15', '#4ade80', '#38bdf8', '#f472b6', '#fb923c', '#c084fc'].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setHighlightColor(c)}
+                    className={`w-5 h-5 rounded-full border-2 transition ${highlightColor === c ? 'scale-125 border-white shadow-md' : 'border-transparent opacity-80'}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+
+              {/* Highlighter Thickness presets */}
+              <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
+                {[
+                  { label: 'Fine', size: 10 },
+                  { label: 'Standard', size: 18 },
+                  { label: 'Broad Bar', size: 28 },
+                ].map((s) => (
+                  <button
+                    key={s.size}
+                    onClick={() => setHighlightThickness(s.size)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                      highlightThickness === s.size ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {s.label} ({s.size}px)
+                  </button>
+                ))}
+              </div>
             </>
           )}
         </div>
@@ -195,6 +238,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
           const dPath = drawing.points
             .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`)
             .join(' ');
+          const isHighlighterOpacity = drawing.opacity < 1.0;
           return (
             <path
               key={drawing.id}
@@ -205,6 +249,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
+              style={{ mixBlendMode: isHighlighterOpacity ? 'multiply' : 'normal' }}
               className="pointer-events-auto hover:stroke-cyan-400 cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
@@ -215,15 +260,16 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         })}
 
         {/* Live Active Stroke */}
-        {isDrawing && currentPoints.length > 1 && (
+        {isDrawing && currentPoints.length > 0 && (
           <path
             d={currentPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`).join(' ')}
-            stroke={isHighlighter ? '#fef08a' : drawColor}
-            strokeWidth={(isHighlighter ? 12 : thickness) * scaleY}
-            strokeOpacity={isHighlighter ? 0.45 : 1.0}
+            stroke={toolMode === 'highlight' ? highlightColor : drawColor}
+            strokeWidth={(toolMode === 'highlight' ? highlightThickness : thickness) * scaleY}
+            strokeOpacity={toolMode === 'highlight' ? 0.45 : 1.0}
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
+            style={{ mixBlendMode: toolMode === 'highlight' ? 'multiply' : 'normal' }}
           />
         )}
 
