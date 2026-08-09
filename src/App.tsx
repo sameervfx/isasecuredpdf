@@ -722,12 +722,15 @@ export const App: React.FC = () => {
     };
   }, [handleExportPDF, handleOpenPayloadData]);
 
-  // Ensure Homepage always shows Landing Page by default on page load
+  // Automatically launch into PDF Editor Workspace for Desktop App (Electron) or direct link
   useEffect(() => {
     try {
+      const isFileProtocol = window.location.protocol === 'file:';
+      const isElectronEnv = typeof window !== 'undefined' && ((window as any).electronAPI !== undefined || isFileProtocol);
       const urlParams = new URLSearchParams(window.location.search);
       const hasEditorQuery = urlParams.get('editor') === 'true' || window.location.hash.includes('editor');
-      if (hasEditorQuery) {
+
+      if (isElectronEnv || hasEditorQuery) {
         setCurrentView('editor');
       } else {
         setCurrentView('landing');
