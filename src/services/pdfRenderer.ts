@@ -1,4 +1,4 @@
-import { getDocument, GlobalWorkerOptions, PDFDocumentProxy } from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, PDFDocumentProxy, AnnotationMode } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
 export class PDFRendererService {
@@ -56,6 +56,7 @@ export class PDFRendererService {
     await page.render({
       canvasContext: ctx,
       viewport: scaledViewport,
+      annotationMode: AnnotationMode.DISABLE,
     }).promise;
 
     const unscaledViewport = page.getViewport({ scale: 1.0, rotation: totalRotation });
@@ -79,7 +80,7 @@ export class PDFRendererService {
       canvas.height = Math.floor(viewport.height);
       const ctx = canvas.getContext('2d');
       if (!ctx) return '';
-      await page.render({ canvasContext: ctx, viewport }).promise;
+      await page.render({ canvasContext: ctx, viewport, annotationMode: AnnotationMode.DISABLE }).promise;
       return canvas.toDataURL('image/jpeg', 0.8);
     } catch (err) {
       console.error('Thumbnail error page', pageIndex, err);

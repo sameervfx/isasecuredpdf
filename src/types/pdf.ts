@@ -8,7 +8,8 @@ export type ToolMode =
   | 'crossmark'
   | 'strikeout'
   | 'draw'
-  | 'highlight';
+  | 'highlight'
+  | 'eraser';
 
 export interface TextAnnotation {
   id: string;
@@ -19,6 +20,7 @@ export interface TextAnnotation {
   height?: number;
   text: string;
   fontSize: number;
+  fontFamily?: string;
   color: string; // Hex e.g. '#000000'
   isRedact: boolean; // Solid white rectangle covering existing text before writing new text
   opacity?: number; // Transparency 0.05 to 1.0
@@ -73,6 +75,10 @@ export interface AcroFormField {
   pageIndex: number;
   value: string | boolean;
   isMultiline?: boolean;
+  fontSize?: number;
+  fontFamily?: string;
+  fontColor?: string;
+  isRedact?: boolean;
   rect: {
     x: number;
     y: number;

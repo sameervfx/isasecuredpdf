@@ -44,7 +44,8 @@ import {
   Highlighter,
   RotateCcw,
   Eye,
-  EyeOff
+  EyeOff,
+  Eraser
 } from 'lucide-react';
 import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
@@ -87,6 +88,8 @@ interface HeaderToolbarProps {
   hasDocument: boolean;
   textFontSize?: number;
   setTextFontSize?: (size: number) => void;
+  textFontFamily?: string;
+  setTextFontFamily?: (fontFamily: string) => void;
   textColor?: string;
   setTextColor?: (color: string) => void;
   textIsRedact?: boolean;
@@ -128,6 +131,8 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   hasDocument,
   textFontSize = 14,
   setTextFontSize,
+  textFontFamily,
+  setTextFontFamily,
   textColor = '#000000',
   setTextColor,
   textIsRedact = false,
@@ -182,7 +187,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
     setToolMode(mode);
   };
 
-  const isAnnotateActive = ['draw', 'strikeout', 'checkmark', 'crossmark', 'form'].includes(toolMode);
+  const isAnnotateActive = ['draw', 'highlight', 'eraser', 'strikeout', 'checkmark', 'crossmark', 'form'].includes(toolMode);
 
   const handleDeleteSavedSig = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -521,12 +526,36 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <span>Edit / Add Text</span>
           </button>
 
-          {/* Inline Text Formatting Controls when Text Tool is active */}
-          {toolMode === 'text' && (
+          {/* Inline Text Formatting Controls when in Select or Text mode */}
+          {(toolMode === 'select' || toolMode === 'text') && (
             <div className="flex items-center space-x-1.5 pl-2 border-l border-slate-800 animate-fadeIn">
+              {/* Font Family / Style Selector */}
+              <select
+                value={textFontFamily || "'Times New Roman', Times, serif"}
+                onChange={(e) => setTextFontFamily && setTextFontFamily(e.target.value)}
+                className="bg-slate-900 text-slate-200 border border-slate-700/80 rounded-lg px-2 py-1 text-xs font-semibold hover:border-cyan-500 transition max-w-[130px] sm:max-w-[150px] truncate"
+                title="Font Style Family"
+              >
+                <option value="'Times New Roman', Times, serif">Times New Roman (Legal)</option>
+                <option value="Arial, Helvetica, sans-serif">Arial / Helvetica (Sans)</option>
+                <option value="'Courier New', Courier, monospace">Courier New (Mono)</option>
+                <option value="Georgia, serif">Georgia (Serif)</option>
+                <option value="Garamond, serif">Garamond (Classic)</option>
+                <option value="Verdana, Geneva, sans-serif">Verdana (Clean)</option>
+                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                <option value="Impact, Charcoal, sans-serif">Impact (Bold)</option>
+                <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans</option>
+                <option value="'Palatino Linotype', Palatino, serif">Palatino</option>
+                <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+                <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
+                <option value="'Brush Script MT', cursive">Brush Script</option>
+                <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                <option value="'Century Gothic', sans-serif">Century Gothic</option>
+              </select>
+
               {/* Font Size Selector */}
               <select
-                value={textFontSize || 14}
+                value={textFontSize || 10}
                 onChange={(e) => setTextFontSize && setTextFontSize(Number(e.target.value))}
                 className="bg-slate-900 text-slate-200 border border-slate-700/80 rounded-lg px-2 py-1 text-xs font-mono font-semibold hover:border-cyan-500 transition"
                 title="Text Font Size"
@@ -589,6 +618,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             >
               {toolMode === 'draw' && <Pencil className="w-3.5 h-3.5 text-yellow-400" />}
               {toolMode === 'highlight' && <Highlighter className="w-3.5 h-3.5 text-yellow-400" />}
+              {toolMode === 'eraser' && <Eraser className="w-3.5 h-3.5 text-amber-400" />}
               {toolMode === 'strikeout' && <Strikethrough className="w-3.5 h-3.5 text-rose-400" />}
               {toolMode === 'checkmark' && <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />}
               {toolMode === 'crossmark' && <XSquare className="w-3.5 h-3.5 text-rose-400" />}
@@ -599,6 +629,8 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   ? 'Draw'
                   : toolMode === 'highlight'
                   ? 'Highlight'
+                  : toolMode === 'eraser'
+                  ? 'Eraser'
                   : toolMode === 'strikeout'
                   ? 'Cross Out'
                   : toolMode === 'checkmark'
@@ -649,6 +681,22 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     <span>Highlight Text & Passages</span>
                   </div>
                   {toolMode === 'highlight' && <span className="w-2 h-2 rounded-full bg-yellow-400" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleToolSelect('eraser');
+                    setIsAnnotateDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl transition ${
+                    toolMode === 'eraser' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Eraser className="w-4 h-4 text-amber-400" />
+                    <span>Eraser / Whiteout Brush</span>
+                  </div>
+                  {toolMode === 'eraser' && <span className="w-2 h-2 rounded-full bg-amber-400" />}
                 </button>
 
                 <button
@@ -948,9 +996,20 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
       {/* Right Controls & Actions */}
       <div className="flex items-center space-x-1.5 sm:space-x-3">
-        {/* Document Action Buttons: Primary Export CTA */}
+        {/* Document Action Buttons: Print Preview & Primary Export CTA */}
         {hasDocument && (
           <div className="flex items-center space-x-2">
+            <button
+              onClick={onPrintPDF}
+              disabled={isPrinting}
+              title="Print Document or Open Print Preview (Ctrl+P)"
+              className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 transition transform active:scale-95 disabled:opacity-50"
+            >
+              <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />
+              <span className="hidden sm:inline">{isPrinting ? 'Preparing...' : 'Print / Preview'}</span>
+              <span className="sm:hidden">{isPrinting ? '...' : 'Print'}</span>
+            </button>
+
             <button
               onClick={onExportPDF}
               disabled={isExporting}

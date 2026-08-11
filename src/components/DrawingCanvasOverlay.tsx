@@ -47,6 +47,8 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   const [highlightColor, setHighlightColor] = useState<string>('#facc15'); // Default Yellow Highlighter
   const [thickness, setThickness] = useState<number>(3); // Pen Scale
   const [highlightThickness, setHighlightThickness] = useState<number>(18); // Highlighter Scale
+  const [eraserThickness, setEraserThickness] = useState<number>(8); // Default 8px Fine Precision Eraser
+  const [hoverPt, setHoverPt] = useState<{ x: number; y: number } | null>(null);
 
   // Selected item for deletion
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   const activeMode =
     toolMode === 'draw' ||
     toolMode === 'highlight' ||
+    toolMode === 'eraser' ||
     toolMode === 'checkmark' ||
     toolMode === 'crossmark' ||
     toolMode === 'strikeout' ||
@@ -78,12 +81,29 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
     };
   };
 
+  const eraseDrawingsNearPoint = (pt: { x: number; y: number }, radius: number) => {
+    for (const d of pageDrawings) {
+      if (d.color === '#ffffff') continue; // Don't auto-delete whiteouts
+      for (const p of d.points) {
+        const dx = p.x - pt.x;
+        const dy = p.y - pt.y;
+        if (dx * dx + dy * dy <= radius * radius) {
+          onDeleteDrawing(d.id);
+          break;
+        }
+      }
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     const pt = getPdfCoords(e);
 
-    if (toolMode === 'draw' || toolMode === 'highlight') {
+    if (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') {
       setIsDrawing(true);
       setCurrentPoints([pt]);
+      if (toolMode === 'eraser') {
+        eraseDrawingsNearPoint(pt, eraserThickness);
+      }
     } else if (toolMode === 'checkmark') {
       onAddStamp({
         pageIndex,
@@ -124,14 +144,21 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!isDrawing || (toolMode !== 'draw' && toolMode !== 'highlight')) return;
     const pt = getPdfCoords(e);
+    if (toolMode === 'eraser') {
+      setHoverPt(pt);
+    }
+    if (!isDrawing || (toolMode !== 'draw' && toolMode !== 'highlight' && toolMode !== 'eraser')) return;
     setCurrentPoints((prev) => [...prev, pt]);
+    if (toolMode === 'eraser') {
+      eraseDrawingsNearPoint(pt, eraserThickness);
+    }
   };
 
   const handleMouseUp = () => {
     if (isDrawing && currentPoints.length > 0) {
       const isHighlight = toolMode === 'highlight';
+      const isEraser = toolMode === 'eraser';
       const pts = currentPoints.length === 1
         ? [currentPoints[0], { x: currentPoints[0].x + 1, y: currentPoints[0].y }]
         : currentPoints;
@@ -139,8 +166,8 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       onAddDrawing({
         pageIndex,
         points: pts,
-        color: isHighlight ? highlightColor : drawColor,
-        thickness: isHighlight ? highlightThickness : thickness,
+        color: isEraser ? '#ffffff' : isHighlight ? highlightColor : drawColor,
+        thickness: isEraser ? eraserThickness : isHighlight ? highlightThickness : thickness,
         opacity: isHighlight ? 0.45 : 1.0,
       });
     }
@@ -151,9 +178,32 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   return (
     <div className="absolute inset-0 z-20 pointer-events-none" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}>
       {/* Floating Brush & Pencil Scale Toolbar Overlay */}
-      {(toolMode === 'draw' || toolMode === 'highlight') && (
+      {(toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') && (
         <div className="absolute top-2 right-2 bg-slate-900/95 border border-slate-700/80 backdrop-blur rounded-2xl p-2 flex items-center space-x-3 shadow-2xl pointer-events-auto z-40 text-xs">
-          {toolMode === 'draw' ? (
+          {toolMode === 'eraser' ? (
+            <>
+              <span className="text-[10px] font-extrabold uppercase text-amber-400">Precision Eraser</span>
+              <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
+                {[
+                  { label: 'Micro', size: 4 },
+                  { label: 'Fine', size: 8 },
+                  { label: 'Medium', size: 16 },
+                  { label: 'Large', size: 32 },
+                  { label: 'Heavy Block', size: 64 },
+                ].map((s) => (
+                  <button
+                    key={s.size}
+                    onClick={() => setEraserThickness(s.size)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                      eraserThickness === s.size ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {s.label} ({s.size}px)
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : toolMode === 'draw' ? (
             <>
               <span className="text-[10px] font-extrabold uppercase text-cyan-400">Pencil Scale</span>
               {/* Pencil Colors */}
@@ -231,10 +281,49 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={() => setHoverPt(null)}
         className={`w-full h-full ${activeMode ? 'pointer-events-auto cursor-crosshair' : 'pointer-events-none'}`}
       >
         {/* Existing Finished Drawings */}
         {pageDrawings.map((drawing) => {
+          const isWhiteout = drawing.color === '#ffffff' || drawing.color?.toLowerCase() === '#fff';
+          if (isWhiteout && drawing.points.length > 0) {
+            let minX = drawing.points[0].x;
+            let minY = drawing.points[0].y;
+            let maxX = drawing.points[0].x;
+            let maxY = drawing.points[0].y;
+
+            for (const p of drawing.points) {
+              if (p.x < minX) minX = p.x;
+              if (p.y < minY) minY = p.y;
+              if (p.x > maxX) maxX = p.x;
+              if (p.y > maxY) maxY = p.y;
+            }
+
+            const th = drawing.thickness || 8;
+            const pad = th / 2;
+            const rx = Math.max(0, minX - pad) * scaleX;
+            const ry = Math.max(0, minY - pad) * scaleY;
+            const rw = ((maxX - minX) + th) * scaleX;
+            const rh = ((maxY - minY) + th) * scaleY;
+
+            return (
+              <rect
+                key={drawing.id}
+                x={rx}
+                y={ry}
+                width={rw}
+                height={rh}
+                fill="#ffffff"
+                className="pointer-events-auto cursor-pointer hover:stroke-cyan-400"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm('Delete this whiteout erasure block?')) onDeleteDrawing(drawing.id);
+                }}
+              />
+            );
+          }
+
           const dPath = drawing.points
             .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`)
             .join(' ');
@@ -263,14 +352,35 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         {isDrawing && currentPoints.length > 0 && (
           <path
             d={currentPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`).join(' ')}
-            stroke={toolMode === 'highlight' ? highlightColor : drawColor}
-            strokeWidth={(toolMode === 'highlight' ? highlightThickness : thickness) * scaleY}
+            stroke={toolMode === 'eraser' ? '#ffffff' : toolMode === 'highlight' ? highlightColor : drawColor}
+            strokeWidth={(toolMode === 'eraser' ? eraserThickness : toolMode === 'highlight' ? highlightThickness : thickness) * scaleY}
             strokeOpacity={toolMode === 'highlight' ? 0.45 : 1.0}
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
             style={{ mixBlendMode: toolMode === 'highlight' ? 'multiply' : 'normal' }}
           />
+        )}
+
+        {/* Dynamic Precision Eraser Cursor Indicator */}
+        {toolMode === 'eraser' && hoverPt && (
+          <g className="pointer-events-none">
+            <circle
+              cx={hoverPt.x * scaleX}
+              cy={hoverPt.y * scaleY}
+              r={Math.max(3, (eraserThickness * scaleY) / 2)}
+              fill="rgba(255, 255, 255, 0.4)"
+              stroke="#f59e0b"
+              strokeWidth="1.5"
+              strokeDasharray="3 3"
+            />
+            <circle
+              cx={hoverPt.x * scaleX}
+              cy={hoverPt.y * scaleY}
+              r="1.5"
+              fill="#f59e0b"
+            />
+          </g>
         )}
 
         {/* Render Checkmarks & Crossmarks */}

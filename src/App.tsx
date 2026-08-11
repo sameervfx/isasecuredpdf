@@ -73,8 +73,66 @@ export const App: React.FC = () => {
 
   // Text Tool Formatting Defaults
   const [textFontSize, setTextFontSize] = useState<number>(14);
+  const [textFontFamily, setTextFontFamily] = useState<string>("'Times New Roman', Times, serif");
   const [textColor, setTextColor] = useState<string>('#000000');
   const [textIsRedact, setTextIsRedact] = useState<boolean>(false);
+  const [activeFormFieldName, setActiveFormFieldName] = useState<string | null>(null);
+
+  const handleSetTextFontFamily = (family: string) => {
+    setTextFontFamily(family);
+    if (activeFormFieldName) {
+      setDocState((prev) => ({
+        ...prev,
+        formFields: prev.formFields.map((f) =>
+          f.name === activeFormFieldName || f.fieldName === activeFormFieldName
+            ? { ...f, fontFamily: family }
+            : f
+        ),
+      }));
+    }
+  };
+
+  const handleSetTextColor = (color: string) => {
+    setTextColor(color);
+    if (activeFormFieldName) {
+      setDocState((prev) => ({
+        ...prev,
+        formFields: prev.formFields.map((f) =>
+          f.name === activeFormFieldName || f.fieldName === activeFormFieldName
+            ? { ...f, fontColor: color }
+            : f
+        ),
+      }));
+    }
+  };
+
+  const handleSetTextFontSize = (size: number) => {
+    setTextFontSize(size);
+    if (activeFormFieldName) {
+      setDocState((prev) => ({
+        ...prev,
+        formFields: prev.formFields.map((f) =>
+          f.name === activeFormFieldName || f.fieldName === activeFormFieldName
+            ? { ...f, fontSize: size }
+            : f
+        ),
+      }));
+    }
+  };
+
+  const handleSetTextIsRedact = (isRedact: boolean) => {
+    setTextIsRedact(isRedact);
+    if (activeFormFieldName) {
+      setDocState((prev) => ({
+        ...prev,
+        formFields: prev.formFields.map((f) =>
+          f.name === activeFormFieldName || f.fieldName === activeFormFieldName
+            ? { ...f, isRedact }
+            : f
+        ),
+      }));
+    }
+  };
 
   const handleOpenPremiumExportModal = (format: ExportFormatType = 'docx') => {
     setPremiumExportFormat(format);
@@ -306,9 +364,20 @@ export const App: React.FC = () => {
 
   const handleUpdateFieldValue = (fieldName: string, value: string | boolean) => {
     pushToHistory(docState);
+    setActiveFormFieldName(fieldName);
     setDocState((prev) => ({
       ...prev,
-      formFields: prev.formFields.map((f) => (f.name === fieldName ? { ...f, value } : f)),
+      formFields: prev.formFields.map((f) =>
+        f.name === fieldName || f.fieldName === fieldName
+          ? {
+              ...f,
+              value,
+              fontSize: f.fontSize || textFontSize || 10,
+              fontColor: f.fontColor || textColor || '#000000',
+              isRedact: f.isRedact !== undefined ? f.isRedact : Boolean(textIsRedact),
+            }
+          : f
+      ),
     }));
   };
 
@@ -616,30 +685,52 @@ export const App: React.FC = () => {
     if (!docState.fileBytes) return;
     setIsPrinting(true);
     try {
+      // Export current state (flattened text, signatures, forms & annotations)
       const modifiedPdfBytes = await pdfEngine.exportDocument(docState);
-      const blob = new Blob([modifiedPdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const blob = new Blob([new Uint8Array(modifiedPdfBytes)], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
 
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.src = blobUrl;
-
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
+      // 1. Open dedicated browser Print Preview window with native PDF viewer
+      const printWin = window.open(blobUrl, '_blank');
+      if (printWin) {
+        printWin.focus();
+        // Trigger auto-print after viewer rendering
         setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
+          try {
+            printWin.print();
+          } catch (e) {
+            console.log('PDF Preview window opened successfully. User can trigger print via window control:', e);
+          }
+        }, 600);
+      } else {
+        // Fallback for pop-up blocked environments
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.src = blobUrl;
+
+        document.body.appendChild(iframe);
+        iframe.onload = () => {
           setTimeout(() => {
-            document.body.removeChild(iframe);
-            URL.revokeObjectURL(blobUrl);
-          }, 2000);
-        }, 300);
-      };
+            try {
+              iframe.contentWindow?.focus();
+              iframe.contentWindow?.print();
+            } catch (e) {
+              console.error('Print iframe error:', e);
+            }
+            setTimeout(() => {
+              if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+              }
+              URL.revokeObjectURL(blobUrl);
+            }, 3000);
+          }, 300);
+        };
+      }
     } catch (err) {
       console.error('Print error:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -794,11 +885,13 @@ export const App: React.FC = () => {
         isPrinting={isPrinting}
         hasDocument={hasDocument}
         textFontSize={textFontSize}
-        setTextFontSize={setTextFontSize}
+        setTextFontSize={handleSetTextFontSize}
+        textFontFamily={textFontFamily}
+        setTextFontFamily={handleSetTextFontFamily}
         textColor={textColor}
-        setTextColor={setTextColor}
+        setTextColor={handleSetTextColor}
         textIsRedact={textIsRedact}
-        setTextIsRedact={setTextIsRedact}
+        setTextIsRedact={handleSetTextIsRedact}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -842,6 +935,7 @@ export const App: React.FC = () => {
           pendingSignatureDataUrl={pendingSignatureDataUrl}
           onCloseDocument={handleCloseDocument}
           onUpdateFieldValue={handleUpdateFieldValue}
+          onFocusFormField={(name) => setActiveFormFieldName(name)}
           onAddAnnotation={handleAddAnnotation}
           onUpdateAnnotation={handleUpdateAnnotation}
           onDeleteAnnotation={handleDeleteAnnotation}
@@ -859,6 +953,9 @@ export const App: React.FC = () => {
           onOpenCreateModal={() => setIsCreateModalOpen(true)}
           onOpenMergeModal={() => setIsMergeModalOpen(true)}
           isLoading={isLoading}
+          textColor={textColor}
+          textFontSize={textFontSize}
+          textIsRedact={textIsRedact}
         />
       </div>
 

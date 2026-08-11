@@ -35,6 +35,11 @@ interface PDFCanvasViewerProps {
   onOpenCreateModal?: () => void;
   onOpenMergeModal?: () => void;
   isLoading?: boolean;
+  textColor?: string;
+  textFontSize?: number;
+  textFontFamily?: string;
+  textIsRedact?: boolean;
+  onFocusFormField?: (fieldName: string) => void;
 }
 
 interface PageDims {
@@ -70,6 +75,11 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   onOpenCreateModal,
   onOpenMergeModal,
   isLoading = false,
+  textColor,
+  textFontSize,
+  textFontFamily,
+  textIsRedact,
+  onFocusFormField,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -312,7 +322,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         return (
           <div
             key={origIdx}
-            className="relative bg-white shadow-2xl rounded-sm border border-slate-700/40 transition-all duration-150"
+            className="pdf-document-page relative bg-white shadow-2xl transition-all duration-150 my-4"
             style={{ width: `${w}px`, height: `${h}px` }}
           >
             <canvas
@@ -325,29 +335,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
             {dims && (
               <>
-                <AcroFormOverlay
-                  fields={state.formFields}
-                  pageIndex={origIdx}
-                  canvasWidth={w}
-                  canvasHeight={h}
-                  originalWidth={origW}
-                  originalHeight={origH}
-                  pendingSignatureDataUrl={pendingSignatureDataUrl}
-                  onUpdateFieldValue={onUpdateFieldValue}
-                  onAddSignatureAtCoords={onAddSignatureAtCoords}
-                />
-                <TextAnnotationEditor
-                  annotations={state.textAnnotations}
-                  pageIndex={origIdx}
-                  canvasWidth={w}
-                  canvasHeight={h}
-                  originalWidth={origW}
-                  originalHeight={origH}
-                  onUpdateAnnotation={onUpdateAnnotation}
-                  onDeleteAnnotation={onDeleteAnnotation}
-                  onAddAnnotation={onAddAnnotation}
-                  isTextMode={toolMode === 'text'}
-                />
                 <DrawingCanvasOverlay
                   pageIndex={origIdx}
                   canvasWidth={w}
@@ -366,6 +353,41 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                   onAddStrikeout={onAddStrikeout}
                   onDeleteStrikeout={onDeleteStrikeout}
                   onAddSignatureAtCoords={onAddSignatureAtCoords}
+                />
+                <AcroFormOverlay
+                  fields={state.formFields}
+                  pageIndex={origIdx}
+                  canvasWidth={w}
+                  canvasHeight={h}
+                  originalWidth={origW}
+                  originalHeight={origH}
+                  rotation={rot}
+                  unrotatedWidth={baseW}
+                  unrotatedHeight={baseH}
+                  textFontSize={textFontSize}
+                  textFontFamily={textFontFamily}
+                  textColor={textColor}
+                  textIsRedact={textIsRedact}
+                  pendingSignatureDataUrl={pendingSignatureDataUrl}
+                  onUpdateFieldValue={onUpdateFieldValue}
+                  onAddSignatureAtCoords={onAddSignatureAtCoords}
+                  onFocusFormField={onFocusFormField}
+                />
+                <TextAnnotationEditor
+                  annotations={state.textAnnotations}
+                  pageIndex={origIdx}
+                  canvasWidth={w}
+                  canvasHeight={h}
+                  originalWidth={origW}
+                  originalHeight={origH}
+                  onUpdateAnnotation={onUpdateAnnotation}
+                  onDeleteAnnotation={onDeleteAnnotation}
+                  onAddAnnotation={onAddAnnotation}
+                  isTextMode={toolMode === 'text'}
+                  textColor={textColor}
+                  textFontSize={textFontSize}
+                  textFontFamily={textFontFamily}
+                  textIsRedact={textIsRedact}
                 />
                 <SignatureOverlay
                   signatures={state.signatures}

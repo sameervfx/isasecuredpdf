@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, degrees, StandardFonts, PDFTextField, PDFCheckBox } from 'pdf-lib';
+import { PDFDocument, rgb, degrees, StandardFonts, PDFTextField, PDFCheckBox, PDFOperator, PDFName, PDFString } from 'pdf-lib';
 import { TextAnnotation, SignatureAnnotation, AcroFormField, PDFDocumentState, StampAnnotation, StrikeoutAnnotation, FreehandDrawing } from '../types/pdf';
 import { createZipBundle, ZipFileEntry } from '../utils/zipBuilder';
 
@@ -44,8 +44,10 @@ export class PDFEngineService {
           let pageIndex = 0;
           const widgetPageRef = widget.P();
           if (widgetPageRef) {
-            const foundIdx = pages.findIndex(p => p.ref === widgetPageRef);
-            if (foundIdx !== -1) pageIndex = foundIdx;
+            const foundIdx = pages.findIndex(p => p.ref && p.ref.objectNumber === widgetPageRef.objectNumber && p.ref.generationNumber === widgetPageRef.generationNumber);
+            if (foundIdx !== -1) {
+              pageIndex = foundIdx;
+            }
           }
 
           let originX = 0;
@@ -86,48 +88,142 @@ export class PDFEngineService {
       throw new Error('No PDF file loaded');
     }
 
-    // 1. Load original document
-    const pdfDoc = await PDFDocument.load(state.fileBytes, { ignoreEncryption: true });
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    // 1. Load original document using isolated bytes copy
+    const copyBytes = new Uint8Array(state.fileBytes.slice(0));
+    const pdfDoc = await PDFDocument.load(copyBytes, { ignoreEncryption: true });
+    
+    // Embed core vector fonts matching user selected text styles
+    const fontTimes = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const fontHelvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontCourier = await pdfDoc.embedFont(StandardFonts.Courier);
+    const font = fontTimes;
 
-    // 2. Fill AcroForms
-    try {
-      const form = pdfDoc.getForm();
-      for (const fieldState of state.formFields) {
-        try {
-          if (fieldState.type === 'text') {
-            const targetName = fieldState.fieldName || fieldState.name;
-            try {
-              const tf = form.getTextField(targetName);
-              const cleanVal = String(fieldState.value ?? '').replace(/[^\x00-\x7F]/g, '');
-              tf.setText(cleanVal);
-            } catch (tErr) {
-              // Ignore missing field or lookup error
-            }
-          } else if (fieldState.type === 'checkbox') {
-            const targetName = fieldState.fieldName || fieldState.name;
-            try {
-              const cb = form.getCheckBox(targetName);
-              if (fieldState.value) cb.check();
-              else cb.uncheck();
-            } catch (cErr) {
-              // Ignore missing checkbox lookup error
-            }
-          }
-        } catch (fErr) {
-          console.warn(`Could not set field ${fieldState.name}:`, fErr);
-        }
+    const getFontForFamily = (family?: string) => {
+      if (!family) return fontTimes;
+      const fam = family.toLowerCase();
+      if (fam.includes('courier') || fam.includes('mono') || fam.includes('lucida')) {
+        return fontCourier;
       }
+      if (
+        fam.includes('arial') ||
+        fam.includes('helvetica') ||
+        fam.includes('sans') ||
+        fam.includes('tahoma') ||
+        fam.includes('trebuchet') ||
+        fam.includes('impact') ||
+        fam.includes('segoe') ||
+        fam.includes('gothic')
+      ) {
+        return fontHelvetica;
+      }
+      return fontTimes;
+    };
+
+    // 2. Fill AcroForms and Update Appearance Streams (/AP) ONLY if form fields exist
+    if (state.formFields && state.formFields.length > 0) {
       try {
-        form.updateFieldAppearances(font);
-      } catch (appErr) {
-        console.warn('Form updateFieldAppearances non-fatal warning:', appErr);
+        const form = pdfDoc.getForm();
+        for (const fieldState of state.formFields) {
+          try {
+            if (fieldState.type === 'text') {
+              const targetName = fieldState.fieldName || fieldState.name;
+              const cleanVal = String(fieldState.value ?? '').replace(/[^\x00-\x7F]/g, '');
+
+              try {
+                const tf = form.getTextField(targetName);
+                tf.setText(cleanVal);
+                if (fieldState.fontSize) {
+                  try { tf.setFontSize(fieldState.fontSize); } catch (e) {}
+                }
+              } catch (tErr) {
+                // Ignore missing field or lookup error
+              }
+            } else if (fieldState.type === 'checkbox') {
+              const targetName = fieldState.fieldName || fieldState.name;
+              try {
+                const cb = form.getCheckBox(targetName);
+                if (fieldState.value) cb.check();
+                else cb.uncheck();
+              } catch (cErr) {
+                // Ignore missing checkbox lookup error
+              }
+            }
+          } catch (err) {}
+        }
+
+        // Rebuild /AP appearance streams for Adobe / Chrome print previewers
+        try {
+          form.updateFieldAppearances(font);
+        } catch (appErr) {
+          console.warn('Form updateFieldAppearances non-fatal warning:', appErr);
+        }
+        try {
+          form.flatten();
+        } catch (flattenErr) {
+          console.warn('Form flatten warning:', flattenErr);
+        }
+      } catch (formErr) {
+        console.warn('Form updating non-fatal warning:', formErr);
       }
-    } catch (formErr) {
-      console.warn('Form updating warning:', formErr);
     }
 
-    // 3. Render Text Annotations (Multi-line & Pasted Text Support)
+    // 3. Render Freehand Drawings & Whiteout Eraser Strokes
+    // Rendering whiteout strokes AFTER form flattening ensures white erased areas wipe out original content cleanly.
+    // Whiteout strokes draw 100% smooth, crisp, solid white rectangles (zero jagged/bumpy line segments).
+    for (const drawing of state.drawings || []) {
+      if (drawing.pageIndex < 0 || drawing.pageIndex >= pdfDoc.getPageCount()) continue;
+      if (!drawing.points || drawing.points.length < 1) continue;
+
+      const targetPage = pdfDoc.getPage(drawing.pageIndex);
+      const { height: pageH } = targetPage.getSize();
+      const isWhiteout = drawing.color === '#ffffff' || drawing.color?.toLowerCase() === '#fff';
+      const strokeThickness = drawing.thickness || 8;
+
+      if (isWhiteout) {
+        let minX = drawing.points[0].x;
+        let minY = drawing.points[0].y;
+        let maxX = drawing.points[0].x;
+        let maxY = drawing.points[0].y;
+
+        for (const p of drawing.points) {
+          if (p.x < minX) minX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y > maxY) maxY = p.y;
+        }
+
+        const padding = strokeThickness / 2;
+        const rectX = Math.max(0, minX - padding);
+        const rectY = Math.max(0, minY - padding);
+        const rectW = (maxX - minX) + strokeThickness;
+        const rectH = (maxY - minY) + strokeThickness;
+
+        targetPage.drawRectangle({
+          x: rectX,
+          y: pageH - rectY - rectH,
+          width: rectW,
+          height: rectH,
+          color: rgb(1, 1, 1),
+          borderWidth: 0,
+        });
+      } else {
+        const drawColor = parseHexColor(drawing.color);
+        for (let i = 0; i < drawing.points.length - 1; i++) {
+          const pt1 = drawing.points[i];
+          const pt2 = drawing.points[i + 1];
+          targetPage.drawLine({
+            start: { x: pt1.x, y: pageH - pt1.y },
+            end: { x: pt2.x, y: pageH - pt2.y },
+            thickness: strokeThickness,
+            color: drawColor,
+            opacity: drawing.opacity || 1.0,
+          });
+        }
+      }
+    }
+
+    // 4. Render Text Annotations (Multi-line & Pasted Text Support)
+    // Rendering text annotations AFTER whiteout drawings ensures newly written text sits ON TOP of erased areas!
     for (const textAnn of state.textAnnotations) {
       if (textAnn.pageIndex < 0 || textAnn.pageIndex >= pdfDoc.getPageCount()) continue;
 
@@ -136,7 +232,7 @@ export class PDFEngineService {
       const textColor = parseHexColor(textAnn.color || '#000000');
 
       const lines = (textAnn.text || '').split(/\r?\n/);
-      const lineHeight = textAnn.fontSize * 1.35;
+      const lineHeight = textAnn.fontSize * 1.3;
       const totalHeight = textAnn.height || Math.max(lines.length * lineHeight + 8, textAnn.fontSize * 1.4 + 8);
       const totalWidth = textAnn.width || 320;
       const pdfY = pageH - textAnn.y - totalHeight;
@@ -152,16 +248,18 @@ export class PDFEngineService {
         });
       }
 
+      const annFont = getFontForFamily(textAnn.fontFamily);
+
       for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
         const cleanLine = lines[lineIdx].replace(/[^\x00-\x7F]/g, '');
         if (cleanLine) {
-          let drawX = textAnn.x + 4;
-          let drawY = pdfY + totalHeight - (lineIdx + 1) * lineHeight + 2;
+          let drawX = textAnn.x + 2;
+          let drawY = pageH - textAnn.y - (lineIdx * lineHeight) - textAnn.fontSize * 0.85;
 
           if (textAnn.rotation && textAnn.rotation !== 0) {
             const rotDeg = -textAnn.rotation;
             const rad = (rotDeg * Math.PI) / 180;
-            const estimatedWidth = font.widthOfTextAtSize(cleanLine, textAnn.fontSize);
+            const estimatedWidth = annFont.widthOfTextAtSize(cleanLine, textAnn.fontSize);
             const estimatedHeight = textAnn.fontSize;
             const pdfCx = textAnn.x;
             const pdfCy = pageH - textAnn.y;
@@ -177,7 +275,7 @@ export class PDFEngineService {
             x: drawX,
             y: drawY,
             size: textAnn.fontSize,
-            font: font,
+            font: annFont,
             color: textColor,
             opacity: textAnn.opacity !== undefined ? textAnn.opacity : 1.0,
             rotate: textAnn.rotation ? degrees(-textAnn.rotation) : undefined,
@@ -222,28 +320,6 @@ export class PDFEngineService {
         thickness: strike.thickness || 2,
         color: strikeColor,
       });
-    }
-
-    // 6. Render Freehand Drawings (Pen & Highlighter)
-    for (const drawing of state.drawings || []) {
-      if (drawing.pageIndex < 0 || drawing.pageIndex >= pdfDoc.getPageCount()) continue;
-      if (!drawing.points || drawing.points.length < 2) continue;
-
-      const targetPage = pdfDoc.getPage(drawing.pageIndex);
-      const { height: pageH } = targetPage.getSize();
-      const drawColor = parseHexColor(drawing.color);
-
-      for (let i = 0; i < drawing.points.length - 1; i++) {
-        const pt1 = drawing.points[i];
-        const pt2 = drawing.points[i + 1];
-        targetPage.drawLine({
-          start: { x: pt1.x, y: pageH - pt1.y },
-          end: { x: pt2.x, y: pageH - pt2.y },
-          thickness: drawing.thickness || 3,
-          color: drawColor,
-          opacity: drawing.opacity || 1.0,
-        });
-      }
     }
 
     // 7. Render Signature Images (Robust JPG/PNG embedding with fallbacks)
@@ -318,10 +394,10 @@ export class PDFEngineService {
         reorderDoc.addPage(page);
       }
 
-      return await reorderDoc.save();
+      return await reorderDoc.save({ useObjectStreams: false });
     }
 
-    return await pdfDoc.save();
+    return await pdfDoc.save({ useObjectStreams: false });
   }
 
   async mergePDFDocuments(fileList: Uint8Array[]): Promise<Uint8Array> {
