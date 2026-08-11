@@ -2,7 +2,7 @@
   "name": "isa-secure-pdf-suite",
   "productName": "Isa Secure PDF Suite",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Isa Secure PDF Suite - 100% client-side secure PDF Editor — renders, edits, signs and exports PDFs entirely in-browser. Zero server uploads.",
   "author": "PDF Suite",
   "type": "module",
