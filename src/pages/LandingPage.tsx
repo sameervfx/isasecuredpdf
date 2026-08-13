@@ -129,18 +129,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
 
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           <button
-            onClick={() => setIsDownloadModalOpen(true)}
-            className="hidden sm:flex items-center space-x-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition"
-          >
-            <Download className="w-4 h-4 text-cyan-400" />
-            <span>Desktop Apps</span>
-          </button>
-
-          <button
             onClick={handleGateCheckAndLaunch}
-            className="flex items-center space-x-1.5 sm:space-x-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
+            className="flex items-center space-x-1.5 sm:space-x-2 px-3.5 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
           >
-            <span>Launch Web Editor</span>
+            <Sparkles className="w-4 h-4 text-yellow-300" />
+            <span>Try Free Web Version</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -150,7 +143,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
       <section className="relative pt-10 sm:pt-16 pb-16 sm:pb-20 px-4 lg:px-8 max-w-7xl mx-auto text-center flex-1 w-full overflow-x-hidden">
         <div className="inline-flex items-center space-x-2 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border border-cyan-500/30 rounded-full text-[10px] sm:text-xs font-semibold text-cyan-300 mb-6 sm:mb-8 max-w-full text-center flex-wrap justify-center">
           <Lock className="w-3.5 h-3.5 flex-shrink-0" />
-          <span>🔒 100% Client-Side • Zero Data Transmission • Offline Ready</span>
+          <span>🔒 100% Client-Side • Zero Data Transmission • Phone, Tablet & Desktop Ready</span>
         </div>
 
         <h1 className="text-2xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-5xl mx-auto px-2">
@@ -158,24 +151,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
         </h1>
 
         <p className="mt-6 text-base sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-normal">
-          Fill forms, edit existing text, and sign contracts locally on your machine. Zero data uploaded to cloud servers. Save up to 80% compared to Adobe Acrobat.
+          Fill forms, edit existing text, and sign contracts locally on your phone, tablet, or desktop. Zero data uploaded to cloud servers. Save up to 80% compared to Adobe Acrobat.
         </p>
 
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
-            onClick={() => setIsDownloadModalOpen(true)}
-            className="w-full sm:w-auto flex items-center justify-center space-x-3 px-7 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm rounded-2xl shadow-xl shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
-          >
-            <Download className="w-5 h-5" />
-            <span>Download Desktop App (.exe / .dmg)</span>
-          </button>
-
-          <button
             onClick={handleGateCheckAndLaunch}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2 px-7 py-4 bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold text-sm rounded-2xl border border-slate-800 transition"
+            className="w-full sm:w-auto flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm sm:text-base rounded-2xl shadow-xl shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
           >
-            <Sparkles className="w-5 h-5 text-cyan-400" />
-            <span>Try Free Web Version</span>
+            <Sparkles className="w-5 h-5 text-yellow-300" />
+            <span>Try Free Web Phone / Tablet Version</span>
+            <ArrowRight className="w-5 h-5 ml-1" />
           </button>
         </div>
 

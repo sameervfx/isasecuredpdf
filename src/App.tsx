@@ -54,7 +54,7 @@ export const App: React.FC = () => {
   const [zoom, setZoom] = useState<number>(1.0);
   const [toolMode, setToolMode] = useState<ToolMode>('select');
   const [thumbnails, setThumbnails] = useState<string[]>([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => window.innerWidth >= 1024);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState<boolean>(false);
   const [isWatermarkModalOpen, setIsWatermarkModalOpen] = useState<boolean>(false);
   const [isPageManagerOpen, setIsPageManagerOpen] = useState<boolean>(false);
