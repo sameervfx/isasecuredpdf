@@ -47,8 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100vh-4rem)] bg-slate-900/95 backdrop-blur-md border-r border-slate-800 transition-all duration-300 flex flex-col z-40 select-none ${
-          isOpen ? 'w-64' : 'w-10 md:w-12'
+        className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100dvh-4rem)] md:h-full bg-slate-900/95 backdrop-blur-md border-r border-slate-800 transition-all duration-300 flex flex-col z-40 select-none ${
+          isOpen ? 'w-64 shadow-2xl md:shadow-none' : 'w-0 md:w-12 overflow-hidden border-none md:border-r'
         }`}
       >
         {/* Sidebar Toggle Button */}

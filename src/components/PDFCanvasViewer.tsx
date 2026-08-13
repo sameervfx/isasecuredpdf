@@ -40,6 +40,7 @@ interface PDFCanvasViewerProps {
   textFontFamily?: string;
   textIsRedact?: boolean;
   onFocusFormField?: (fieldName: string) => void;
+  onFitToWidth?: () => void;
 }
 
 interface PageDims {
@@ -54,6 +55,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   currentPage,
   zoom,
   onZoomChange,
+  onFitToWidth,
   toolMode,
   pendingSignatureDataUrl,
   onCloseDocument,
@@ -120,6 +122,55 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
+  }, [zoom, onZoomChange]);
+
+  // Touch Pinch-to-Zoom for Mobile Phone & Tablet Touchscreens
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let initialTouchDist = 0;
+    let initialZoom = zoom;
+
+    const getTouchDist = (e: TouchEvent) => {
+      if (e.touches.length < 2) return 0;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      return Math.hypot(dx, dy);
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        initialTouchDist = getTouchDist(e);
+        initialZoom = zoom;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && initialTouchDist > 0) {
+        e.preventDefault();
+        const currentDist = getTouchDist(e);
+        if (currentDist > 0) {
+          const scaleRatio = currentDist / initialTouchDist;
+          const newZoom = Math.max(0.35, Math.min(2.5, Math.round(initialZoom * scaleRatio * 100) / 100));
+          onZoomChange(newZoom);
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      initialTouchDist = 0;
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
   }, [zoom, onZoomChange]);
 
   // Render pages when doc/zoom/rotation changes
@@ -403,7 +454,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
             )}
 
             {/* Page number badge */}
-            <div className="absolute -left-14 top-2 bg-slate-900/80 backdrop-blur border border-slate-800 text-slate-400 text-[11px] font-mono font-semibold px-2 py-1 rounded shadow">
+            <div className="absolute left-2 sm:-left-14 top-2 bg-slate-900/90 backdrop-blur border border-slate-800 text-cyan-300 sm:text-slate-400 text-[10px] sm:text-[11px] font-mono font-bold px-2 py-0.5 sm:py-1 rounded-full sm:rounded shadow z-30">
               P.{pageNum}
             </div>
           </div>
@@ -411,9 +462,9 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       })}
 
       {/* Floating Canvas Zoom Controls */}
-      <div className="sticky bottom-6 z-20 flex items-center space-x-1.5 px-3 py-2 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-full shadow-2xl text-slate-300">
+      <div className="sticky bottom-6 z-20 flex items-center space-x-1.5 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-full shadow-2xl text-slate-300">
         <button
-          onClick={() => onZoomChange(Math.max(0.4, Math.round((zoom - 0.15) * 100) / 100))}
+          onClick={() => onZoomChange(Math.max(0.35, Math.round((zoom - 0.15) * 100) / 100))}
           className="p-1.5 hover:text-white rounded-full hover:bg-slate-800 transition"
           title="Zoom Out (Ctrl + Scroll Down)"
         >
@@ -443,11 +494,17 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         </button>
 
         <button
-          onClick={() => onZoomChange(1.25)}
-          className="px-2.5 py-1 text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-full transition"
-          title="Fit Page Width"
+          onClick={() => {
+            if (onFitToWidth) {
+              onFitToWidth();
+            } else {
+              onZoomChange(0.65);
+            }
+          }}
+          className="px-2.5 py-1 text-[11px] font-bold bg-cyan-950/70 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/50 rounded-full transition shadow-sm"
+          title="Auto Fit Page to Screen Width"
         >
-          Fit Width
+          Fit Screen
         </button>
       </div>
       {/* Real-Time Signature Mouse Follower */}

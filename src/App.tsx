@@ -134,6 +134,19 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleFitToWidth = useCallback(() => {
+    const screenW = window.innerWidth;
+    const isMobile = screenW < 768;
+    const isTablet = screenW >= 768 && screenW < 1024;
+    const sidebarW = isSidebarOpen && !isMobile ? 256 : 48;
+    const availableW = screenW - sidebarW - (isMobile ? 16 : 48);
+    const pageW = docState.pages[0]?.width || 612;
+    if (pageW > 0 && availableW > 0) {
+      const fitScale = Math.floor((availableW / pageW) * 100) / 100;
+      setZoom(Math.max(0.35, Math.min(2.5, fitScale)));
+    }
+  }, [docState.pages, isSidebarOpen]);
+
   const handleOpenPremiumExportModal = (format: ExportFormatType = 'docx') => {
     setPremiumExportFormat(format);
     setIsPremiumExportModalOpen(true);
@@ -257,6 +270,32 @@ export const App: React.FC = () => {
         const vp = page.getViewport({ scale: 1.0 });
         pages.push({ pageNumber: i + 1, pageIndex: i, width: vp.width, height: vp.height, rotation: page.rotate });
         pageOrder.push(i);
+      }
+
+      // Calculate smart auto-fit zoom for mobile, tablet, and desktop viewports
+      const screenW = window.innerWidth;
+      const isMobile = screenW < 768;
+      const isTablet = screenW >= 768 && screenW < 1024;
+      const firstPageW = pages[0]?.width || 612;
+      const availableW = isMobile ? screenW - 24 : isTablet ? screenW - 80 : screenW - 320;
+
+      let fitZoom = 1.0;
+      if (firstPageW > 0 && availableW > 0) {
+        const fitScale = availableW / firstPageW;
+        if (isMobile) {
+          fitZoom = Math.max(0.35, Math.min(1.0, Math.floor(fitScale * 100) / 100));
+        } else if (isTablet) {
+          fitZoom = Math.max(0.45, Math.min(1.15, Math.floor(fitScale * 100) / 100));
+        } else {
+          fitZoom = Math.max(0.6, Math.min(1.25, Math.floor(fitScale * 100) / 100));
+        }
+      }
+
+      setZoom(fitZoom);
+
+      // On mobile or tablet screens, default sidebar to closed so PDF document gets 100% viewport width!
+      if (isMobile || isTablet) {
+        setIsSidebarOpen(false);
       }
 
       setDocState({
@@ -865,6 +904,7 @@ export const App: React.FC = () => {
         onPageChange={setCurrentPage}
         zoom={zoom}
         onZoomChange={setZoom}
+        onFitToWidth={handleFitToWidth}
         onOpenFile={handleOpenFile}
         onLoadSample={handleLoadSample}
         onOpenSignatureModal={handleOpenSignatureModal}
@@ -931,6 +971,7 @@ export const App: React.FC = () => {
           onPageVisibleChange={setCurrentPage}
           zoom={zoom}
           onZoomChange={setZoom}
+          onFitToWidth={handleFitToWidth}
           toolMode={toolMode}
           pendingSignatureDataUrl={pendingSignatureDataUrl}
           onCloseDocument={handleCloseDocument}

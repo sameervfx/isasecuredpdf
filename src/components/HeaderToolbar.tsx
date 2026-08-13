@@ -67,6 +67,7 @@ interface HeaderToolbarProps {
   onPageChange: (page: number) => void;
   zoom: number;
   onZoomChange: (zoom: number) => void;
+  onFitToWidth?: () => void;
   onOpenFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onLoadSample: () => void;
   onOpenSignatureModal: (tab?: 'draw' | 'upload') => void;
@@ -497,7 +498,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
       {/* Center Toolbar Tool Modes */}
       {hasDocument && (
-        <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-950/80 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative flex-shrink-0">
+        <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-950/80 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative flex-shrink-0 overflow-x-auto max-w-[calc(100vw-110px)] sm:max-w-none whitespace-nowrap scrollbar-none">
           {/* Select Mode */}
           <button
             onClick={() => handleToolSelect('select')}
