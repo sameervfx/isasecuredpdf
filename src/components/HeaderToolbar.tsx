@@ -525,7 +525,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
       {/* Center Toolbar Tool Modes: Dedicated 2nd Row on Mobile, Center on Desktop */}
       {hasDocument && (
-        <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:w-auto overflow-x-auto whitespace-nowrap scrollbar-none">
+        <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:w-auto overflow-visible whitespace-nowrap">
           {/* Select Mode */}
           <button
             onClick={() => handleToolSelect('select')}
@@ -674,7 +674,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
             {/* Annotate Dropdown Popover */}
             {isAnnotateDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-60 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 flex flex-col space-y-1">
+              <div className="absolute top-full left-0 mt-2.5 w-64 bg-slate-900/98 backdrop-blur-2xl border border-slate-700/90 rounded-2xl shadow-2xl shadow-cyan-950/80 p-2.5 z-[100] flex flex-col space-y-1 ring-1 ring-cyan-500/30">
                 <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
                   Markups & Stamps
                 </div>
@@ -796,7 +796,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
             {/* Dropdown Popover */}
             {isSignDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2 w-56 sm:w-64 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl p-2 z-50 flex flex-col space-y-2">
+              <div className="absolute top-full left-0 mt-2.5 w-64 sm:w-72 bg-slate-900/98 backdrop-blur-2xl border border-slate-700/90 rounded-2xl shadow-2xl shadow-cyan-950/80 p-3 z-[100] flex flex-col space-y-2 ring-1 ring-cyan-500/30">
                 <button
                   onClick={() => {
                     setIsSignDropdownOpen(false);

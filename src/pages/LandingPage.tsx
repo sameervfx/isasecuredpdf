@@ -154,14 +154,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
           Fill forms, edit existing text, and sign contracts locally on your phone, tablet, or desktop. Zero data uploaded to cloud servers. Save up to 80% compared to Adobe Acrobat.
         </p>
 
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
+          {/* First Button: Try Free Phone/Tablet Version */}
           <button
             onClick={handleGateCheckAndLaunch}
-            className="w-full sm:w-auto flex items-center justify-center space-x-3 px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm sm:text-base rounded-2xl shadow-xl shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center space-x-2.5 px-7 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm sm:text-base rounded-2xl shadow-xl shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
           >
-            <Sparkles className="w-5 h-5 text-yellow-300" />
-            <span>Try Free Web Phone / Tablet Version</span>
-            <ArrowRight className="w-5 h-5 ml-1" />
+            <Sparkles className="w-5 h-5 text-yellow-300 flex-shrink-0" />
+            <span>Try Free Phone / Tablet Version</span>
+            <ArrowRight className="w-4 h-4 ml-1 flex-shrink-0" />
+          </button>
+
+          {/* Second Button: Try Free Web Version */}
+          <button
+            onClick={handleGateCheckAndLaunch}
+            className="w-full sm:w-auto flex items-center justify-center space-x-2.5 px-7 py-4 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white font-semibold text-sm sm:text-base rounded-2xl border border-slate-700 transition transform active:scale-95 shadow-lg"
+          >
+            <Monitor className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+            <span>Try Free Web Version</span>
+            <ArrowRight className="w-4 h-4 ml-1 flex-shrink-0 text-slate-400" />
           </button>
         </div>
 
