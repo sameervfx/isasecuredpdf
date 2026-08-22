@@ -37,8 +37,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleProtect = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleProtect = async (shouldDownload: boolean) => {
     setErrorMessage('');
     setSuccessMessage('');
 
@@ -68,17 +67,23 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
 
       const encryptedBytes = await securityService.encryptPDF(pdfBytes, encryptOpts);
 
-      // Download encrypted PDF
-      const blob = new Blob([new Uint8Array(encryptedBytes)], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      const baseName = fileName ? fileName.replace(/\.pdf$/i, '') : 'document';
-      link.download = `${baseName}_protected.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
+      if (shouldDownload) {
+        // Download encrypted PDF
+        const blob = new Blob([new Uint8Array(encryptedBytes)], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const baseName = fileName ? fileName.replace(/\.pdf$/i, '') : 'document';
+        link.download = `${baseName}_protected.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+        setSuccessMessage('PDF password protected and downloaded successfully!');
+      } else {
+        // Apply locked PDF directly to current session
+        onApplyDecryptedPDF(encryptedBytes);
+        setSuccessMessage('PDF locked with password successfully!');
+      }
 
-      setSuccessMessage('PDF password protected and downloaded successfully!');
       setTimeout(() => {
         onClose();
         setPassword('');
@@ -197,7 +202,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
           )}
 
           {activeTab === 'protect' ? (
-            <form onSubmit={handleProtect} className="space-y-4">
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
                   <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
@@ -253,23 +258,41 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                 </label>
               </div>
 
-              <div className="pt-3">
+              {/* Separate Action Buttons */}
+              <div className="pt-3 grid grid-cols-2 gap-2.5">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => handleProtect(false)}
                   disabled={isProcessing}
-                  className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-lg transition flex items-center justify-center space-x-2 disabled:opacity-50"
+                  className="py-2.5 px-3 bg-slate-800 hover:bg-slate-750 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                >
+                  {isProcessing ? (
+                    <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Lock className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Lock Password</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleProtect(true)}
+                  disabled={isProcessing}
+                  className="py-2.5 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-lg transition flex items-center justify-center space-x-1.5 disabled:opacity-50"
                 >
                   {isProcessing ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <Download className="w-4 h-4" />
-                      <span>Encrypt & Download PDF</span>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Lock & Download</span>
                     </>
                   )}
                 </button>
               </div>
-            </form>
+            </div>
           ) : (
             <form onSubmit={handleUnlock} className="space-y-4">
               <div className="space-y-1.5">
