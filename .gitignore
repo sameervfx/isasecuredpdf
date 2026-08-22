@@ -20,3 +20,11 @@ electron-mac.zip
 .vscode/
 .idea/
 *.swp
+
+.vercel
+src_v1_backup/
+src_v02_backup/
+scratch/
+test_*.pdf
+test_*.ts
+wrap_test.pdf

@@ -99,12 +99,18 @@ function createWindow() {
   const localDistPath = path.join(__dirname, '../dist/index.html');
   const appDistPath = path.join(__dirname, 'dist/index.html');
 
-  if (fs.existsSync(localDistPath)) {
+  if (isDev && process.env.NODE_ENV === 'development') {
+    mainWindow.loadURL('http://localhost:3000').catch(() => {
+      if (fs.existsSync(localDistPath)) {
+        mainWindow.loadFile(localDistPath);
+      }
+    });
+  } else if (fs.existsSync(localDistPath)) {
     mainWindow.loadFile(localDistPath);
   } else if (fs.existsSync(appDistPath)) {
     mainWindow.loadFile(appDistPath);
   } else {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadFile(path.resolve(__dirname, '../dist/index.html'));
   }
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

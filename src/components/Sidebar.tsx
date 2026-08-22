@@ -38,6 +38,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
+      {/* Mobile Floating Page Count Badge when sidebar is closed */}
+      {!isOpen && (
+        <button
+          onClick={onToggleSidebar}
+          className="md:hidden fixed left-2 top-20 z-40 bg-slate-900/95 text-cyan-300 border border-cyan-500/40 rounded-full px-3 py-1.5 shadow-2xl backdrop-blur-md flex items-center space-x-1.5 text-xs font-bold ring-1 ring-cyan-500/30 transition hover:scale-105"
+          title="Open Pages & Combined PDF Thumbnails Panel"
+        >
+          <Layers className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Pages ({activePageIndices.length})</span>
+        </button>
+      )}
+
       {/* Mobile Backdrop Overlay */}
       {isOpen && (
         <div 
@@ -62,14 +74,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {isOpen ? (
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Header */}
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Layers className="w-4 h-4 text-cyan-400" />
-              <h2 className="text-xs font-bold tracking-wider uppercase text-slate-300">
-                Thumbnails ({activePageIndices.length})
-              </h2>
+          <div className="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+            <div className="flex flex-col">
+              <div className="flex items-center space-x-2">
+                <Layers className="w-4 h-4 text-cyan-400" />
+                <h2 className="text-xs font-bold tracking-wider uppercase text-slate-200">
+                  Pages & Thumbnails
+                </h2>
+              </div>
+              <span className="text-[10px] text-cyan-400 font-semibold mt-0.5">
+                {activePageIndices.length} Combined Page{activePageIndices.length !== 1 ? 's' : ''} Total
+              </span>
             </div>
-            <span className="text-[10px] text-slate-400 truncate max-w-[100px]" title={state.fileName}>
+            <span className="text-[10px] text-slate-400 truncate max-w-[80px]" title={state.fileName}>
               {state.fileName}
             </span>
           </div>

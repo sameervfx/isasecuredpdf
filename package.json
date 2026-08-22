@@ -2,18 +2,18 @@
   "name": "isa-secure-pdf-suite",
   "productName": "Isa Secure PDF Suite",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "Isa Secure PDF Suite - 100% client-side secure PDF Editor — renders, edits, signs and exports PDFs entirely in-browser. Zero server uploads.",
   "author": "PDF Suite",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npx tsc && npx vite build",
     "preview": "vite preview",
     "electron:dev": "set NODE_ENV=development && electron .",
-    "electron:build": "vite build && electron-builder build --win --x64",
-    "electron:build:dir": "vite build && electron-builder build --win --x64 --dir"
+    "electron:build": "vite build && npx electron-builder --win",
+    "electron:build:dir": "vite build && npx electron-builder --win dir"
   },
   "build": {
     "appId": "com.isasecurepdf.editor",
@@ -37,8 +37,12 @@
       "node_modules/**/*",
       "package.json"
     ],
+    "forceCodeSigning": false,
+    "cscLink": null,
     "win": {
       "forceCodeSigning": false,
+      "signAndEditExecutable": false,
+      "sign": null,
       "target": [
         {
           "target": "dir",
@@ -61,6 +65,7 @@
   },
   "dependencies": {
     "lucide-react": "^0.474.0",
+    "mupdf": "^1.28.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^3.11.174",
     "react": "^18.3.1",

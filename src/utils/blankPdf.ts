@@ -1504,20 +1504,17 @@ export async function createBlankPDF(options: CreatePDFOptions): Promise<Uint8Ar
     y1 -= 12;
 
     y1 = drawSectionHeader(p1, '1.', 'Real Property Description.', y1);
-    const re1_addr_a = 'Seller hereby agrees to sell and convey to Buyer, and Buyer agrees to purchase from Seller, that certain residential real property located at ';
-    const re1_addr_aW = font.widthOfTextAtSize(re1_addr_a, 10);
-    p1.drawText(re1_addr_a, { x: 54, y: y1, size: 10, font, color: rgb(0, 0, 0) });
-    y1 -= 14;
+    y1 = drawPara(p1, 'Seller hereby agrees to sell and convey to Buyer, and Buyer agrees to purchase from Seller, that certain residential real property located at:', y1);
+    y1 -= 4;
 
-    const re1_addr_u = '____________________________________';
+    const re1_addr_u = '_____________________________________________________';
     const re1_addr_uW = font.widthOfTextAtSize(re1_addr_u, 10);
     p1.drawText(re1_addr_u, { x: 54, y: y1, size: 10, font, color: rgb(0, 0, 0) });
     addFieldTo(p1, 're_address', 54, y1 - 2, re1_addr_uW);
+    y1 -= 16;
 
-    p1.drawText(' together with all permanent improvements,', { x: 54 + re1_addr_uW, y: y1, size: 10, font, color: rgb(0, 0, 0) });
+    y1 = drawPara(p1, 'together with all permanent improvements, built-in home appliances, plumbing fixtures, heating systems, electrical wiring, and attached window coverings.', y1);
     y1 -= 14;
-    p1.drawText('built-in home appliances, plumbing fixtures, heating systems, electrical wiring, and attached window coverings.', { x: 54, y: y1, size: 10, font, color: rgb(0, 0, 0) });
-    y1 -= 18;
 
     y1 = drawSectionHeader(p1, '2.', 'Purchase Price & Earnest Money Deposit.', y1);
     const re2_pr_a = 'The total purchase price for the real property shall be $';
@@ -1528,9 +1525,8 @@ export async function createBlankPDF(options: CreatePDFOptions): Promise<Uint8Ar
     const re2_pr_uW = font.widthOfTextAtSize(re2_pr_u, 10);
     p1.drawText(re2_pr_u, { x: 54 + re2_pr_aW, y: y1, size: 10, font, color: rgb(0, 0, 0) });
     addFieldTo(p1, 're_price', 54 + re2_pr_aW, y1 - 2, re2_pr_uW);
-
     p1.drawText('.', { x: 54 + re2_pr_aW + re2_pr_uW, y: y1, size: 10, font, color: rgb(0, 0, 0) });
-    y1 -= 14;
+    y1 -= 16;
 
     const re2_dep_b = 'Buyer shall deposit the sum of $';
     const re2_dep_bW = font.widthOfTextAtSize(re2_dep_b, 10);
@@ -1540,42 +1536,84 @@ export async function createBlankPDF(options: CreatePDFOptions): Promise<Uint8Ar
     const re2_dep_uW = font.widthOfTextAtSize(re2_dep_u, 10);
     p1.drawText(re2_dep_u, { x: 54 + re2_dep_bW, y: y1, size: 10, font, color: rgb(0, 0, 0) });
     addFieldTo(p1, 're_deposit', 54 + re2_dep_bW, y1 - 2, re2_dep_uW);
+    p1.drawText(' as Earnest Money Deposit', { x: 54 + re2_dep_bW + re2_dep_uW, y: y1, size: 10, font, color: rgb(0, 0, 0) });
+    y1 -= 14;
 
-    p1.drawText(' as Earnest Money with designated Escrow Holder.', { x: 54 + re2_dep_bW + re2_dep_uW, y: y1, size: 10, font, color: rgb(0, 0, 0) });
-    y1 -= 18;
+    y1 = drawPara(p1, 'to be held by designated Escrow Holder upon execution of this Agreement.', y1);
+    y1 -= 14;
 
     y1 = drawSectionHeader(p1, '3.', 'Financing & Loan Contingency.', y1);
-    const re3_a = 'Buyer obligations under this Agreement are contingent upon Buyer securing a commitment for a mortgage loan in the principal amount of $';
-    const re3_aW = font.widthOfTextAtSize(re3_a, 10);
-    p1.drawText(re3_a, { x: 54, y: y1, size: 10, font, color: rgb(0, 0, 0) });
-    y1 -= 14;
+    y1 = drawPara(p1, 'Buyer obligations under this Agreement are contingent upon Buyer securing a commitment for a mortgage loan in the principal amount of:', y1);
+    y1 -= 4;
 
     const re3_u1 = '____________________';
     const re3_u1W = font.widthOfTextAtSize(re3_u1, 10);
     p1.drawText(re3_u1, { x: 54, y: y1, size: 10, font, color: rgb(0, 0, 0) });
     addFieldTo(p1, 're_loan_amt', 54, y1 - 2, re3_u1W);
 
-    p1.drawText(' at prevailing market interest rates within twenty-one (21) days of execution.', { x: 54 + re3_u1W, y: y1, size: 10, font, color: rgb(0, 0, 0) });
+    p1.drawText(' at prevailing market interest rates within 21 days.', { x: 54 + re3_u1W, y: y1, size: 10, font, color: rgb(0, 0, 0) });
+    y1 -= 16;
 
-    // Page 2 Escrow closing date
+    // ================= PAGE 2 OF 4 =================
+    drawFooter(p2, 2);
+    let y2 = pageH - 54;
+
+    y2 = drawSectionHeader(p2, '4.', 'Closing of Escrow & Settlement.', y2);
     const re_close = 'Escrow shall close on or before ';
     const re_closeW = font.widthOfTextAtSize(re_close, 10);
-    p2.drawText(re_close, { x: 54, y: 550, size: 10, font, color: rgb(0, 0, 0) });
+    p2.drawText(re_close, { x: 54, y: y2, size: 10, font, color: rgb(0, 0, 0) });
     const re_closeU = '__________________';
     const re_closeUW = font.widthOfTextAtSize(re_closeU, 10);
-    p2.drawText(re_closeU, { x: 54 + re_closeW, y: 550, size: 10, font, color: rgb(0, 0, 0) });
-    addFieldTo(p2, 're_close_date', 54 + re_closeW, 548, re_closeUW);
-    p2.drawText(', 20___, or at such other date as agreed.', { x: 54 + re_closeW + re_closeUW, y: 550, size: 10, font, color: rgb(0, 0, 0) });
+    p2.drawText(re_closeU, { x: 54 + re_closeW, y: y2, size: 10, font, color: rgb(0, 0, 0) });
+    addFieldTo(p2, 're_close_date', 54 + re_closeW, y2 - 2, re_closeUW);
+    p2.drawText(', 20___, or at such other date as agreed in writing.', { x: 54 + re_closeW + re_closeUW, y: y2, size: 10, font, color: rgb(0, 0, 0) });
+    y2 -= 16;
 
-    // Page 3 Governing State
-    const re_gov = 'This Agreement shall be governed by the laws of ';
+    y2 = drawPara(p2, 'Settlement and closing shall occur through a licensed escrow holder. All closing costs, title insurance premiums, escrow fees, transfer taxes, and recording fees shall be allocated between Buyer and Seller in accordance with customary local real estate practices, unless expressly agreed otherwise herein.', y2);
+    y2 -= 12;
+
+    y2 = drawSectionHeader(p2, '5.', 'Property Inspection & Disclosures.', y2);
+    y2 = drawPara(p2, 'Buyer shall have fourteen (14) days from the Effective Date ("Inspection Period") to conduct physical, environmental, and structural inspections of the Property by qualified inspectors at Buyer\'s sole expense. If Buyer disapproves of any inspection report, Buyer may terminate this Agreement in writing prior to the expiration of the Inspection Period and receive a full refund of the Earnest Money Deposit.', y2);
+    y2 -= 10;
+
+    y2 = drawPara(p2, 'Seller shall provide Buyer with all legally required disclosures, including the Seller Property Condition Disclosure Statement and Lead-Based Paint Disclosure (for homes built prior to 1978), within five (5) days of the Effective Date.', y2);
+    y2 -= 12;
+
+    y2 = drawSectionHeader(p2, '6.', 'Title & Encumbrances.', y2);
+    y2 = drawPara(p2, 'Seller warrants that Seller holds marketable and insurable title to the Property, free and clear of all liens, mortgages, claims, and encumbrances, except covenants, conditions, restrictions, rights-of-way, and easements of record that do not materially impair the residential use of the Property. Seller shall provide Buyer with an Owner\'s Policy of Title Insurance at closing.', y2);
+    y2 -= 12;
+
+    y2 = drawSectionHeader(p2, '7.', 'Risk of Loss & Casualty.', y2);
+    y2 = drawPara(p2, 'Risk of loss or damage to the Property by fire, storm, or other casualty remains with Seller until closing and transfer of possession. In the event of material damage prior to closing exceeding ten percent (10%) of the Purchase Price, Buyer may elect to terminate this Agreement and receive a full refund of Earnest Money.', y2);
+
+    // ================= PAGE 3 OF 4 =================
+    drawFooter(p3, 3);
+    let y3 = pageH - 54;
+
+    y3 = drawSectionHeader(p3, '8.', 'Default & Liquidated Damages.', y3);
+    y3 = drawPara(p3, 'If Buyer fails to complete the purchase of the Property in breach of this Agreement, Seller shall be released from all obligations to sell the Property and may retain the Earnest Money Deposit as liquidated damages, which the parties agree is a reasonable estimate of Seller\'s damages. If Seller fails to perform any obligation under this Agreement, Buyer may seek specific performance or terminate this Agreement and demand immediate return of the Earnest Money Deposit.', y3);
+    y3 -= 12;
+
+    y3 = drawSectionHeader(p3, '9.', 'Prorations & Adjustments.', y3);
+    y3 = drawPara(p3, 'Real property taxes, personal property taxes, home association dues, municipal assessments, utilities, and rents shall be prorated as of the Date of Closing. If tax amounts for the current year are not finalized prior to closing, prorations shall be calculated based upon the most recent tax bill.', y3);
+    y3 -= 12;
+
+    y3 = drawSectionHeader(p3, '10.', 'Governing Law & Dispute Resolution.', y3);
+    const re_gov = 'This Agreement shall be governed by and construed under the laws of ';
     const re_govW = font.widthOfTextAtSize(re_gov, 10);
-    p3.drawText(re_gov, { x: 54, y: 550, size: 10, font, color: rgb(0, 0, 0) });
+    p3.drawText(re_gov, { x: 54, y: y3, size: 10, font, color: rgb(0, 0, 0) });
     const re_govU = '_____________________';
     const re_govUW = font.widthOfTextAtSize(re_govU, 10);
-    p3.drawText(re_govU, { x: 54 + re_govW, y: 550, size: 10, font, color: rgb(0, 0, 0) });
-    addFieldTo(p3, 're_gov_state', 54 + re_govW, 548, re_govUW);
-    p3.drawText(' (state/province).', { x: 54 + re_govW + re_govUW, y: 550, size: 10, font, color: rgb(0, 0, 0) });
+    p3.drawText(re_govU, { x: 54 + re_govW, y: y3, size: 10, font, color: rgb(0, 0, 0) });
+    addFieldTo(p3, 're_gov_state', 54 + re_govW, y3 - 2, re_govUW);
+    p3.drawText(' (state/province).', { x: 54 + re_govW + re_govUW, y: y3, size: 10, font, color: rgb(0, 0, 0) });
+    y3 -= 16;
+
+    y3 = drawPara(p3, 'In the event of any dispute arising out of this Agreement, Buyer and Seller agree to participate in non-binding mediation prior to initiating formal legal proceedings. The prevailing party in any litigation or arbitration shall be entitled to recover reasonable attorneys\' fees and court costs.', y3);
+    y3 -= 12;
+
+    y3 = drawSectionHeader(p3, '11.', 'Entirety of Agreement & Amendments.', y3);
+    y3 = drawPara(p3, 'This Agreement, including all attached riders, exhibits, and disclosures, constitutes the entire agreement between Buyer and Seller. No prior representations, warranties, or verbal statements shall be binding unless reduced to writing and signed by both Buyer and Seller.', y3);
 
     // ================= PAGE 4 OF 4 =================
     drawFooter(p4, 4);

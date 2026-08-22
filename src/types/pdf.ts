@@ -9,7 +9,11 @@ export type ToolMode =
   | 'strikeout'
   | 'draw'
   | 'highlight'
-  | 'eraser';
+  | 'eraser'
+  | 'line'
+  | 'rectangle'
+  | 'oval'
+  | 'image';
 
 export interface TextAnnotation {
   id: string;
@@ -23,6 +27,7 @@ export interface TextAnnotation {
   fontFamily?: string;
   color: string; // Hex e.g. '#000000'
   isRedact: boolean; // Solid white rectangle covering existing text before writing new text
+  isUnderline?: boolean; // Underline text toggle
   opacity?: number; // Transparency 0.05 to 1.0
   rotation?: number; // Rotation in degrees e.g. -45, 90
 }
@@ -47,6 +52,32 @@ export interface StampAnnotation {
   y: number;
   size: number; // Size in PDF points
   color: string;
+}
+
+export interface ShapeAnnotation {
+  id: string;
+  pageIndex: number;
+  type: 'line' | 'rectangle' | 'oval';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  x2?: number; // Line end point X
+  y2?: number; // Line end point Y
+  strokeColor: string;
+  fillColor?: string; // transparent or hex color e.g. '#3b82f6'
+  strokeWidth: number;
+}
+
+export interface ImageStampAnnotation {
+  id: string;
+  pageIndex: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  dataUrl: string;
+  imageType?: 'png' | 'jpeg';
 }
 
 export interface StrikeoutAnnotation {
@@ -106,6 +137,8 @@ export interface PDFDocumentState {
   textAnnotations: TextAnnotation[];
   signatures: SignatureAnnotation[];
   stamps: StampAnnotation[];
+  shapes: ShapeAnnotation[];
+  imageStamps: ImageStampAnnotation[];
   strikeouts: StrikeoutAnnotation[];
   drawings: FreehandDrawing[];
   formFields: AcroFormField[];

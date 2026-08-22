@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Eye, EyeOff, Move, Clipboard, Minus, Plus, Type } from 'lucide-react';
+import { Trash2, Eye, EyeOff, Move, Clipboard, Minus, Plus, Type, Underline } from 'lucide-react';
 import { TextAnnotation } from '../types/pdf';
 
 interface TextAnnotationEditorProps {
@@ -17,6 +17,7 @@ interface TextAnnotationEditorProps {
   textFontSize?: number;
   textFontFamily?: string;
   textIsRedact?: boolean;
+  textIsUnderline?: boolean;
 }
 
 export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
@@ -34,6 +35,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   textFontSize,
   textFontFamily,
   textIsRedact,
+  textIsUnderline,
 }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -43,45 +45,78 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
     annId: string;
     offsetX: number;
     offsetY: number;
+    isToolbarOnly?: boolean;
   } | null>(null);
+
+  // Movable Floating Toolbar Offsets per annotation
+  const [toolbarOffsets, setToolbarOffsets] = useState<Record<string, { x: number; y: number }>>({});
 
   const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
   const scaleX = originalWidth > 0 ? canvasWidth / originalWidth : 1;
   const scaleY = originalHeight > 0 ? canvasHeight / originalHeight : 1;
 
-  // Mouse move / up handler
+  // Global Mouse & Touch Move/Up Handlers for Dragging Text & Floating Toolbar
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (clientX: number, clientY: number) => {
       if (!dragState || !containerRef.current || originalWidth <= 0 || originalHeight <= 0) return;
       const containerRect = containerRef.current.getBoundingClientRect();
 
-      const mouseX = e.clientX - containerRect.left;
-      const mouseY = e.clientY - containerRect.top;
+      const mouseX = clientX - containerRect.left;
+      const mouseY = clientY - containerRect.top;
 
-      const newScreenX = mouseX - dragState.offsetX;
-      const newScreenY = mouseY - dragState.offsetY;
+      if (dragState.isToolbarOnly) {
+        // Move floating toolbar independently
+        setToolbarOffsets((prev) => ({
+          ...prev,
+          [dragState.annId]: {
+            x: Math.round(mouseX - dragState.offsetX),
+            y: Math.round(mouseY - dragState.offsetY),
+          },
+        }));
+      } else {
+        // Move text annotation on PDF page
+        const newScreenX = mouseX - dragState.offsetX;
+        const newScreenY = mouseY - dragState.offsetY;
 
-      const newPdfX = Math.max(0, Math.min(originalWidth - 30, newScreenX / scaleX));
-      const newPdfY = Math.max(0, Math.min(originalHeight - 15, newScreenY / scaleY));
+        const newPdfX = Math.max(0, Math.min(originalWidth - 30, newScreenX / scaleX));
+        const newPdfY = Math.max(0, Math.min(originalHeight - 15, newScreenY / scaleY));
 
-      onUpdateAnnotation(dragState.annId, {
-        x: Math.round(newPdfX),
-        y: Math.round(newPdfY),
-      });
+        onUpdateAnnotation(dragState.annId, {
+          x: Math.round(newPdfX),
+          y: Math.round(newPdfY),
+        });
+      }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (dragState && e.touches.length > 0) {
+        e.preventDefault();
+        handleMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const handleEnd = () => {
       if (dragState) setDragState(null);
     };
 
     if (dragState) {
       window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mouseup', handleEnd);
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleEnd);
+      window.addEventListener('touchcancel', handleEnd);
     }
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleEnd);
+      window.removeEventListener('touchcancel', handleEnd);
     };
   }, [dragState, scaleX, scaleY, originalWidth, originalHeight, onUpdateAnnotation]);
 
@@ -136,6 +171,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       fontFamily: textFontFamily || "'Times New Roman', Times, serif",
       color: textColor || '#000000',
       isRedact: textIsRedact || false,
+      isUnderline: textIsUnderline || false,
     });
   };
 
@@ -150,6 +186,42 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
 
     const mouseScreenX = e.clientX - containerRect.left;
     const mouseScreenY = e.clientY - containerRect.top;
+
+    setDragState({
+      annId: ann.id,
+      offsetX: mouseScreenX - annScreenX,
+      offsetY: mouseScreenY - annScreenY,
+    });
+  };
+
+  const handleStartToolbarDrag = (clientX: number, clientY: number, annId: string) => {
+    if (!containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const currentOffset = toolbarOffsets[annId] || { x: 0, y: 35 };
+
+    const mouseX = clientX - containerRect.left;
+    const mouseY = clientY - containerRect.top;
+
+    setDragState({
+      annId,
+      offsetX: mouseX - currentOffset.x,
+      offsetY: mouseY - currentOffset.y,
+      isToolbarOnly: true,
+    });
+  };
+
+  const handleTouchStartTextDrag = (e: React.TouchEvent, ann: TextAnnotation) => {
+    e.stopPropagation();
+    if (!e.touches || e.touches.length === 0 || !containerRef.current) return;
+    setSelectedId(ann.id);
+
+    const touch = e.touches[0];
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const annScreenX = ann.x * scaleX;
+    const annScreenY = ann.y * scaleY;
+
+    const mouseScreenX = touch.clientX - containerRect.left;
+    const mouseScreenY = touch.clientY - containerRect.top;
 
     setDragState({
       annId: ann.id,
@@ -186,6 +258,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         const lineCount = Math.max(1, lines.length);
         const maxCharCount = Math.max(...lines.map((l) => l.length), 1);
         const calculatedWidth = Math.max(80, maxCharCount * (ann.fontSize * 0.62) + 24);
+        const tbOffset = toolbarOffsets[ann.id] || { x: 0, y: 35 };
 
         return (
           <div
@@ -225,6 +298,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                 fontFamily: ann.fontFamily || textFontFamily || "'Times New Roman', Times, serif",
                 color: ann.color || '#000000',
                 caretColor: ann.color || '#000000',
+                textDecoration: ann.isUnderline ? 'underline' : 'none',
                 width: `${calculatedWidth * scaleX}px`,
                 whiteSpace: 'pre',
                 overflow: 'hidden',
@@ -232,63 +306,44 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
               }}
             />
 
-            {/* Sleek Floating Action Toolbar (Font Size, Style, Colors, Move, Paste & Delete) */}
+            {/* Movable & Draggable Compact Floating Action Toolbar - Placed BELOW Text Box */}
             {isSelected && (
               <div
-                className="absolute top-[100%] left-0 mt-1 flex items-center gap-1.5 bg-slate-900/95 text-white rounded-xl px-2 py-1 shadow-2xl z-40 select-none border border-slate-700/80 backdrop-blur whitespace-nowrap"
+                className="absolute top-[calc(100%+8px)] left-0 flex items-center gap-1 bg-slate-900/50 backdrop-blur-md text-white rounded-lg px-2 py-1 shadow-2xl z-50 select-none border border-slate-700/80 whitespace-nowrap ring-1 ring-cyan-500/40 animate-fadeIn"
+                style={{ transform: `translate(${tbOffset.x}px, ${tbOffset.y}px)` }}
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Drag / Move Handle */}
-                <button
-                  type="button"
-                  onMouseDown={(e) => handleMouseDownDrag(e, ann)}
-                  title="Click & Drag to Move Text"
-                  className="p-1 hover:bg-slate-700/80 rounded text-slate-200 hover:text-white cursor-grab active:cursor-grabbing transition"
+                {/* Drag / Move Handle - Moves Text Box Anywhere on PDF Canvas */}
+                <div
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleMouseDownDrag(e, ann);
+                  }}
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    handleTouchStartTextDrag(e, ann);
+                  }}
+                  title="Touch & Drag to Move Text Anywhere over PDF Page"
+                  className="p-1 bg-cyan-500/20 hover:bg-cyan-500/40 rounded text-cyan-300 cursor-grab active:cursor-grabbing transition flex items-center space-x-1 border border-cyan-500/30"
                 >
                   <Move className="w-3.5 h-3.5" />
-                </button>
+                  <span className="text-[10px] font-bold">Move</span>
+                </div>
 
-                <div className="w-[1px] h-4 bg-slate-700" />
+                <div className="w-[1px] h-3.5 bg-slate-700" />
 
-                {/* Font Style Family Dropdown */}
-                <select
-                  value={ann.fontFamily || textFontFamily || "'Times New Roman', Times, serif"}
-                  onChange={(e) => onUpdateAnnotation(ann.id, { fontFamily: e.target.value })}
-                  className="bg-slate-800 text-cyan-300 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-semibold hover:border-cyan-400 transition max-w-[120px] truncate"
-                  title="Text Font Style Family"
-                >
-                  <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                  <option value="Arial, Helvetica, sans-serif">Arial / Helvetica</option>
-                  <option value="'Courier New', Courier, monospace">Courier New</option>
-                  <option value="Georgia, serif">Georgia</option>
-                  <option value="Garamond, serif">Garamond</option>
-                  <option value="Verdana, Geneva, sans-serif">Verdana</option>
-                  <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                  <option value="Impact, Charcoal, sans-serif">Impact</option>
-                  <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans</option>
-                  <option value="'Palatino Linotype', Palatino, serif">Palatino</option>
-                  <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
-                  <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
-                  <option value="'Brush Script MT', cursive">Brush Script</option>
-                  <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
-                  <option value="'Century Gothic', sans-serif">Century Gothic</option>
-                </select>
-
-                <div className="w-[1px] h-4 bg-slate-700" />
-
-                {/* Font Size Stepper & Readout */}
-                <div className="flex items-center space-x-1 bg-slate-800/90 rounded px-1 py-0.5 border border-slate-700">
-                  <Type className="w-3 h-3 text-cyan-400" />
+                {/* Font Size Stepper */}
+                <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1 py-0.5 border border-slate-700">
                   <button
                     type="button"
                     onClick={() => onUpdateAnnotation(ann.id, { fontSize: Math.max(6, ann.fontSize - 2) })}
                     title="Decrease Font Size (-2pt)"
-                    className="p-0.5 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition"
+                    className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
 
-                  <span className="text-[11px] font-extrabold font-mono text-cyan-300 min-w-[28px] text-center">
+                  <span className="text-[10px] font-extrabold font-mono text-cyan-300 min-w-[24px] text-center">
                     {ann.fontSize}pt
                   </span>
 
@@ -296,38 +351,32 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                     type="button"
                     onClick={() => onUpdateAnnotation(ann.id, { fontSize: Math.min(120, ann.fontSize + 2) })}
                     title="Increase Font Size (+2pt)"
-                    className="p-0.5 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition"
+                    className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
 
-                {/* Font Size Quick Presets */}
-                <div className="flex items-center space-x-0.5">
-                  {[10, 14, 18, 24, 36, 48].map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => onUpdateAnnotation(ann.id, { fontSize: size })}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
-                        ann.fontSize === size ? 'bg-cyan-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="w-[1px] h-4 bg-slate-700" />
+                {/* Underline Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => onUpdateAnnotation(ann.id, { isUnderline: !ann.isUnderline })}
+                  title="Toggle Underline"
+                  className={`p-1 rounded transition ${
+                    ann.isUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
+                  }`}
+                >
+                  <Underline className="w-3.5 h-3.5" />
+                </button>
 
                 {/* Quick Color Swatches */}
-                <div className="flex items-center space-x-1">
-                  {['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#ffffff'].map((color) => (
+                <div className="flex items-center space-x-1 pl-0.5">
+                  {['#000000', '#dc2626', '#2563eb', '#ffffff'].map((color) => (
                     <button
                       key={color}
                       type="button"
                       onClick={() => onUpdateAnnotation(ann.id, { color })}
-                      className={`w-4 h-4 rounded-full border border-slate-600 transition ${
+                      className={`w-3.5 h-3.5 rounded-full border border-slate-600 transition ${
                         ann.color === color ? 'scale-125 border-white ring-1 ring-cyan-400 shadow' : 'opacity-80 hover:opacity-100'
                       }`}
                       style={{ backgroundColor: color }}
@@ -335,19 +384,17 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                   ))}
                 </div>
 
-                <div className="w-[1px] h-4 bg-slate-700" />
+                <div className="w-[1px] h-3.5 bg-slate-700" />
 
                 {/* Quick Paste Button */}
                 <button
                   type="button"
                   onClick={() => handlePasteClipboard(ann.id)}
                   title="Paste Clipboard Text"
-                  className="p-1 hover:bg-slate-700/80 rounded text-slate-300 hover:text-white transition"
+                  className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                 >
-                  <Clipboard className="w-3.5 h-3.5" />
+                  <Clipboard className="w-3 h-3" />
                 </button>
-
-                <div className="w-[1px] h-4 bg-slate-700" />
 
                 {/* Delete Button */}
                 <button
@@ -356,10 +403,10 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                     e.stopPropagation();
                     onDeleteAnnotation(ann.id);
                   }}
-                  title="Delete Text Annotation"
+                  title="Delete Text"
                   className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3 h-3" />
                 </button>
               </div>
             )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { Sidebar } from './components/Sidebar';
@@ -10,6 +11,12 @@ import { MergePDFModal } from './components/MergePDFModal';
 import { SaveMultiplePDFsModal } from './components/SaveMultiplePDFsModal';
 import { WatermarkModal, WatermarkOptions } from './components/WatermarkModal';
 import { PremiumExportModal, ExportFormatType } from './components/PremiumExportModal';
+import { ThemeModal } from './components/ThemeModal';
+import { UserGuideModal } from './components/UserGuideModal';
+import { HelcimCheckoutModal } from './components/HelcimCheckoutModal';
+import { PasswordModal } from './components/PasswordModal';
+import { CompressModal } from './components/CompressModal';
+import { ThemePreset, getActiveTheme } from './utils/themeManager';
 import { LandingPage } from './pages/LandingPage';
 import { pdfRenderer } from './services/pdfRenderer';
 import { pdfEngine } from './services/pdfEngine';
@@ -24,6 +31,8 @@ import {
   TextAnnotation,
   SignatureAnnotation,
   StampAnnotation,
+  ShapeAnnotation,
+  ImageStampAnnotation,
   StrikeoutAnnotation,
   FreehandDrawing,
   PageInfo,
@@ -42,6 +51,8 @@ const EMPTY_STATE: PDFDocumentState = {
   textAnnotations: [],
   signatures: [],
   stamps: [],
+  shapes: [],
+  imageStamps: [],
   strikeouts: [],
   drawings: [],
   formFields: [],
@@ -70,13 +81,74 @@ export const App: React.FC = () => {
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
+  const [isUserGuideModalOpen, setIsUserGuideModalOpen] = useState<boolean>(false);
+  const [isHelcimCheckoutOpen, setIsHelcimCheckoutOpen] = useState<boolean>(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
+  const [passwordModalMode, setPasswordModalMode] = useState<'protect' | 'unlock'>('protect');
+  const [isCompressModalOpen, setIsCompressModalOpen] = useState<boolean>(false);
+  const [isProActive, setIsProActive] = useState<boolean>(
+    () => localStorage.getItem('isa_pro_active') === 'true'
+  );
+
+  const [themePreset, setThemePreset] = useState<ThemePreset>(
+    () => (localStorage.getItem('isa_theme_preset') as ThemePreset) || 'cyan'
+  );
+  const activeTheme = getActiveTheme(themePreset);
+
+  const [showProWelcomeModal, setShowProWelcomeModal] = useState<boolean>(false);
+
+  // Helcim Payment Redirect Listener & Mode Reset / Tester Unlock
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const modeVal = urlParams.get('mode') || urlParams.get('reset') || urlParams.get('vip');
+      
+      if (modeVal === 'free' || modeVal === 'reset') {
+        localStorage.removeItem('isa_pro_active');
+        setIsProActive(false);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+
+      if (modeVal === 'pro' || modeVal === 'tester' || modeVal === 'family' || modeVal === 'vip') {
+        localStorage.setItem('isa_pro_active', 'true');
+        setIsProActive(true);
+        setShowProWelcomeModal(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+
+      const paymentVal = urlParams.get('payment');
+      const statusVal = urlParams.get('status');
+      const helcimStatusVal = urlParams.get('helcim_status');
+
+      if (
+        paymentVal === 'success' ||
+        statusVal === 'success' ||
+        helcimStatusVal === 'APPROVED' ||
+        helcimStatusVal === 'success'
+      ) {
+        localStorage.setItem('isa_pro_active', 'true');
+        setIsProActive(true);
+        setShowProWelcomeModal(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    } catch (e) {}
+  }, []);
 
   // Text Tool Formatting Defaults
   const [textFontSize, setTextFontSize] = useState<number>(14);
   const [textFontFamily, setTextFontFamily] = useState<string>("'Times New Roman', Times, serif");
   const [textColor, setTextColor] = useState<string>('#000000');
   const [textIsRedact, setTextIsRedact] = useState<boolean>(false);
+  const [textIsUnderline, setTextIsUnderline] = useState<boolean>(false);
   const [activeFormFieldName, setActiveFormFieldName] = useState<string | null>(null);
+
+  // Shape Tool Defaults
+  const [shapeStrokeColor, setShapeStrokeColor] = useState<string>('#3b82f6');
+  const [shapeFillColor, setShapeFillColor] = useState<string>('transparent');
+  const [shapeStrokeWidth, setShapeStrokeWidth] = useState<number>(2);
 
   const handleSetTextFontFamily = (family: string) => {
     setTextFontFamily(family);
@@ -157,6 +229,24 @@ export const App: React.FC = () => {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
+  const cloneDocState = (state: PDFDocumentState): PDFDocumentState => ({
+    fileName: state.fileName,
+    fileBytes: state.fileBytes,
+    numPages: state.numPages,
+    pages: state.pages.map((p) => ({ ...p })),
+    pageRotations: { ...state.pageRotations },
+    deletedPages: new Set(state.deletedPages),
+    pageOrder: [...state.pageOrder],
+    textAnnotations: state.textAnnotations.map((a) => ({ ...a })),
+    signatures: state.signatures.map((s) => ({ ...s })),
+    stamps: state.stamps.map((s) => ({ ...s })),
+    shapes: state.shapes.map((sh) => ({ ...sh })),
+    imageStamps: state.imageStamps.map((img) => ({ ...img })),
+    strikeouts: state.strikeouts.map((s) => ({ ...s })),
+    drawings: state.drawings.map((d) => ({ ...d, points: d.points.map((pt) => ({ ...pt })) })),
+    formFields: state.formFields.map((f) => ({ ...f, rect: { ...f.rect } })),
+  });
+
   const updateHistoryState = () => {
     setCanUndo(historyRef.current.length > 0);
     setCanRedo(futureRef.current.length > 0);
@@ -164,10 +254,7 @@ export const App: React.FC = () => {
 
   const pushToHistory = useCallback((previousState: PDFDocumentState) => {
     if (!previousState.fileBytes) return;
-    historyRef.current.push(JSON.parse(JSON.stringify({
-      ...previousState,
-      deletedPages: Array.from(previousState.deletedPages),
-    })));
+    historyRef.current.push(cloneDocState(previousState));
     if (historyRef.current.length > 40) {
       historyRef.current.shift();
     }
@@ -175,21 +262,13 @@ export const App: React.FC = () => {
     updateHistoryState();
   }, []);
 
-  const restoreState = (st: any): PDFDocumentState => ({
-    ...st,
-    deletedPages: new Set(st.deletedPages || []),
-  });
-
   const handleUndo = useCallback(() => {
     if (historyRef.current.length === 0) return;
     const prevRaw = historyRef.current.pop();
     if (!prevRaw) return;
     setDocState((current) => {
-      futureRef.current.push(JSON.parse(JSON.stringify({
-        ...current,
-        deletedPages: Array.from(current.deletedPages),
-      })));
-      return restoreState(prevRaw);
+      futureRef.current.push(cloneDocState(current));
+      return prevRaw;
     });
     updateHistoryState();
   }, []);
@@ -199,11 +278,8 @@ export const App: React.FC = () => {
     const nextRaw = futureRef.current.pop();
     if (!nextRaw) return;
     setDocState((current) => {
-      historyRef.current.push(JSON.parse(JSON.stringify({
-        ...current,
-        deletedPages: Array.from(current.deletedPages),
-      })));
-      return restoreState(nextRaw);
+      historyRef.current.push(cloneDocState(current));
+      return nextRaw;
     });
     updateHistoryState();
   }, []);
@@ -243,15 +319,43 @@ export const App: React.FC = () => {
     }
   };
 
-  const loadPDFData = useCallback(async (data: Uint8Array, fileName: string) => {
+  const loadPDFData = useCallback(async (data: Uint8Array, fileName: string, initialPassword?: string) => {
     setIsLoading(true);
     setLoadError(null);
     try {
       // Record in recent files history
       addRecentFile(fileName);
 
-      // Load into PDF.js renderer
-      const pdfjsDoc = await pdfRenderer.loadDocument(data.slice(0));
+      // Load into PDF.js renderer with password handling
+      let pdfjsDoc: any = null;
+      try {
+        pdfjsDoc = await pdfRenderer.loadDocument(data.slice(0), initialPassword);
+      } catch (err: any) {
+        if (err?.name === 'PasswordException') {
+          let userPass = initialPassword || prompt(`"${fileName}" is password protected. Please enter password to open:`);
+          let isAuth = false;
+          while (userPass && !isAuth) {
+            try {
+              pdfjsDoc = await pdfRenderer.loadDocument(data.slice(0), userPass);
+              isAuth = true;
+            } catch (authErr: any) {
+              if (authErr?.name === 'PasswordException') {
+                userPass = prompt(`Incorrect password for "${fileName}". Please try again:`);
+              } else {
+                throw authErr;
+              }
+            }
+          }
+          if (!isAuth) {
+            setIsLoading(false);
+            setLoadError('Password prompt canceled. Could not open protected document.');
+            return;
+          }
+        } else {
+          throw err;
+        }
+      }
+
       const numPages = pdfjsDoc.numPages;
 
       // Load into pdf-lib editor
@@ -309,6 +413,8 @@ export const App: React.FC = () => {
         textAnnotations: [],
         signatures: [],
         stamps: [],
+        shapes: [],
+        imageStamps: [],
         strikeouts: [],
         drawings: [],
         formFields: rawFields,
@@ -430,7 +536,6 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateAnnotation = (id: string, updated: Partial<TextAnnotation>) => {
-    pushToHistory(docState);
     setDocState((prev) => ({
       ...prev,
       textAnnotations: prev.textAnnotations.map((a) => (a.id === id ? { ...a, ...updated } : a)),
@@ -445,9 +550,9 @@ export const App: React.FC = () => {
     }));
   };
 
-  const [signatureModalTab, setSignatureModalTab] = useState<'draw' | 'upload'>('draw');
+  const [signatureModalTab, setSignatureModalTab] = useState<'draw' | 'type' | 'upload'>('draw');
 
-  const handleOpenSignatureModal = (tab: 'draw' | 'upload' = 'draw') => {
+  const handleOpenSignatureModal = (tab: 'draw' | 'type' | 'upload' = 'draw') => {
     setSignatureModalTab(tab);
     setIsSignatureModalOpen(true);
   };
@@ -478,7 +583,6 @@ export const App: React.FC = () => {
   };
 
   const handleUpdateSignature = (id: string, updated: Partial<SignatureAnnotation>) => {
-    pushToHistory(docState);
     setDocState((prev) => ({
       ...prev,
       signatures: prev.signatures.map((s) => (s.id === id ? { ...s, ...updated } : s)),
@@ -530,6 +634,48 @@ export const App: React.FC = () => {
   const handleDeleteStrikeout = (id: string) => {
     pushToHistory(docState);
     setDocState((prev) => ({ ...prev, strikeouts: prev.strikeouts.filter((s) => s.id !== id) }));
+  };
+
+  const handleAddShape = (shape: Omit<ShapeAnnotation, 'id'>) => {
+    pushToHistory(docState);
+    const newShape: ShapeAnnotation = {
+      ...shape,
+      id: `shape_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    };
+    setDocState((prev) => ({ ...prev, shapes: [...(prev.shapes || []), newShape] }));
+  };
+
+  const handleUpdateShape = (id: string, updated: Partial<ShapeAnnotation>) => {
+    setDocState((prev) => ({
+      ...prev,
+      shapes: (prev.shapes || []).map((sh) => (sh.id === id ? { ...sh, ...updated } : sh)),
+    }));
+  };
+
+  const handleDeleteShape = (id: string) => {
+    pushToHistory(docState);
+    setDocState((prev) => ({ ...prev, shapes: (prev.shapes || []).filter((sh) => sh.id !== id) }));
+  };
+
+  const handleAddImageStamp = (imgData: Omit<ImageStampAnnotation, 'id'>) => {
+    pushToHistory(docState);
+    const newImg: ImageStampAnnotation = {
+      ...imgData,
+      id: `img_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    };
+    setDocState((prev) => ({ ...prev, imageStamps: [...(prev.imageStamps || []), newImg] }));
+  };
+
+  const handleUpdateImageStamp = (id: string, updated: Partial<ImageStampAnnotation>) => {
+    setDocState((prev) => ({
+      ...prev,
+      imageStamps: (prev.imageStamps || []).map((img) => (img.id === id ? { ...img, ...updated } : img)),
+    }));
+  };
+
+  const handleDeleteImageStamp = (id: string) => {
+    pushToHistory(docState);
+    setDocState((prev) => ({ ...prev, imageStamps: (prev.imageStamps || []).filter((img) => img.id !== id) }));
   };
 
   const handleApplyWatermark = (options: WatermarkOptions) => {
@@ -879,9 +1025,33 @@ export const App: React.FC = () => {
 
   if (currentView === 'landing') {
     return (
-      <LandingPage
-        onLaunchEditor={handleLaunchEditor}
-      />
+      <>
+        <LandingPage
+          onLaunchEditor={handleLaunchEditor}
+          themePreset={themePreset}
+          activeTheme={activeTheme}
+          onOpenThemeModal={() => setIsThemeModalOpen(true)}
+          onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
+        />
+        <ThemeModal
+          isOpen={isThemeModalOpen}
+          onClose={() => setIsThemeModalOpen(false)}
+          currentPreset={themePreset}
+          onSelectPreset={(p) => {
+            setThemePreset(p);
+            try {
+              localStorage.setItem('isa_theme_preset', p);
+            } catch (e) {}
+          }}
+          onOpenCheckout={() => {
+            setIsThemeModalOpen(false);
+          }}
+        />
+        <UserGuideModal
+          isOpen={isUserGuideModalOpen}
+          onClose={() => setIsUserGuideModalOpen(false)}
+        />
+      </>
     );
   }
 
@@ -932,6 +1102,22 @@ export const App: React.FC = () => {
         setTextColor={handleSetTextColor}
         textIsRedact={textIsRedact}
         setTextIsRedact={handleSetTextIsRedact}
+        textIsUnderline={textIsUnderline}
+        setTextIsUnderline={setTextIsUnderline}
+        shapeStrokeColor={shapeStrokeColor}
+        setShapeStrokeColor={setShapeStrokeColor}
+        shapeFillColor={shapeFillColor}
+        setShapeFillColor={setShapeFillColor}
+        shapeStrokeWidth={shapeStrokeWidth}
+        setShapeStrokeWidth={setShapeStrokeWidth}
+        onAddImageStamp={handleAddImageStamp}
+        onOpenPasswordModal={(mode) => {
+          setPasswordModalMode(mode);
+          setIsPasswordModalOpen(true);
+        }}
+        onOpenCompressModal={() => setIsCompressModalOpen(true)}
+        isProActive={isProActive}
+        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -951,15 +1137,13 @@ export const App: React.FC = () => {
         {/* Loading overlay */}
         {isLoading && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
-              <p className="text-sm font-medium text-slate-300">Processing PDF document…</p>
-            </div>
+            <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-sm font-semibold text-cyan-300">Processing PDF Document...</p>
           </div>
         )}
 
-        {/* Error banner */}
-        {loadError && !isLoading && (
+        {/* Load error overlay */}
+        {loadError && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-rose-900/90 border border-rose-700 rounded-xl px-6 py-3 text-xs text-rose-200 shadow-xl max-w-md text-center">
             <span className="font-bold text-rose-300">Error:</span> {loadError}
           </div>
@@ -989,14 +1173,27 @@ export const App: React.FC = () => {
           onDeleteStamp={handleDeleteStamp}
           onAddStrikeout={handleAddStrikeout}
           onDeleteStrikeout={handleDeleteStrikeout}
+          onAddShape={handleAddShape}
+          onUpdateShape={handleUpdateShape}
+          onDeleteShape={handleDeleteShape}
+          onAddImageStamp={handleAddImageStamp}
+          onUpdateImageStamp={handleUpdateImageStamp}
+          onDeleteImageStamp={handleDeleteImageStamp}
           onOpenFile={handleOpenFile}
           onLoadSample={handleLoadSample}
           onOpenCreateModal={() => setIsCreateModalOpen(true)}
           onOpenMergeModal={() => setIsMergeModalOpen(true)}
+          onOpenSignatureModal={handleOpenSignatureModal}
           isLoading={isLoading}
           textColor={textColor}
           textFontSize={textFontSize}
+          textFontFamily={textFontFamily}
           textIsRedact={textIsRedact}
+          textIsUnderline={textIsUnderline}
+          shapeStrokeColor={shapeStrokeColor}
+          shapeFillColor={shapeFillColor}
+          shapeStrokeWidth={shapeStrokeWidth}
+          activeTheme={activeTheme}
         />
       </div>
 
@@ -1006,6 +1203,8 @@ export const App: React.FC = () => {
         onClose={() => setIsSignatureModalOpen(false)}
         onSaveSignature={handleSaveSignature}
         initialTab={signatureModalTab}
+        isProActive={isProActive}
+        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
       />
 
       {/* Page Manager Grid Modal */}
@@ -1048,6 +1247,8 @@ export const App: React.FC = () => {
         onClose={() => setIsPremiumExportModalOpen(false)}
         state={docState}
         initialFormat={premiumExportFormat}
+        isProActive={isProActive}
+        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
       />
 
       {/* Custom Watermark & Logo Overlay Modal */}
@@ -1056,6 +1257,85 @@ export const App: React.FC = () => {
         onClose={() => setIsWatermarkModalOpen(false)}
         onApplyWatermark={handleApplyWatermark}
       />
+
+      {/* Theme & Background Customizer Modal */}
+      <ThemeModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        currentPreset={themePreset}
+        onSelectPreset={(p) => {
+          setThemePreset(p);
+          try {
+            localStorage.setItem('isa_theme_preset', p);
+          } catch (e) {}
+        }}
+        onOpenCheckout={() => {
+          setIsThemeModalOpen(false);
+        }}
+      />
+
+      {/* User Guide & Security Whitepaper Modal */}
+      <UserGuideModal
+        isOpen={isUserGuideModalOpen}
+        onClose={() => setIsUserGuideModalOpen(false)}
+        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
+      />
+
+      {/* Helcim Checkout & License Key Modal */}
+      <HelcimCheckoutModal
+        isOpen={isHelcimCheckoutOpen}
+        onClose={() => setIsHelcimCheckoutOpen(false)}
+        onPaymentSuccess={(plan) => {
+          localStorage.setItem('isa_pro_active', 'true');
+          setIsProActive(true);
+          setShowProWelcomeModal(true);
+        }}
+      />
+
+      {/* Password Security Modal (Add / Remove Password) */}
+      <PasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        pdfBytes={docState.fileBytes}
+        fileName={docState.fileName}
+        initialMode={passwordModalMode}
+        onApplyDecryptedPDF={(decryptedBytes) => {
+          const unlockedName = docState.fileName
+            ? docState.fileName.replace(/\.pdf$/i, '_unlocked.pdf')
+            : 'document_unlocked.pdf';
+          loadPDFData(decryptedBytes, unlockedName);
+        }}
+      />
+
+      {/* Compress PDF Modal */}
+      <CompressModal
+        isOpen={isCompressModalOpen}
+        onClose={() => setIsCompressModalOpen(false)}
+        pdfBytes={docState.fileBytes}
+        fileName={docState.fileName}
+      />
+
+      {/* Post-Payment Pro Welcome Modal */}
+      {showProWelcomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-emerald-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100 text-center">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -z-10" />
+            <div className="mx-auto w-14 h-14 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/20">
+              <CheckCircle2 className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-extrabold text-white">Welcome to ISASecuredPDF Pro!</h3>
+            <p className="text-xs text-slate-300 my-3 leading-relaxed">
+              Your payment was verified successfully. All Pro features, advanced stamps, password encryption, and unlimited batch processing are now 100% unlocked on your device.
+            </p>
+            <button
+              onClick={() => setShowProWelcomeModal(false)}
+              className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition active:scale-95"
+            >
+              Start Using Pro Features →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

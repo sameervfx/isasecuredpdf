@@ -86,7 +86,7 @@ export async function createSamplePDF(): Promise<Uint8Array> {
     color: rgb(0.7, 0.2, 0.2),
   });
 
-  page1.drawText('Original Secret Value: Confidential-Project-Delta-889', {
+  page1.drawText('Original Secret Value: Sample Document Title', {
     x: 50,
     y: currentY - 35,
     size: 11,

@@ -12,13 +12,18 @@ interface DrawingCanvasOverlayProps {
   drawings: FreehandDrawing[];
   stamps: StampAnnotation[];
   strikeouts: StrikeoutAnnotation[];
+  shapeStrokeColor?: string;
+  shapeFillColor?: string;
+  shapeStrokeWidth?: number;
   onAddDrawing: (drawing: Omit<FreehandDrawing, 'id'>) => void;
   onDeleteDrawing: (id: string) => void;
   onAddStamp: (stamp: Omit<StampAnnotation, 'id'>) => void;
   onDeleteStamp: (id: string) => void;
   onAddStrikeout: (strike: Omit<StrikeoutAnnotation, 'id'>) => void;
   onDeleteStrikeout: (id: string) => void;
+  onAddShape?: (shape: Omit<import('../types/pdf').ShapeAnnotation, 'id'>) => void;
   onAddSignatureAtCoords?: (sig: Omit<SignatureAnnotation, 'id'>) => void;
+  onOpenSignatureModal?: (tab?: 'draw' | 'type' | 'upload') => void;
 }
 
 export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
@@ -32,23 +37,34 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   drawings,
   stamps,
   strikeouts,
+  shapeStrokeColor,
+  shapeFillColor,
+  shapeStrokeWidth,
   onAddDrawing,
   onDeleteDrawing,
   onAddStamp,
   onDeleteStamp,
   onAddStrikeout,
   onDeleteStrikeout,
+  onAddShape,
   onAddSignatureAtCoords,
+  onOpenSignatureModal,
 }) => {
   // Draw & Highlight Options
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPoints, setCurrentPoints] = useState<{ x: number; y: number }[]>([]);
   const [drawColor, setDrawColor] = useState<string>('#ef4444'); // Default Red Pen
   const [highlightColor, setHighlightColor] = useState<string>('#facc15'); // Default Yellow Highlighter
+  const [highlightMode, setHighlightMode] = useState<'line' | 'box' | 'freehand'>('line'); // Default to Straight Line Text Highlight
   const [thickness, setThickness] = useState<number>(3); // Pen Scale
   const [highlightThickness, setHighlightThickness] = useState<number>(18); // Highlighter Scale
   const [eraserThickness, setEraserThickness] = useState<number>(8); // Default 8px Fine Precision Eraser
   const [hoverPt, setHoverPt] = useState<{ x: number; y: number } | null>(null);
+
+  // Shape Drag-to-Draw State
+  const [isDrawingShape, setIsDrawingShape] = useState(false);
+  const [shapeStartPt, setShapeStartPt] = useState<{ x: number; y: number } | null>(null);
+  const [shapeCurrentPt, setShapeCurrentPt] = useState<{ x: number; y: number } | null>(null);
 
   // Selected item for deletion
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -69,7 +85,10 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
     toolMode === 'checkmark' ||
     toolMode === 'crossmark' ||
     toolMode === 'strikeout' ||
-    (toolMode === 'sign' && Boolean(pendingSignatureDataUrl));
+    toolMode === 'sign' ||
+    toolMode === 'line' ||
+    toolMode === 'rectangle' ||
+    toolMode === 'oval';
 
   const getPdfCoords = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -95,16 +114,8 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
-    const pt = getPdfCoords(e);
-
-    if (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') {
-      setIsDrawing(true);
-      setCurrentPoints([pt]);
-      if (toolMode === 'eraser') {
-        eraseDrawingsNearPoint(pt, eraserThickness);
-      }
-    } else if (toolMode === 'checkmark') {
+  const handleDropPoint = (pt: { x: number; y: number }) => {
+    if (toolMode === 'checkmark') {
       onAddStamp({
         pageIndex,
         type: 'checkmark',
@@ -131,15 +142,36 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         thickness: 3,
         color: '#ef4444', // Red strikeout line
       });
-    } else if (toolMode === 'sign' && pendingSignatureDataUrl && onAddSignatureAtCoords) {
-      onAddSignatureAtCoords({
-        pageIndex,
-        x: Math.max(0, pt.x - 80),
-        y: Math.max(0, pt.y - 35),
-        width: 160,
-        height: 70,
-        dataUrl: pendingSignatureDataUrl,
-      });
+    } else if (toolMode === 'sign') {
+      if (pendingSignatureDataUrl && onAddSignatureAtCoords) {
+        onAddSignatureAtCoords({
+          pageIndex,
+          x: Math.max(0, pt.x - 80),
+          y: Math.max(0, pt.y - 35),
+          width: 160,
+          height: 70,
+          dataUrl: pendingSignatureDataUrl,
+        });
+      } else if (onOpenSignatureModal) {
+        onOpenSignatureModal('draw');
+      }
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+    const pt = getPdfCoords(e);
+    if (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') {
+      setIsDrawing(true);
+      setCurrentPoints([pt]);
+      if (toolMode === 'eraser') {
+        eraseDrawingsNearPoint(pt, eraserThickness);
+      }
+    } else if (toolMode === 'line' || toolMode === 'rectangle' || toolMode === 'oval') {
+      setIsDrawingShape(true);
+      setShapeStartPt(pt);
+      setShapeCurrentPt(pt);
+    } else {
+      handleDropPoint(pt);
     }
   };
 
@@ -148,14 +180,100 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
     if (toolMode === 'eraser') {
       setHoverPt(pt);
     }
+
+    if (isDrawingShape) {
+      setShapeCurrentPt(pt);
+      return;
+    }
+
     if (!isDrawing || (toolMode !== 'draw' && toolMode !== 'highlight' && toolMode !== 'eraser')) return;
-    setCurrentPoints((prev) => [...prev, pt]);
+
+    if (toolMode === 'highlight' && highlightMode === 'line') {
+      const startPt = currentPoints[0] || pt;
+      const lockedPt = { x: pt.x, y: startPt.y };
+      setCurrentPoints([startPt, lockedPt]);
+    } else {
+      setCurrentPoints((prev) => [...prev, pt]);
+    }
+
     if (toolMode === 'eraser') {
       eraseDrawingsNearPoint(pt, eraserThickness);
     }
   };
 
   const handleMouseUp = () => {
+    if (isDrawingShape && shapeStartPt && shapeCurrentPt) {
+      const x1 = shapeStartPt.x;
+      const y1 = shapeStartPt.y;
+      let x2 = shapeCurrentPt.x;
+      let y2 = shapeCurrentPt.y;
+
+      const dist = Math.hypot(x2 - x1, y2 - y1);
+
+      if (toolMode === 'line') {
+        if (dist < 5) {
+          // Single click: default horizontal line 140pt long
+          x2 = x1 + 140;
+          y2 = y1;
+        }
+
+        const minX = Math.min(x1, x2);
+        const minY = Math.min(y1, y2);
+        const maxX = Math.max(x1, x2);
+        const maxY = Math.max(y1, y2);
+        const w = Math.max(maxX - minX, Math.max((shapeStrokeWidth || 2) * 2, 8));
+        const h = Math.max(maxY - minY, Math.max((shapeStrokeWidth || 2) * 2, 8));
+
+        if (onAddShape) {
+          onAddShape({
+            pageIndex,
+            type: 'line',
+            x: x1,
+            y: y1,
+            x2,
+            y2,
+            width: w,
+            height: h,
+            strokeColor: shapeStrokeColor || '#3b82f6',
+            fillColor: 'transparent',
+            strokeWidth: shapeStrokeWidth || 2,
+          });
+        }
+      } else {
+        // Rectangle or Oval
+        let w = Math.abs(x2 - x1);
+        let h = Math.abs(y2 - y1);
+        let finalX = Math.min(x1, x2);
+        let finalY = Math.min(y1, y2);
+
+        if (w < 6 && h < 6) {
+          // Single click: default size
+          w = 140;
+          h = 80;
+          finalX = x1;
+          finalY = y1;
+        }
+
+        if (onAddShape) {
+          onAddShape({
+            pageIndex,
+            type: toolMode as 'rectangle' | 'oval',
+            x: finalX,
+            y: finalY,
+            width: w,
+            height: h,
+            strokeColor: shapeStrokeColor || '#3b82f6',
+            fillColor: shapeFillColor || 'transparent',
+            strokeWidth: shapeStrokeWidth || 2,
+          });
+        }
+      }
+
+      setIsDrawingShape(false);
+      setShapeStartPt(null);
+      setShapeCurrentPt(null);
+      return;
+    }
     if (isDrawing && currentPoints.length > 0) {
       const isHighlight = toolMode === 'highlight';
       const isEraser = toolMode === 'eraser';
@@ -163,16 +281,115 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         ? [currentPoints[0], { x: currentPoints[0].x + 1, y: currentPoints[0].y }]
         : currentPoints;
 
-      onAddDrawing({
-        pageIndex,
-        points: pts,
-        color: isEraser ? '#ffffff' : isHighlight ? highlightColor : drawColor,
-        thickness: isEraser ? eraserThickness : isHighlight ? highlightThickness : thickness,
-        opacity: isHighlight ? 0.45 : 1.0,
-      });
+      if (isHighlight && highlightMode === 'line') {
+        const pStart = currentPoints[0];
+        const pEnd = currentPoints[currentPoints.length - 1];
+        let minX = Math.min(pStart.x, pEnd.x);
+        let maxX = Math.max(pStart.x, pEnd.x);
+        if (maxX - minX < 8) {
+          minX = Math.max(10, pStart.x - 10);
+          maxX = Math.min(originalWidth - 10, pStart.x + 220);
+        }
+
+        onAddDrawing({
+          pageIndex,
+          points: [
+            { x: minX, y: pStart.y },
+            { x: maxX, y: pStart.y },
+          ],
+          color: highlightColor,
+          thickness: highlightThickness,
+          opacity: 0.40,
+        });
+      } else if (isHighlight && highlightMode === 'box') {
+        const pStart = currentPoints[0];
+        const pEnd = currentPoints[currentPoints.length - 1];
+        let minX = Math.min(pStart.x, pEnd.x);
+        let maxX = Math.max(pStart.x, pEnd.x);
+        let minY = Math.min(pStart.y, pEnd.y);
+        let maxY = Math.max(pStart.y, pEnd.y);
+        let w = maxX - minX;
+        let h = maxY - minY;
+
+        // Single click on a text line -> auto line highlight rectangle
+        if (w < 8 && h < 8) {
+          minX = Math.max(10, pStart.x - 10);
+          maxX = Math.min(originalWidth - 10, pStart.x + 220);
+          minY = pStart.y - 8;
+          maxY = pStart.y + 8;
+          w = maxX - minX;
+          h = 16;
+        }
+
+        const midY = minY + h / 2;
+        onAddDrawing({
+          pageIndex,
+          points: [
+            { x: minX, y: midY },
+            { x: minX + w, y: midY },
+          ],
+          color: highlightColor,
+          thickness: Math.max(12, Math.round(h)),
+          opacity: 0.35,
+        });
+      } else {
+        onAddDrawing({
+          pageIndex,
+          points: pts,
+          color: isEraser ? '#ffffff' : isHighlight ? highlightColor : drawColor,
+          thickness: isEraser ? eraserThickness : isHighlight ? highlightThickness : thickness,
+          opacity: isHighlight ? 0.45 : 1.0,
+        });
+      }
     }
     setIsDrawing(false);
     setCurrentPoints([]);
+  };
+
+  const getPdfCoordsFromTouch = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (!e.touches || e.touches.length === 0) return null;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.touches[0];
+    const screenX = touch.clientX - rect.left;
+    const screenY = touch.clientY - rect.top;
+    return {
+      x: Math.round(screenX / scaleX),
+      y: Math.round(screenY / scaleY),
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches && e.touches.length >= 2) {
+      setIsDrawing(false);
+      setCurrentPoints([]);
+      return;
+    }
+    const pt = getPdfCoordsFromTouch(e);
+    if (!pt) return;
+    if (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') {
+      setIsDrawing(true);
+      setCurrentPoints([pt]);
+      if (toolMode === 'eraser') {
+        eraseDrawingsNearPoint(pt, eraserThickness);
+      }
+    } else {
+      handleDropPoint(pt);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches && e.touches.length >= 2) {
+      setIsDrawing(false);
+      setCurrentPoints([]);
+      return;
+    }
+    if (!isDrawing || (toolMode !== 'draw' && toolMode !== 'highlight' && toolMode !== 'eraser')) return;
+    const pt = getPdfCoordsFromTouch(e);
+    if (!pt) return;
+    setCurrentPoints((prev) => [...prev, pt]);
+    if (toolMode === 'eraser') {
+      eraseDrawingsNearPoint(pt, eraserThickness);
+    }
   };
 
   return (
@@ -240,9 +457,38 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
             </>
           ) : (
             <>
-              <span className="text-[10px] font-extrabold uppercase text-yellow-400">Highlighter Scale</span>
-              {/* Highlighter Colors */}
               <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => setHighlightMode('line')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition ${
+                    highlightMode === 'line' ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                  title="Straight Horizontal Text Line Highlight (Follows cursor horizontally along text line)"
+                >
+                  <span>📏 Straight Line</span>
+                </button>
+                <button
+                  onClick={() => setHighlightMode('box')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition ${
+                    highlightMode === 'box' ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                  title="Text Passage Box Highlight (Drag Bounding Box)"
+                >
+                  <span>📦 Passage Box</span>
+                </button>
+                <button
+                  onClick={() => setHighlightMode('freehand')}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition ${
+                    highlightMode === 'freehand' ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                  title="Freehand Curve Highlighter"
+                >
+                  <span>✏️ Freehand</span>
+                </button>
+              </div>
+
+              {/* Highlighter Colors */}
+              <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
                 {['#facc15', '#4ade80', '#38bdf8', '#f472b6', '#fb923c', '#c084fc'].map((c) => (
                   <button
                     key={c}
@@ -254,23 +500,25 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
               </div>
 
               {/* Highlighter Thickness presets */}
-              <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
-                {[
-                  { label: 'Fine', size: 10 },
-                  { label: 'Standard', size: 18 },
-                  { label: 'Broad Bar', size: 28 },
-                ].map((s) => (
-                  <button
-                    key={s.size}
-                    onClick={() => setHighlightThickness(s.size)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                      highlightThickness === s.size ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {s.label} ({s.size}px)
-                  </button>
-                ))}
-              </div>
+              {highlightMode === 'freehand' && (
+                <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
+                  {[
+                    { label: 'Fine', size: 10 },
+                    { label: 'Standard', size: 18 },
+                    { label: 'Broad Bar', size: 28 },
+                  ].map((s) => (
+                    <button
+                      key={s.size}
+                      onClick={() => setHighlightThickness(s.size)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                        highlightThickness === s.size ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {s.label} ({s.size}px)
+                    </button>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -282,6 +530,11 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => setHoverPt(null)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseUp}
+        onTouchCancel={handleMouseUp}
+        style={{ touchAction: activeMode ? 'none' : 'auto' }}
         className={`w-full h-full ${activeMode ? 'pointer-events-auto cursor-crosshair' : 'pointer-events-none'}`}
       >
         {/* Existing Finished Drawings */}
@@ -328,6 +581,8 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
             .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`)
             .join(' ');
           const isHighlighterOpacity = drawing.opacity < 1.0;
+          const isHighlightBox = drawing.opacity <= 0.38 && drawing.points.length === 2 && drawing.points[0].y === drawing.points[1].y;
+
           return (
             <path
               key={drawing.id}
@@ -335,7 +590,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
               stroke={drawing.color}
               strokeWidth={drawing.thickness * scaleY}
               strokeOpacity={drawing.opacity}
-              strokeLinecap="round"
+              strokeLinecap={isHighlightBox ? 'butt' : 'round'}
               strokeLinejoin="round"
               fill="none"
               style={{ mixBlendMode: isHighlighterOpacity ? 'multiply' : 'normal' }}
@@ -348,18 +603,105 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
           );
         })}
 
-        {/* Live Active Stroke */}
+        {/* Live Active Stroke / Line / Box Highlight Preview */}
         {isDrawing && currentPoints.length > 0 && (
-          <path
-            d={currentPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`).join(' ')}
-            stroke={toolMode === 'eraser' ? '#ffffff' : toolMode === 'highlight' ? highlightColor : drawColor}
-            strokeWidth={(toolMode === 'eraser' ? eraserThickness : toolMode === 'highlight' ? highlightThickness : thickness) * scaleY}
-            strokeOpacity={toolMode === 'highlight' ? 0.45 : 1.0}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-            style={{ mixBlendMode: toolMode === 'highlight' ? 'multiply' : 'normal' }}
-          />
+          toolMode === 'highlight' && highlightMode === 'line' ? (
+            (() => {
+              const pStart = currentPoints[0];
+              const pEnd = currentPoints[currentPoints.length - 1];
+              const minX = Math.min(pStart.x, pEnd.x) * scaleX;
+              const maxX = Math.max(pStart.x, pEnd.x) * scaleX;
+              const y = pStart.y * scaleY;
+              return (
+                <line
+                  x1={minX}
+                  y1={y}
+                  x2={maxX}
+                  y2={y}
+                  stroke={highlightColor}
+                  strokeWidth={highlightThickness * scaleY}
+                  strokeOpacity="0.45"
+                  strokeLinecap="butt"
+                  style={{ mixBlendMode: 'multiply' }}
+                />
+              );
+            })()
+          ) : toolMode === 'highlight' && highlightMode === 'box' ? (
+            (() => {
+              const pStart = currentPoints[0];
+              const pEnd = currentPoints[currentPoints.length - 1];
+              const minX = Math.min(pStart.x, pEnd.x) * scaleX;
+              const minY = Math.min(pStart.y, pEnd.y) * scaleY;
+              const w = Math.max(12, Math.abs(pEnd.x - pStart.x)) * scaleX;
+              const h = Math.max(12, Math.abs(pEnd.y - pStart.y)) * scaleY;
+              return (
+                <rect
+                  x={minX}
+                  y={minY}
+                  width={w}
+                  height={h}
+                  fill={highlightColor}
+                  fillOpacity="0.35"
+                  stroke={highlightColor}
+                  strokeWidth="1.5"
+                  strokeDasharray="4 3"
+                  style={{ mixBlendMode: 'multiply' }}
+                />
+              );
+            })()
+          ) : (
+            <path
+              d={currentPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`).join(' ')}
+              stroke={toolMode === 'eraser' ? '#ffffff' : toolMode === 'highlight' ? highlightColor : drawColor}
+              strokeWidth={(toolMode === 'eraser' ? eraserThickness : toolMode === 'highlight' ? highlightThickness : thickness) * scaleY}
+              strokeOpacity={toolMode === 'highlight' ? 0.45 : 1.0}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+              style={{ mixBlendMode: toolMode === 'highlight' ? 'multiply' : 'normal' }}
+            />
+          )
+        )}
+
+        {/* Real-time Preview of Vector Shape Being Drawn */}
+        {isDrawingShape && shapeStartPt && shapeCurrentPt && (
+          <g className="pointer-events-none">
+            {toolMode === 'line' && (
+              <line
+                x1={shapeStartPt.x * scaleX}
+                y1={shapeStartPt.y * scaleY}
+                x2={shapeCurrentPt.x * scaleX}
+                y2={shapeCurrentPt.y * scaleY}
+                stroke={shapeStrokeColor || '#3b82f6'}
+                strokeWidth={(shapeStrokeWidth || 2) * scaleX}
+                strokeDasharray="4 4"
+              />
+            )}
+            {toolMode === 'rectangle' && (
+              <rect
+                x={Math.min(shapeStartPt.x, shapeCurrentPt.x) * scaleX}
+                y={Math.min(shapeStartPt.y, shapeCurrentPt.y) * scaleY}
+                width={Math.max(4, Math.abs(shapeCurrentPt.x - shapeStartPt.x)) * scaleX}
+                height={Math.max(4, Math.abs(shapeCurrentPt.y - shapeStartPt.y)) * scaleY}
+                stroke={shapeStrokeColor || '#3b82f6'}
+                strokeWidth={(shapeStrokeWidth || 2) * scaleX}
+                fill={shapeFillColor && shapeFillColor !== 'transparent' ? shapeFillColor : 'none'}
+                strokeDasharray="4 4"
+              />
+            )}
+            {toolMode === 'oval' && (
+              <ellipse
+                cx={((shapeStartPt.x + shapeCurrentPt.x) / 2) * scaleX}
+                cy={((shapeStartPt.y + shapeCurrentPt.y) / 2) * scaleY}
+                rx={Math.max(2, (Math.abs(shapeCurrentPt.x - shapeStartPt.x) / 2) * scaleX)}
+                ry={Math.max(2, (Math.abs(shapeCurrentPt.y - shapeStartPt.y) / 2) * scaleY)}
+                stroke={shapeStrokeColor || '#3b82f6'}
+                strokeWidth={(shapeStrokeWidth || 2) * scaleX}
+                fill={shapeFillColor && shapeFillColor !== 'transparent' ? shapeFillColor : 'none'}
+                strokeDasharray="4 4"
+              />
+            )}
+          </g>
         )}
 
         {/* Dynamic Precision Eraser Cursor Indicator */}

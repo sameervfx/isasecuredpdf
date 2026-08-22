@@ -3,8 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ command }) => ({
   plugins: [react()],
-  // Use '/' base for web/Vercel deployments, './' only for Electron standalone
-  base: process.env.ELECTRON_BUILD === 'true' ? './' : '/',
+  base: './',
   server: {
     port: 3000,
     host: '0.0.0.0',
@@ -12,9 +11,18 @@ export default defineConfig(({ command }) => ({
     open: false,
   },
   optimizeDeps: {
-    include: ['pdf-lib', 'pdfjs-dist'],
+    include: ['pdf-lib', 'pdfjs-dist', 'mupdf'],
+    esbuildOptions: {
+      target: 'esnext',
+      supported: { 'top-level-await': true },
+    },
+  },
+  esbuild: {
+    target: 'esnext',
+    supported: { 'top-level-await': true },
   },
   build: {
+    target: 'esnext',
     outDir: 'dist',
     rollupOptions: {
       output: {

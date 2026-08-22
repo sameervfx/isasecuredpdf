@@ -5,6 +5,9 @@ import { AcroFormOverlay } from './AcroFormOverlay';
 import { TextAnnotationEditor } from './TextAnnotationEditor';
 import { SignatureOverlay } from './SignatureOverlay';
 import { DrawingCanvasOverlay } from './DrawingCanvasOverlay';
+import { ShapeOverlay } from './ShapeOverlay';
+import { ImageStampOverlay } from './ImageStampOverlay';
+import { ShapeAnnotation, ImageStampAnnotation } from '../types/pdf';
 import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, RotateCcw, XCircle, X } from 'lucide-react';
 import appLogo from '../assets/app_logo.jpg';
 
@@ -39,8 +42,20 @@ interface PDFCanvasViewerProps {
   textFontSize?: number;
   textFontFamily?: string;
   textIsRedact?: boolean;
+  textIsUnderline?: boolean;
+  shapeStrokeColor?: string;
+  shapeFillColor?: string;
+  shapeStrokeWidth?: number;
+  onAddShape?: (shape: Omit<ShapeAnnotation, 'id'>) => void;
+  onUpdateShape?: (id: string, updated: Partial<ShapeAnnotation>) => void;
+  onDeleteShape?: (id: string) => void;
+  onAddImageStamp?: (img: Omit<ImageStampAnnotation, 'id'>) => void;
+  onUpdateImageStamp?: (id: string, updated: Partial<ImageStampAnnotation>) => void;
+  onDeleteImageStamp?: (id: string) => void;
   onFocusFormField?: (fieldName: string) => void;
   onFitToWidth?: () => void;
+  onOpenSignatureModal?: (tab?: 'draw' | 'type' | 'upload') => void;
+  activeTheme?: any;
 }
 
 interface PageDims {
@@ -72,6 +87,12 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   onDeleteStamp,
   onAddStrikeout,
   onDeleteStrikeout,
+  onAddShape,
+  onUpdateShape,
+  onDeleteShape,
+  onAddImageStamp,
+  onUpdateImageStamp,
+  onDeleteImageStamp,
   onOpenFile,
   onLoadSample,
   onOpenCreateModal,
@@ -81,7 +102,13 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   textFontSize,
   textFontFamily,
   textIsRedact,
+  textIsUnderline,
+  shapeStrokeColor,
+  shapeFillColor,
+  shapeStrokeWidth,
   onFocusFormField,
+  onOpenSignatureModal,
+  activeTheme,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -124,13 +151,24 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     return () => container.removeEventListener('wheel', handleWheel);
   }, [zoom, onZoomChange]);
 
-  // Touch Pinch-to-Zoom for Mobile Phone & Tablet Touchscreens
+  // Keep ref for smooth zoom scaling without stale closure issues
+  const zoomRef = useRef(zoom);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  // Touch Pinch-to-Zoom & 1-Finger Drag Panning for Touchscreens
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     let initialTouchDist = 0;
-    let initialZoom = zoom;
+    let initialZoom = zoomRef.current;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
+    let startScrollLeft = 0;
+    let startScrollTop = 0;
 
     const getTouchDist = (e: TouchEvent) => {
       if (e.touches.length < 2) return 0;
@@ -141,8 +179,16 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
+        e.preventDefault();
         initialTouchDist = getTouchDist(e);
-        initialZoom = zoom;
+        initialZoom = zoomRef.current;
+        isPanning = false;
+      } else if (e.touches.length === 1 && toolMode === 'select') {
+        isPanning = true;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startScrollLeft = container.scrollLeft;
+        startScrollTop = container.scrollTop;
       }
     };
 
@@ -155,23 +201,31 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           const newZoom = Math.max(0.35, Math.min(2.5, Math.round(initialZoom * scaleRatio * 100) / 100));
           onZoomChange(newZoom);
         }
+      } else if (isPanning && e.touches.length === 1 && toolMode === 'select') {
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        container.scrollLeft = startScrollLeft - dx;
+        container.scrollTop = startScrollTop - dy;
       }
     };
 
     const handleTouchEnd = () => {
       initialTouchDist = 0;
+      isPanning = false;
     };
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [zoom, onZoomChange]);
+  }, [toolMode, onZoomChange]);
 
   // Render pages when doc/zoom/rotation changes
   useEffect(() => {
@@ -189,12 +243,14 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       while (retries < 10 && !cancelled) {
         const hasAllCanvases = activePages.every((idx) => Boolean(canvasRefs.current.get(idx)));
         if (hasAllCanvases) break;
-        await new Promise((r) => requestAnimationFrame(r));
+        await new Promise((r) => setTimeout(r, 40));
         retries++;
       }
+
       if (cancelled) return;
 
       const newDims: Record<number, PageDims> = {};
+
       for (const origIdx of activePages) {
         if (cancelled) break;
         const canvas = canvasRefs.current.get(origIdx);
@@ -330,7 +386,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   // Show skeleton while loading
   if (isLoading && !state.fileBytes) {
     return (
-      <main className="flex-1 flex items-center justify-center bg-slate-950">
+      <main className={`flex-1 flex items-center justify-center ${activeTheme?.bgClass || 'bg-slate-950'}`}>
         <div className="flex flex-col items-center space-y-4">
           <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
           <p className="text-sm font-medium text-slate-400">Rendering PDF…</p>
@@ -343,7 +399,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     <main
       ref={containerRef}
       tabIndex={0}
-      className="flex-1 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-auto max-w-[100vw] bg-slate-950 p-2 sm:p-8 flex flex-col items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none touch-pan-x touch-pan-y"
+      className={`flex-1 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none touch-auto min-w-0 transition-colors duration-500`}
     >
       {onCloseDocument && (
         <div className="sticky top-2 sm:top-4 self-end z-30 mr-2 sm:mr-6 -mb-10 sm:-mb-12">
@@ -397,13 +453,18 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                   drawings={state.drawings}
                   stamps={state.stamps}
                   strikeouts={state.strikeouts}
+                  shapeStrokeColor={shapeStrokeColor}
+                  shapeFillColor={shapeFillColor}
+                  shapeStrokeWidth={shapeStrokeWidth}
                   onAddDrawing={onAddDrawing}
                   onDeleteDrawing={onDeleteDrawing}
                   onAddStamp={onAddStamp}
                   onDeleteStamp={onDeleteStamp}
                   onAddStrikeout={onAddStrikeout}
                   onDeleteStrikeout={onDeleteStrikeout}
+                  onAddShape={onAddShape}
                   onAddSignatureAtCoords={onAddSignatureAtCoords}
+                  onOpenSignatureModal={onOpenSignatureModal}
                 />
                 <AcroFormOverlay
                   fields={state.formFields}
@@ -439,6 +500,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                   textFontSize={textFontSize}
                   textFontFamily={textFontFamily}
                   textIsRedact={textIsRedact}
+                  textIsUnderline={textIsUnderline}
                 />
                 <SignatureOverlay
                   signatures={state.signatures}
@@ -449,6 +511,26 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                   originalHeight={origH}
                   onUpdateSignature={onUpdateSignature}
                   onDeleteSignature={onDeleteSignature}
+                />
+                <ShapeOverlay
+                  shapes={state.shapes}
+                  pageIndex={origIdx}
+                  canvasWidth={w}
+                  canvasHeight={h}
+                  originalWidth={origW}
+                  originalHeight={origH}
+                  onUpdateShape={onUpdateShape || (() => {})}
+                  onDeleteShape={onDeleteShape || (() => {})}
+                />
+                <ImageStampOverlay
+                  imageStamps={state.imageStamps}
+                  pageIndex={origIdx}
+                  canvasWidth={w}
+                  canvasHeight={h}
+                  originalWidth={origW}
+                  originalHeight={origH}
+                  onUpdateImageStamp={onUpdateImageStamp || (() => {})}
+                  onDeleteImageStamp={onDeleteImageStamp || (() => {})}
                 />
               </>
             )}

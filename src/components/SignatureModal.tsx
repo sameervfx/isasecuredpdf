@@ -5,7 +5,9 @@ interface SignatureModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveSignature: (dataUrl: string, saveLocally?: boolean) => void;
-  initialTab?: 'draw' | 'upload';
+  initialTab?: 'draw' | 'type' | 'upload';
+  isProActive?: boolean;
+  onOpenCheckout?: () => void;
 }
 
 export const SignatureModal: React.FC<SignatureModalProps> = ({
@@ -13,8 +15,10 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
   onClose,
   onSaveSignature,
   initialTab = 'draw',
+  isProActive = false,
+  onOpenCheckout,
 }) => {
-  const [activeTab, setActiveTab] = useState<'draw' | 'upload'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'draw' | 'type' | 'upload'>(initialTab);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -164,7 +168,13 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('upload')}
+            onClick={() => {
+              if (!isProActive) {
+                if (onOpenCheckout) onOpenCheckout();
+                return;
+              }
+              setActiveTab('upload');
+            }}
             className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold rounded-t-xl border-t border-x transition ${
               activeTab === 'upload'
                 ? 'bg-slate-900 border-slate-800 text-cyan-400'
@@ -172,7 +182,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
             }`}
           >
             <Upload className="w-4 h-4" />
-            <span>Upload Image (JPG/PNG)</span>
+            <span>Upload Image (JPG/PNG) {!isProActive && <span className="text-[9px] font-extrabold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 ml-1">PRO</span>}</span>
           </button>
         </div>
 

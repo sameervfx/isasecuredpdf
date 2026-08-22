@@ -12,10 +12,10 @@ export class PDFRendererService {
     }
   }
 
-  async loadDocument(data: Uint8Array): Promise<PDFDocumentProxy> {
+  async loadDocument(data: Uint8Array, password?: string): Promise<PDFDocumentProxy> {
     this.ensureWorker();
     const copyData = data.slice(0);
-    const loadingTask = getDocument({ data: copyData });
+    const loadingTask = getDocument({ data: copyData, password });
     this.pdfDoc = await loadingTask.promise;
     return this.pdfDoc;
   }

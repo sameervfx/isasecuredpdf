@@ -24,15 +24,21 @@ interface PremiumExportModalProps {
   onClose: () => void;
   state: PDFDocumentState;
   initialFormat?: ExportFormatType;
+  isProActive?: boolean;
+  onOpenCheckout?: () => void;
 }
 
 export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
   isOpen,
   onClose,
   state,
-  initialFormat = 'docx'
+  initialFormat = 'jpg',
+  isProActive = false,
+  onOpenCheckout
 }) => {
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormatType>(initialFormat);
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormatType>(
+    isProActive ? initialFormat : 'jpg'
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -43,6 +49,10 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
   const fileNameWithoutExt = state.fileName.replace(/\.[^/.]+$/, '');
 
   const handleExport = async () => {
+    if (!isProActive && selectedFormat !== 'jpg') {
+      if (onOpenCheckout) onOpenCheckout();
+      return;
+    }
     setIsProcessing(true);
     setProgress(10);
 

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ShieldCheck, 
   MousePointer, 
@@ -45,7 +46,13 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
-  Eraser
+  Eraser,
+  Underline,
+  Square,
+  Circle,
+  Minus,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
@@ -95,6 +102,19 @@ interface HeaderToolbarProps {
   setTextColor?: (color: string) => void;
   textIsRedact?: boolean;
   setTextIsRedact?: (isRedact: boolean) => void;
+  textIsUnderline?: boolean;
+  setTextIsUnderline?: (isUnderline: boolean) => void;
+  shapeStrokeColor?: string;
+  setShapeStrokeColor?: (color: string) => void;
+  shapeFillColor?: string;
+  setShapeFillColor?: (color: string) => void;
+  shapeStrokeWidth?: number;
+  setShapeStrokeWidth?: (width: number) => void;
+  onAddImageStamp?: (img: Omit<import('../types/pdf').ImageStampAnnotation, 'id'>) => void;
+  onOpenPasswordModal?: (mode: 'protect' | 'unlock') => void;
+  onOpenCompressModal?: () => void;
+  isProActive?: boolean;
+  onOpenCheckout?: () => void;
 }
 
 export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
@@ -138,20 +158,104 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   setTextColor,
   textIsRedact = false,
   setTextIsRedact,
+  textIsUnderline,
+  setTextIsUnderline,
+  shapeStrokeColor,
+  setShapeStrokeColor,
+  shapeFillColor,
+  setShapeFillColor,
+  shapeStrokeWidth,
+  setShapeStrokeWidth,
+  onAddImageStamp,
+  onOpenPasswordModal,
+  onOpenCompressModal,
+  isProActive = false,
+  onOpenCheckout,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
   const [isRecentSubmenuOpen, setIsRecentSubmenuOpen] = useState(false);
+  const [isTextDropdownOpen, setIsTextDropdownOpen] = useState(false);
   const [isSignDropdownOpen, setIsSignDropdownOpen] = useState(false);
   const [isAnnotateDropdownOpen, setIsAnnotateDropdownOpen] = useState(false);
   const [isMoreToolsOpen, setIsMoreToolsOpen] = useState(false);
   const [savedSigs, setSavedSigs] = useState<SavedSignature[]>([]);
   const [recentFilesList, setRecentFilesList] = useState<RecentFileItem[]>([]);
+  const [popoverPos, setPopoverPos] = useState<{ name: string; left: number; top: number }>({ name: '', left: 0, top: 0 });
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const dataUrl = evt.target?.result as string;
+      if (!dataUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const aspect = img.width / img.height;
+        let initW = 160;
+        let initH = Math.round(160 / aspect);
+        if (initH > 200) {
+          initH = 200;
+          initW = Math.round(200 * aspect);
+        }
+
+        if (onAddImageStamp) {
+          onAddImageStamp({
+            pageIndex: Math.max(0, currentPage - 1),
+            x: 100,
+            y: 150,
+            width: initW,
+            height: initH,
+            dataUrl,
+            imageType: file.type.includes('png') ? 'png' : 'jpeg',
+          });
+        }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
   
+  const textDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const annotateDropdownRef = useRef<HTMLDivElement>(null);
   const moreToolsRef = useRef<HTMLDivElement>(null);
   const fileMenuRef = useRef<HTMLDivElement>(null);
+
+  const toggleDropdown = (
+    name: 'text' | 'annotate' | 'sign' | 'tools' | 'file',
+    ref: React.RefObject<HTMLDivElement>,
+    popoverWidth = 256
+  ) => {
+    if (popoverPos.name === name) {
+      setPopoverPos({ name: '', left: 0, top: 0 });
+      setIsTextDropdownOpen(false);
+      setIsAnnotateDropdownOpen(false);
+      setIsSignDropdownOpen(false);
+      setIsMoreToolsOpen(false);
+      setIsFileMenuOpen(false);
+      return;
+    }
+
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const idealLeft = rect.left + rect.width / 2 - popoverWidth / 2;
+      const left = Math.max(8, Math.min(window.innerWidth - popoverWidth - 8, idealLeft));
+      const top = rect.bottom + 6;
+      setPopoverPos({ name, left, top });
+    }
+
+    setIsTextDropdownOpen(name === 'text');
+    setIsAnnotateDropdownOpen(name === 'annotate');
+    setIsSignDropdownOpen(name === 'sign');
+    setIsMoreToolsOpen(name === 'tools');
+    setIsFileMenuOpen(name === 'file');
+  };
 
   // Sync saved signatures & recent files whenever dropdown opens
   useEffect(() => {
@@ -166,22 +270,35 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
     }
   }, [isFileMenuOpen]);
 
-  // Click outside to close dropdowns
+  // Click/Touch outside to close dropdowns
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsSignDropdownOpen(false);
-      }
-      if (annotateDropdownRef.current && !annotateDropdownRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const rawTarget = e.target as Node | null;
+      const target = (rawTarget instanceof Element ? rawTarget : rawTarget?.parentElement) as HTMLElement | null;
+      const isClickOnPopover = target?.closest('[data-popover="true"]');
+      const isClickInsideTrigger =
+        (textDropdownRef.current && textDropdownRef.current.contains(rawTarget)) ||
+        (annotateDropdownRef.current && annotateDropdownRef.current.contains(rawTarget)) ||
+        (dropdownRef.current && dropdownRef.current.contains(rawTarget)) ||
+        (moreToolsRef.current && moreToolsRef.current.contains(rawTarget)) ||
+        (fileMenuRef.current && fileMenuRef.current.contains(rawTarget));
+
+      if (!isClickOnPopover && !isClickInsideTrigger) {
+        setPopoverPos({ name: '', left: 0, top: 0 });
+        setIsTextDropdownOpen(false);
         setIsAnnotateDropdownOpen(false);
-      }
-      if (fileMenuRef.current && !fileMenuRef.current.contains(e.target as Node)) {
+        setIsSignDropdownOpen(false);
+        setIsMoreToolsOpen(false);
         setIsFileMenuOpen(false);
         setIsRecentSubmenuOpen(false);
       }
     };
     window.addEventListener('mousedown', handleClickOutside);
-    return () => window.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   const handleToolSelect = (mode: ToolMode) => {
@@ -222,15 +339,24 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             {/* File Menu Dropdown */}
             <div className="relative" ref={fileMenuRef}>
               <button
-                onClick={() => setIsFileMenuOpen(!isFileMenuOpen)}
+                onClick={() => toggleDropdown('file', fileMenuRef, 208)}
                 className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center space-x-1 transition shadow-sm"
               >
                 <span>File</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
-              {isFileMenuOpen && (
-                <div className="absolute top-full left-0 mt-2 w-60 sm:w-64 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 flex flex-col space-y-1 text-xs">
+              {isFileMenuOpen && popoverPos.name === 'file' && createPortal(
+                <div
+                  data-popover="true"
+                  style={{
+                    position: 'fixed',
+                    left: `${popoverPos.left}px`,
+                    top: `${popoverPos.top}px`,
+                    zIndex: 999999,
+                  }}
+                  className="w-48 sm:w-52 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-1.5 flex flex-col space-y-1 text-xs opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+                >
                   {/* File Operations */}
                   <button
                     onClick={() => {
@@ -369,13 +495,17 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     disabled={!hasDocument}
                     onClick={() => {
                       setIsFileMenuOpen(false);
+                      if (!isProActive) {
+                        if (onOpenCheckout) onOpenCheckout();
+                        return;
+                      }
                       onOpenSaveMultipleModal();
                     }}
                     className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-white hover:bg-slate-800 rounded-xl transition disabled:opacity-40"
                   >
                     <div className="flex items-center space-x-2.5">
                       <FolderArchive className="w-4 h-4 text-purple-400" />
-                      <span>Save Multiple PDFs (ZIP)...</span>
+                      <span>Save Multiple PDFs (ZIP)... {!isProActive && <span className="text-[9px] font-extrabold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 ml-1">PRO</span>}</span>
                     </div>
                   </button>
 
@@ -474,18 +604,23 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     <Mail className="w-4 h-4 text-cyan-400" />
                     <span>Support: support@isasecuredpdf.com</span>
                   </a>
-                </div>
+                </div>,
+                document.body
               )}
             </div>
 
             {onGoToLandingPage && (
-              <button
-                onClick={onGoToLandingPage}
-                className="hidden sm:inline-block px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
-                title="Return to Landing Page"
-              >
-                Home
-              </button>
+              <>
+                <input type="file" ref={fileInputRef} onChange={onOpenFile} accept="application/pdf" className="hidden" />
+                <input type="file" ref={imageFileInputRef} onChange={handleImageFileSelect} accept="image/png, image/jpeg, image/jpg" className="hidden" />
+                <button
+                  onClick={onGoToLandingPage}
+                  className="hidden sm:inline-block px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                  title="Return to Landing Page"
+                >
+                  Home
+                </button>
+              </>
             )}
 
             <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -495,26 +630,25 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           </div>
           <p className="hidden xl:block text-xs text-slate-400">Zero Server Data Transmission Guarantee</p>
         </div>
-      </div>
 
-        {/* Action Buttons in Row 1 on Mobile, Right side on Desktop */}
+        {/* Mobile-Only Action Buttons in Row 1 */}
         {hasDocument && (
-          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+          <div className="flex lg:hidden items-center space-x-1.5 shrink-0 ml-auto">
             <button
               onClick={onPrintPDF}
               disabled={isPrinting}
-              title="Print Document or Open Print Preview (Ctrl+P)"
-              className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-lg sm:rounded-xl border border-slate-700 transition active:scale-95 disabled:opacity-50"
+              title="Print Document"
+              className="flex items-center space-x-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition active:scale-95 disabled:opacity-50"
             >
               <Printer className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden sm:inline">{isPrinting ? 'Preparing...' : 'Print'}</span>
+              <span>{isPrinting ? '...' : 'Print'}</span>
             </button>
 
             <button
               onClick={onExportPDF}
               disabled={isExporting}
-              title="Export & Download PDF File"
-              className="flex items-center space-x-1 px-2.5 py-1 sm:px-4 sm:py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg sm:rounded-xl shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50"
+              title="Export PDF"
+              className="flex items-center space-x-1 px-2.5 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50"
             >
               <Download className="w-3.5 h-3.5" />
               <span>{isExporting ? '...' : 'Export'}</span>
@@ -522,124 +656,182 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           </div>
         )}
       </div>
+      </div>
 
       {/* Center Toolbar Tool Modes: Dedicated 2nd Row on Mobile, Center on Desktop */}
       {hasDocument && (
-        <div className="flex items-center space-x-1 sm:space-x-1.5 bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:w-auto overflow-visible whitespace-nowrap">
-          {/* Select Mode */}
-          <button
-            onClick={() => handleToolSelect('select')}
-            title="Select & Navigate (S)"
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              toolMode === 'select'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <MousePointer className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Select</span>
-          </button>
+        <div className="bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:w-auto overflow-hidden lg:overflow-visible whitespace-nowrap lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:top-1/2 lg:-translate-y-1/2 z-20">
+          <div className="flex items-center space-x-1 sm:space-x-1.5 flex-nowrap max-lg:overflow-x-auto lg:overflow-visible touch-pan-x scrollbar-none w-full max-w-full py-0.5 px-2 justify-start lg:justify-center">
+            {/* Select Mode */}
+            <button
+              onClick={() => handleToolSelect('select')}
+              title="Select & Navigate (S)"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+                toolMode === 'select'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <MousePointer className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Select</span>
+            </button>
 
-          {/* Edit / Redact Text */}
-          <button
-            onClick={() => handleToolSelect('text')}
-            title="Edit & Add Text (T)"
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              toolMode === 'text'
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <Type className="w-3.5 h-3.5 text-blue-400" />
-            <span>Edit / Add Text</span>
-          </button>
-
-          {/* Inline Text Formatting Controls when in Select or Text mode */}
-          {(toolMode === 'select' || toolMode === 'text') && (
-            <div className="flex items-center space-x-1.5 pl-2 border-l border-slate-800 animate-fadeIn">
-              {/* Font Family / Style Selector */}
-              <select
-                value={textFontFamily || "'Times New Roman', Times, serif"}
-                onChange={(e) => setTextFontFamily && setTextFontFamily(e.target.value)}
-                className="bg-slate-900 text-slate-200 border border-slate-700/80 rounded-lg px-2 py-1 text-xs font-semibold hover:border-cyan-500 transition max-w-[130px] sm:max-w-[150px] truncate"
-                title="Font Style Family"
-              >
-                <option value="'Times New Roman', Times, serif">Times New Roman (Legal)</option>
-                <option value="Arial, Helvetica, sans-serif">Arial / Helvetica (Sans)</option>
-                <option value="'Courier New', Courier, monospace">Courier New (Mono)</option>
-                <option value="Georgia, serif">Georgia (Serif)</option>
-                <option value="Garamond, serif">Garamond (Classic)</option>
-                <option value="Verdana, Geneva, sans-serif">Verdana (Clean)</option>
-                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                <option value="Impact, Charcoal, sans-serif">Impact (Bold)</option>
-                <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans</option>
-                <option value="'Palatino Linotype', Palatino, serif">Palatino</option>
-                <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
-                <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
-                <option value="'Brush Script MT', cursive">Brush Script</option>
-                <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
-                <option value="'Century Gothic', sans-serif">Century Gothic</option>
-              </select>
-
-              {/* Font Size Selector */}
-              <select
-                value={textFontSize || 10}
-                onChange={(e) => setTextFontSize && setTextFontSize(Number(e.target.value))}
-                className="bg-slate-900 text-slate-200 border border-slate-700/80 rounded-lg px-2 py-1 text-xs font-mono font-semibold hover:border-cyan-500 transition"
-                title="Text Font Size"
-              >
-                {[8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64].map((size) => (
-                  <option key={size} value={size}>
-                    {size}pt
-                  </option>
-                ))}
-              </select>
-
-              {/* Color Chips Palette */}
-              <div className="flex items-center space-x-1 bg-slate-900 border border-slate-700/80 rounded-lg p-1">
-                {['#000000', '#1e3a8a', '#dc2626', '#15803d', '#7e22ce', '#ffffff'].map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setTextColor && setTextColor(c)}
-                    style={{ backgroundColor: c }}
-                    className={`w-3.5 h-3.5 rounded-full border transition ${
-                      textColor === c ? 'border-cyan-400 scale-125 shadow-sm ring-1 ring-cyan-400' : 'border-slate-600 opacity-80'
-                    }`}
-                    title={`Text Color: ${c}`}
-                  />
-                ))}
-                <input
-                  type="color"
-                  value={textColor || '#000000'}
-                  onChange={(e) => setTextColor && setTextColor(e.target.value)}
-                  className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
-                  title="Custom Color"
-                />
-              </div>
-
-              {/* Background Fill / White Cover Toggle */}
+            {/* Edit / Redact Text Dropdown */}
+            <div className="relative shrink-0" ref={textDropdownRef}>
               <button
-                onClick={() => setTextIsRedact && setTextIsRedact(!textIsRedact)}
-                title={textIsRedact ? 'White Cover Box Active' : 'Plain Transparent Text'}
-                className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center space-x-1 transition border ${
-                  textIsRedact
-                    ? 'bg-white text-slate-900 border-white shadow'
-                    : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-white'
+                onClick={() => {
+                  handleToolSelect('text');
+                  toggleDropdown('text', textDropdownRef, 208);
+                }}
+                title="Add Text & Type on PDF (T) - Click for text formatting options"
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  toolMode === 'text' || (isTextDropdownOpen && popoverPos.name === 'text')
+                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                {textIsRedact ? <EyeOff className="w-3 h-3 text-red-600" /> : <Eye className="w-3 h-3 text-cyan-400" />}
-                <span>{textIsRedact ? 'White Fill' : 'Plain Text'}</span>
+                <Type className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Text</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
+
+              {/* Text Formatting Options Dropdown Popover */}
+              {isTextDropdownOpen && popoverPos.name === 'text' && createPortal(
+                <div
+                  data-popover="true"
+                  style={{
+                    position: 'fixed',
+                    left: `${popoverPos.left}px`,
+                    top: `${popoverPos.top}px`,
+                    zIndex: 999999,
+                  }}
+                  className="w-52 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-2 animate-fadeIn opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+                >
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 border-b border-slate-800 pb-1 flex items-center justify-between">
+                    <span>Text Formatting & Style</span>
+                    <span className="text-[9px] text-slate-500 font-mono">Real-time</span>
+                  </div>
+
+                  {/* Font Family / Style */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] font-semibold text-slate-400">Font Family</label>
+                    <select
+                      value={textFontFamily || "'Times New Roman', Times, serif"}
+                      onChange={(e) => setTextFontFamily && setTextFontFamily(e.target.value)}
+                      className="bg-slate-950 text-slate-100 border border-slate-700 rounded-lg px-2 py-1 text-xs font-semibold hover:border-cyan-500 transition w-full"
+                    >
+                      <option value="'Times New Roman', Times, serif">Times New Roman (Legal)</option>
+                      <option value="Arial, Helvetica, sans-serif">Arial / Helvetica (Sans)</option>
+                      <option value="'Courier New', Courier, monospace">Courier New (Mono)</option>
+                      <option value="Georgia, serif">Georgia (Serif)</option>
+                      <option value="Garamond, serif">Garamond (Classic)</option>
+                      <option value="Verdana, Geneva, sans-serif">Verdana (Clean)</option>
+                      <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                      <option value="Impact, Charcoal, sans-serif">Impact (Bold)</option>
+                      <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans</option>
+                      <option value="'Palatino Linotype', Palatino, serif">Palatino</option>
+                      <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+                      <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
+                      <option value="'Brush Script MT', cursive">Brush Script</option>
+                      <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
+                      <option value="'Century Gothic', sans-serif">Century Gothic</option>
+                    </select>
+                  </div>
+
+                  {/* Font Size & Stepper */}
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-semibold text-slate-400">Font Size</label>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setTextFontSize && setTextFontSize(Math.max(8, (textFontSize || 14) - 2))}
+                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold transition"
+                        title="Decrease Font Size"
+                      >
+                        -
+                      </button>
+                      <select
+                        value={textFontSize || 14}
+                        onChange={(e) => setTextFontSize && setTextFontSize(Number(e.target.value))}
+                        className="bg-slate-950 text-slate-100 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono font-bold hover:border-cyan-500 transition"
+                      >
+                        {[8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64].map((size) => (
+                          <option key={size} value={size}>
+                            {size}pt
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setTextFontSize && setTextFontSize(Math.min(72, (textFontSize || 14) + 2))}
+                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold transition"
+                        title="Increase Font Size"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Color Palette */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] font-semibold text-slate-400">Text Color</label>
+                    <div className="flex items-center space-x-1.5 bg-slate-950 border border-slate-800 rounded-lg p-1.5 justify-between">
+                      {['#000000', '#1e3a8a', '#dc2626', '#15803d', '#7e22ce', '#ffffff'].map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => setTextColor && setTextColor(c)}
+                          style={{ backgroundColor: c }}
+                          className={`w-4 h-4 rounded-full border transition ${
+                            textColor === c ? 'border-cyan-400 scale-110 ring-1 ring-cyan-400' : 'border-slate-600 opacity-80'
+                          }`}
+                          title={`Color ${c}`}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={textColor || '#000000'}
+                        onChange={(e) => setTextColor && setTextColor(e.target.value)}
+                        className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        title="Custom Color Picker"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Underline Toggle */}
+                  <button
+                    onClick={() => setTextIsUnderline && setTextIsUnderline(!textIsUnderline)}
+                    className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition border ${
+                      textIsUnderline
+                        ? 'bg-cyan-500 text-white border-cyan-400 shadow'
+                        : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
+                    }`}
+                  >
+                    <Underline className="w-3.5 h-3.5" />
+                    <span>{textIsUnderline ? 'Underline Text Active' : 'Normal Text (No Underline)'}</span>
+                  </button>
+
+                  {/* Redact Background Cover Toggle */}
+                  <button
+                    onClick={() => setTextIsRedact && setTextIsRedact(!textIsRedact)}
+                    className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition border ${
+                      textIsRedact
+                        ? 'bg-white text-slate-900 border-white shadow'
+                        : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
+                    }`}
+                  >
+                    {textIsRedact ? <EyeOff className="w-3.5 h-3.5 text-red-600" /> : <Eye className="w-3.5 h-3.5 text-cyan-400" />}
+                    <span>{textIsRedact ? 'White Cover Box Active' : 'Plain Transparent Text'}</span>
+                  </button>
+                </div>,
+                document.body
+              )}
             </div>
-          )}
 
           {/* Annotate & Markups Dropdown */}
-          <div className="relative" ref={annotateDropdownRef}>
+          <div className="relative shrink-0" ref={annotateDropdownRef}>
             <button
-              onClick={() => setIsAnnotateDropdownOpen(!isAnnotateDropdownOpen)}
+              onClick={() => toggleDropdown('annotate', annotateDropdownRef, 208)}
               title="Annotations, Markups, Stamps & Forms"
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                isAnnotateActive || isAnnotateDropdownOpen
+                isAnnotateActive || (isAnnotateDropdownOpen && popoverPos.name === 'annotate')
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
@@ -673,8 +865,17 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             </button>
 
             {/* Annotate Dropdown Popover */}
-            {isAnnotateDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2.5 w-64 bg-slate-900/98 backdrop-blur-2xl border border-slate-700/90 rounded-2xl shadow-2xl shadow-cyan-950/80 p-2.5 z-[100] flex flex-col space-y-1 ring-1 ring-cyan-500/30">
+            {isAnnotateDropdownOpen && popoverPos.name === 'annotate' && createPortal(
+              <div
+                data-popover="true"
+                style={{
+                  position: 'fixed',
+                  left: `${popoverPos.left}px`,
+                  top: `${popoverPos.top}px`,
+                  zIndex: 999999,
+                }}
+                className="w-52 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+              >
                 <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
                   Markups & Stamps
                 </div>
@@ -774,17 +975,18 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   </div>
                   {toolMode === 'crossmark' && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
           {/* Sign Dropdown Button */}
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative shrink-0" ref={dropdownRef}>
             <button
-              onClick={() => setIsSignDropdownOpen(!isSignDropdownOpen)}
+              onClick={() => toggleDropdown('sign', dropdownRef, 224)}
               title="Signature Options & Saved Signatures"
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                toolMode === 'sign' || isSignDropdownOpen
+                toolMode === 'sign' || (isSignDropdownOpen && popoverPos.name === 'sign')
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
@@ -795,8 +997,17 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             </button>
 
             {/* Dropdown Popover */}
-            {isSignDropdownOpen && (
-              <div className="absolute top-full left-0 mt-2.5 w-64 sm:w-72 bg-slate-900/98 backdrop-blur-2xl border border-slate-700/90 rounded-2xl shadow-2xl shadow-cyan-950/80 p-3 z-[100] flex flex-col space-y-2 ring-1 ring-cyan-500/30">
+            {isSignDropdownOpen && popoverPos.name === 'sign' && createPortal(
+              <div
+                data-popover="true"
+                style={{
+                  position: 'fixed',
+                  left: `${popoverPos.left}px`,
+                  top: `${popoverPos.top}px`,
+                  zIndex: 999999,
+                }}
+                className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-2 opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+              >
                 <button
                   onClick={() => {
                     setIsSignDropdownOpen(false);
@@ -850,64 +1061,18 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     </div>
                   )}
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
-          {/* Rotate Current Page */}
-          <button
-            onClick={() => {
-              if (onRotatePage) {
-                // Rotate active page (currentPage is 1-indexed)
-                onRotatePage(currentPage - 1);
-              }
-            }}
-            title="Rotate Current Page 90° Clockwise"
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
-          >
-            <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Rotate ↻</span>
-          </button>
-
-          {/* Manage Pages / Reorder */}
-          <button
-            onClick={onOpenPageManager}
-            title="Manage, Split & Reorder Pages"
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
-          >
-            <Grid className="w-3.5 h-3.5 text-purple-400" />
-            <span>Pages</span>
-          </button>
-
-          {/* Undo & Redo Controls */}
-          <div className="flex items-center space-x-1 border-l border-slate-800 pl-1.5">
-            <button
-              disabled={!canUndo}
-              onClick={onUndo}
-              title="Undo Action (Ctrl+Z)"
-              className="flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Undo</span>
-            </button>
-            <button
-              disabled={!canRedo}
-              onClick={onRedo}
-              title="Redo Action (Ctrl+Y / Ctrl+Shift+Z)"
-              className="flex items-center space-x-1 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent"
-            >
-              <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Redo</span>
-            </button>
-          </div>
-
           {/* Expanded Feature Modules Dropdown */}
-          <div className="relative" ref={moreToolsRef}>
+          <div className="relative shrink-0" ref={moreToolsRef}>
             <button
-              onClick={() => setIsMoreToolsOpen(!isMoreToolsOpen)}
+              onClick={() => toggleDropdown('tools', moreToolsRef, 224)}
               title="More Feature Modules (E-Sig, Templates, Watermark, AI)"
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                isMoreToolsOpen
+                isMoreToolsOpen && popoverPos.name === 'tools'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
@@ -918,11 +1083,184 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             </button>
 
             {/* Feature Modules Popover */}
-            {isMoreToolsOpen && (
-              <div className="absolute top-full right-0 mt-2 w-72 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 flex flex-col space-y-1">
+            {isMoreToolsOpen && popoverPos.name === 'tools' && createPortal(
+              <div
+                data-popover="true"
+                style={{
+                  position: 'fixed',
+                  left: `${popoverPos.left}px`,
+                  top: `${popoverPos.top}px`,
+                  zIndex: 999999,
+                }}
+                className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+              >
                 <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
-                  Feature Modules
+                  Feature Modules & Shapes
                 </div>
+
+                {/* Add Image / Logo Attachment */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    imageFileInputRef.current?.click();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <ImageIcon className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Add Image / Logo</div>
+                      <div className="text-[10px] text-slate-400">Attach PNG/JPG stamp on page</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Stamp</span>
+                </button>
+
+                {/* Vector Shapes Submenu */}
+                <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800 space-y-1.5 my-1">
+                  <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Vector Shapes</div>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      onClick={() => {
+                        setToolMode('line');
+                        setIsMoreToolsOpen(false);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
+                        toolMode === 'line' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                      title="Draw Line"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                      <span className="text-[9px]">Line</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setToolMode('rectangle');
+                        setIsMoreToolsOpen(false);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
+                        toolMode === 'rectangle' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                      title="Draw Rectangle"
+                    >
+                      <Square className="w-3.5 h-3.5" />
+                      <span className="text-[9px]">Rect</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setToolMode('oval');
+                        setIsMoreToolsOpen(false);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
+                        toolMode === 'oval' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                      title="Draw Oval / Ellipse"
+                    >
+                      <Circle className="w-3.5 h-3.5" />
+                      <span className="text-[9px]">Oval</span>
+                    </button>
+                  </div>
+
+                  {/* Shape Controls: Stroke & Fill */}
+                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-slate-400">Stroke:</span>
+                      <input
+                        type="color"
+                        value={shapeStrokeColor || '#3b82f6'}
+                        onChange={(e) => setShapeStrokeColor && setShapeStrokeColor(e.target.value)}
+                        className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        title="Stroke Color"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-1">
+                      <span className="text-slate-400">Fill:</span>
+                      <select
+                        value={shapeFillColor || 'transparent'}
+                        onChange={(e) => setShapeFillColor && setShapeFillColor(e.target.value)}
+                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold"
+                      >
+                        <option value="transparent">None</option>
+                        <option value="#3b82f6">Blue</option>
+                        <option value="#ef4444">Red</option>
+                        <option value="#10b981">Green</option>
+                        <option value="#facc15">Yellow</option>
+                        <option value="#ffffff">White</option>
+                        <option value="#000000">Black</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center space-x-1">
+                      <span className="text-slate-400">Width:</span>
+                      <select
+                        value={shapeStrokeWidth || 2}
+                        onChange={(e) => setShapeStrokeWidth && setShapeStrokeWidth(Number(e.target.value))}
+                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold"
+                      >
+                        <option value={1}>1px</option>
+                        <option value={2}>2px</option>
+                        <option value={4}>4px</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Protect PDF (Add Password) */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    if (onOpenPasswordModal) onOpenPasswordModal('protect');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Lock className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Protect PDF</div>
+                      <div className="text-[10px] text-slate-400">Add AES-256 password & permissions</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Security</span>
+                </button>
+
+                {/* Unlock PDF (Remove Password) */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    if (onOpenPasswordModal) onOpenPasswordModal('unlock');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Unlock className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Unlock PDF</div>
+                      <div className="text-[10px] text-slate-400">Remove password & decrypt PDF</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Unlock</span>
+                </button>
+
+                {/* Compress PDF */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    if (onOpenCompressModal) onOpenCompressModal();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Zap className="w-4 h-4 text-amber-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Compress PDF</div>
+                      <div className="text-[10px] text-slate-400">Reduce file size (Medium, High, Lossless)</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/30">Size</span>
+                </button>
 
                 {/* 1. Request E-Signature */}
                 <button
@@ -982,6 +1320,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 <button
                   onClick={() => {
                     setIsMoreToolsOpen(false);
+                    if (!isProActive) {
+                      if (onOpenCheckout) onOpenCheckout();
+                      return;
+                    }
                     if (onOpenWatermarkModal) onOpenWatermarkModal();
                   }}
                   className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
@@ -989,7 +1331,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   <div className="flex items-center space-x-2.5">
                     <Award className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
                     <div>
-                      <div className="font-bold text-white">Apply Watermark & Stamps</div>
+                      <div className="font-bold text-white flex items-center space-x-1">
+                        <span>Apply Watermark & Stamps</span>
+                        {!isProActive && <span className="text-[9px] font-extrabold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">PRO</span>}
+                      </div>
                       <div className="text-[10px] text-slate-400">CONFIDENTIAL, APPROVED stamps</div>
                     </div>
                   </div>
@@ -1016,8 +1361,123 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   </div>
                   <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full shadow">AI Pro</span>
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
+          </div>
+
+          {/* Mobile-Only Action Buttons in Row 2 */}
+          <button
+            onClick={() => onRotatePage && onRotatePage(currentPage - 1)}
+            title="Rotate Current Page 90° Clockwise"
+            className="lg:hidden flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all shrink-0"
+          >
+            <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Rotate</span>
+          </button>
+
+          <button
+            onClick={onOpenPageManager}
+            title="Manage, Split & Reorder Pages"
+            className="lg:hidden flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all shrink-0"
+          >
+            <Grid className="w-3.5 h-3.5 text-purple-400" />
+            <span>Pages</span>
+          </button>
+
+          <button
+            disabled={!canUndo}
+            onClick={onUndo}
+            title="Undo Action (Ctrl+Z)"
+            className="lg:hidden flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 shrink-0"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Undo</span>
+          </button>
+
+          <button
+            disabled={!canRedo}
+            onClick={onRedo}
+            title="Redo Action (Ctrl+Y)"
+            className="lg:hidden flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 shrink-0"
+          >
+            <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Redo</span>
+          </button>
+          </div>
+        </div>
+      )}
+
+      {/* Right Header Action Buttons: Rotate, Pages, Undo/Redo, Print & Export PDF (Web Desktop Only) */}
+      {hasDocument && (
+        <div className="hidden lg:flex items-center space-x-1.5 sm:space-x-2 shrink-0 ml-auto z-20">
+          {/* Rotate Current Page */}
+          <button
+            onClick={() => {
+              if (onRotatePage) {
+                onRotatePage(currentPage - 1);
+              }
+            }}
+            title="Rotate Current Page 90° Clockwise"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+          >
+            <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Rotate ↻</span>
+          </button>
+
+          {/* Manage Pages / Reorder */}
+          <button
+            onClick={onOpenPageManager}
+            title="Manage, Split & Reorder Pages"
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+          >
+            <Grid className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">Pages</span>
+          </button>
+
+          {/* Undo & Redo Controls */}
+          <div className="flex items-center space-x-0.5 border-l border-slate-800 pl-1">
+            <button
+              disabled={!canUndo}
+              onClick={onUndo}
+              title="Undo Action (Ctrl+Z)"
+              className="flex items-center space-x-1 px-1.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden xl:inline">Undo</span>
+            </button>
+            <button
+              disabled={!canRedo}
+              onClick={onRedo}
+              title="Redo Action (Ctrl+Y / Ctrl+Shift+Z)"
+              className="flex items-center space-x-1 px-1.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden xl:inline">Redo</span>
+            </button>
+          </div>
+
+          {/* Right-Side Action Group: Print & Export PDF */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 border-l border-slate-800 pl-1.5 sm:pl-2">
+            <button
+              onClick={onPrintPDF}
+              disabled={isPrinting}
+              title="Print Document or Open Print Preview (Ctrl+P)"
+              className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-lg sm:rounded-xl border border-slate-700 transition active:scale-95 disabled:opacity-50"
+            >
+              <Printer className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">{isPrinting ? 'Preparing...' : 'Print'}</span>
+            </button>
+
+            <button
+              onClick={onExportPDF}
+              disabled={isExporting}
+              title="Export & Download PDF File"
+              className="flex items-center space-x-1 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg sm:rounded-xl shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{isExporting ? 'Exporting...' : 'Export'}</span>
+            </button>
           </div>
         </div>
       )}

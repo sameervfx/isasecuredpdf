@@ -280,6 +280,18 @@ export class PDFEngineService {
             opacity: textAnn.opacity !== undefined ? textAnn.opacity : 1.0,
             rotate: textAnn.rotation ? degrees(-textAnn.rotation) : undefined,
           });
+
+          if (textAnn.isUnderline) {
+            const lineLen = annFont.widthOfTextAtSize(cleanLine, textAnn.fontSize);
+            const lineThick = Math.max(1, textAnn.fontSize * 0.07);
+            targetPage.drawLine({
+              start: { x: drawX, y: drawY - 2 },
+              end: { x: drawX + lineLen, y: drawY - 2 },
+              thickness: lineThick,
+              color: textColor,
+              opacity: textAnn.opacity !== undefined ? textAnn.opacity : 1.0,
+            });
+          }
         }
       }
     }
@@ -303,6 +315,80 @@ export class PDFEngineService {
       } else if (stamp.type === 'crossmark') {
         targetPage.drawLine({ start: { x: stamp.x, y: pdfY + s }, end: { x: stamp.x + s, y: pdfY }, thickness: th, color: stampColor });
         targetPage.drawLine({ start: { x: stamp.x, y: pdfY }, end: { x: stamp.x + s, y: pdfY + s }, thickness: th, color: stampColor });
+      }
+    }
+
+    // 5. Render Vector Shapes (Line, Rectangle, Oval)
+    for (const shape of state.shapes || []) {
+      if (shape.pageIndex < 0 || shape.pageIndex >= pdfDoc.getPageCount()) continue;
+      const targetPage = pdfDoc.getPage(shape.pageIndex);
+      const { height: pageH } = targetPage.getSize();
+      const strokeColor = parseHexColor(shape.strokeColor || '#3b82f6');
+      const fillColor = shape.fillColor && shape.fillColor !== 'transparent' ? parseHexColor(shape.fillColor) : undefined;
+      const pdfY = pageH - shape.y - shape.height;
+
+      if (shape.type === 'line') {
+        const startX = shape.x;
+        const startY = pageH - shape.y;
+        const endX = shape.x2 !== undefined ? shape.x2 : shape.x + shape.width;
+        const endY = pageH - (shape.y2 !== undefined ? shape.y2 : shape.y + shape.height);
+
+        targetPage.drawLine({
+          start: { x: startX, y: startY },
+          end: { x: endX, y: endY },
+          thickness: shape.strokeWidth || 2,
+          color: strokeColor,
+        });
+      } else if (shape.type === 'rectangle') {
+        targetPage.drawRectangle({
+          x: shape.x,
+          y: pdfY,
+          width: shape.width,
+          height: shape.height,
+          borderWidth: shape.strokeWidth || 2,
+          borderColor: strokeColor,
+          color: fillColor,
+        });
+      } else if (shape.type === 'oval') {
+        targetPage.drawEllipse({
+          x: shape.x + shape.width / 2,
+          y: pdfY + shape.height / 2,
+          xScale: Math.max(1, shape.width / 2),
+          yScale: Math.max(1, shape.height / 2),
+          borderWidth: shape.strokeWidth || 2,
+          borderColor: strokeColor,
+          color: fillColor,
+        });
+      }
+    }
+
+    // 6. Render Image Stamps / Attached Logos
+    for (const img of state.imageStamps || []) {
+      if (img.pageIndex < 0 || img.pageIndex >= pdfDoc.getPageCount()) continue;
+      const targetPage = pdfDoc.getPage(img.pageIndex);
+      const { height: pageH } = targetPage.getSize();
+
+      try {
+        let embeddedImg;
+        const dataUrl = img.dataUrl;
+        if (dataUrl.includes('image/jpeg') || dataUrl.includes('image/jpg')) {
+          embeddedImg = await pdfDoc.embedJpg(dataUrl);
+        } else {
+          try {
+            embeddedImg = await pdfDoc.embedPng(dataUrl);
+          } catch (e) {
+            embeddedImg = await pdfDoc.embedJpg(dataUrl);
+          }
+        }
+
+        targetPage.drawImage(embeddedImg, {
+          x: img.x,
+          y: pageH - img.y - img.height,
+          width: img.width,
+          height: img.height,
+        });
+      } catch (err) {
+        console.warn('Failed to embed image stamp into PDF:', err);
       }
     }
 

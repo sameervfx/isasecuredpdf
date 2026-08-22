@@ -19,18 +19,36 @@ import {
   Layers,
   Mail,
   Shield,
-  FileCheck
+  FileCheck,
+  Palette,
+  Award,
+  Scissors,
+  Grid,
+  Combine,
+  FileType,
+  BookOpen
 } from 'lucide-react';
+import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 
 import appLogo from '../assets/app_logo.jpg';
 
 interface LandingPageProps {
   onLaunchEditor: () => void;
+  themePreset?: ThemePreset;
+  activeTheme?: ThemeConfig;
+  onOpenThemeModal?: () => void;
+  onOpenUserGuide?: () => void;
 }
 
 type LegalModalType = 'privacy' | 'terms' | 'refund' | 'contact' | null;
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({
+  onLaunchEditor,
+  themePreset,
+  activeTheme,
+  onOpenThemeModal,
+  onOpenUserGuide,
+}) => {
   const [activeModal, setActiveModal] = useState<LegalModalType>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
@@ -98,15 +116,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
     e.preventDefault();
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      element.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
+  const bgClass = activeTheme?.bgClass || 'bg-slate-950';
+  const primaryBtnClass = activeTheme?.primaryBtn || 'from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-cyan-500/25 border-cyan-400/30';
+  const accentTextClass = activeTheme?.accentText || 'text-cyan-400';
+
   return (
-    <div className="min-h-screen w-full max-w-[100vw] overflow-y-auto overflow-x-hidden scroll-smooth bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-white flex flex-col">
+    <div className={`min-h-screen w-full max-w-[100vw] overflow-y-auto max-lg:overflow-x-auto lg:overflow-x-hidden touch-auto scroll-smooth ${bgClass} text-slate-100 font-sans selection:bg-cyan-500 selection:text-white flex flex-col transition-colors duration-500`}>
       {/* 1. Navigation Bar */}
-      <nav className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between max-w-[100vw] overflow-x-hidden">
-        <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer flex-shrink-0" onClick={handleGateCheckAndLaunch}>
+      <nav className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between max-w-[100vw] max-lg:overflow-x-auto">
+        <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
             <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
           </div>
@@ -128,9 +150,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+          {onOpenUserGuide && (
+            <button
+              onClick={onOpenUserGuide}
+              title="User Guide & Security Specs Whitepaper"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition active:scale-95 shadow"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline font-bold">User Guide</span>
+            </button>
+          )}
+
+          {onOpenThemeModal && (
+            <button
+              onClick={onOpenThemeModal}
+              title="Customize Themes & Dynamic Time-of-Day Backgrounds"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition active:scale-95 shadow"
+            >
+              <Palette className={`w-3.5 h-3.5 ${accentTextClass}`} />
+              <span className="hidden sm:inline font-bold">Theme</span>
+            </button>
+          )}
+
           <button
             onClick={handleGateCheckAndLaunch}
-            className="flex items-center space-x-1.5 sm:space-x-2 px-3.5 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
+            className={`flex items-center space-x-1.5 sm:space-x-2 px-3.5 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r ${primaryBtnClass} text-xs sm:text-sm font-bold rounded-xl shadow-lg border transition transform active:scale-95`}
           >
             <Sparkles className="w-4 h-4 text-yellow-300" />
             <span>Try Free Web Version</span>
@@ -140,14 +184,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
       </nav>
 
       {/* 2. Hero Section */}
-      <section className="relative pt-10 sm:pt-16 pb-16 sm:pb-20 px-4 lg:px-8 max-w-7xl mx-auto text-center flex-1 w-full overflow-x-hidden">
-        <div className="inline-flex items-center space-x-2 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border border-cyan-500/30 rounded-full text-[10px] sm:text-xs font-semibold text-cyan-300 mb-6 sm:mb-8 max-w-full text-center flex-wrap justify-center">
+      <section className="relative pt-10 sm:pt-16 pb-16 sm:pb-20 px-4 lg:px-8 max-w-7xl mx-auto text-center flex-1 w-full max-lg:overflow-x-auto lg:overflow-x-hidden">
+        <div className={`inline-flex items-center space-x-2 px-3 py-1.5 sm:px-4 sm:py-1.5 bg-slate-900/80 border ${activeTheme?.accentBorder || 'border-cyan-500/30'} rounded-full text-[10px] sm:text-xs font-semibold ${accentTextClass} mb-6 sm:mb-8 max-w-full text-center flex-wrap justify-center shadow`}>
           <Lock className="w-3.5 h-3.5 flex-shrink-0" />
           <span>🔒 100% Client-Side • Zero Data Transmission • Phone, Tablet & Desktop Ready</span>
         </div>
 
         <h1 className="text-2xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-5xl mx-auto px-2">
-          The 100% On-Device, <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">Privacy-First PDF Suite</span> for Modern Teams.
+          The 100% On-Device, <span className={`bg-gradient-to-r ${activeTheme?.accentGradient || 'from-cyan-400 via-teal-300 to-indigo-400'} bg-clip-text text-transparent`}>Privacy-First PDF Suite</span> for Modern Teams.
         </h1>
 
         <p className="mt-6 text-base sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-normal">
@@ -158,7 +202,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
           {/* First Button: Try Free Phone/Tablet Version */}
           <button
             onClick={handleGateCheckAndLaunch}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2.5 px-7 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm sm:text-base rounded-2xl shadow-xl shadow-cyan-500/25 border border-cyan-400/30 transition transform active:scale-95"
+            className={`w-full sm:w-auto flex items-center justify-center space-x-2.5 px-7 py-4 bg-gradient-to-r ${primaryBtnClass} text-white font-bold text-sm sm:text-base rounded-2xl shadow-xl border transition transform active:scale-95`}
           >
             <Sparkles className="w-5 h-5 text-yellow-300 flex-shrink-0" />
             <span>Try Free Phone / Tablet Version</span>
@@ -177,7 +221,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
         </div>
 
         {/* Hero Interactive Preview Feature Card */}
-        <div className="mt-16 relative max-w-5xl mx-auto bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-8 shadow-2xl overflow-hidden backdrop-blur-xl">
+        <div className="mt-16 relative max-w-5xl mx-auto bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-8 shadow-2xl max-lg:overflow-x-auto lg:overflow-hidden backdrop-blur-xl">
           <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
           <div className="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-6">
             <div className="flex items-center space-x-3">
@@ -228,36 +272,76 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/50 transition">
-              <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-xl w-fit mb-4">
+            {/* 1. Redact & Overwrite */}
+            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition group">
+              <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <Edit3 className="w-6 h-6" />
               </div>
               <h3 className="text-base font-bold text-white mb-2">Redact & Overwrite Text</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Cover old text coordinates and replace seamlessly with clean 4K text rendering.</p>
+              <p className="text-xs text-slate-400 leading-relaxed">Cover sensitive text coordinates and overlay clean 4K text rendering seamlessly.</p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/50 transition">
-              <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl w-fit mb-4">
+            {/* 2. Interactive Form Filling */}
+            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/10 transition group">
+              <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <FileText className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Interactive Form Filling</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Fill standard AcroForm fields effortlessly with visual blue highlight cues.</p>
+              <h3 className="text-base font-bold text-white mb-2">Interactive AcroForm Filling</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Fill standard AcroForm fields, text boxes, and checkboxes with visual highlight cues.</p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/50 transition">
-              <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl w-fit mb-4">
+            {/* 3. Digital Signatures */}
+            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 transition group">
+              <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <PenTool className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Handwritten & Digital Signatures</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Draw, place, and flatten signatures locally with instant drag-and-drop handles.</p>
+              <h3 className="text-base font-bold text-white mb-2">Digital Signatures & E-Sign</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Draw, type, place, and flatten signatures locally with instant drag-and-drop handles.</p>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/50 transition">
-              <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl w-fit mb-4">
+            {/* 4. Stamp Tool & Seals */}
+            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-amber-500/50 hover:shadow-xl hover:shadow-amber-500/10 transition group">
+              <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+                <Award className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Dynamic Stamps & Seals</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Apply official APPROVED, CONFIDENTIAL, REJECTED, and custom image seals with one tap.</p>
+            </div>
+
+            {/* 5. Split & Arrange Pages */}
+            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/10 transition group">
+              <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+                <Scissors className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Split & Arrange Pages</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Extract page ranges, delete unwanted pages, and reorder document pages visually.</p>
+            </div>
+
+            {/* 6. Combine & Merge PDFs */}
+            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-rose-500/50 hover:shadow-xl hover:shadow-rose-500/10 transition group">
+              <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+                <Combine className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Merge & Combine PDFs</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Merge multiple PDF documents into one single organized PDF file seamlessly.</p>
+            </div>
+
+            {/* 7. Multi-Format Converter */}
+            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition group">
+              <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+                <FileType className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">Export to Word, Excel, JPG</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Convert PDFs into Word (.docx), Excel (.xlsx), Text (.txt), and High-DPI Images (.jpg/.png).</p>
+            </div>
+
+            {/* 8. Cross-Platform & Desktop */}
+            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-teal-500/50 hover:shadow-xl hover:shadow-teal-500/10 transition group">
+              <div className="p-3 bg-teal-500/10 text-teal-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <Monitor className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Cross-Platform Desktop & Web</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Run directly in your browser or install as a native lightweight desktop app.</p>
+              <h3 className="text-base font-bold text-white mb-2">Cross-Platform Web & Desktop</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">Run directly in your browser or install as a lightweight native air-gapped desktop app.</p>
             </div>
           </div>
         </div>
@@ -265,7 +349,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
 
       {/* 4. Security & Compliance Highlight */}
       <section id="security" className="scroll-mt-24 py-24 px-4 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 rounded-3xl p-8 sm:p-14 shadow-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 rounded-3xl p-8 sm:p-14 shadow-2xl relative max-lg:overflow-x-auto lg:overflow-hidden">
           <div className="max-w-4xl">
             <div className="flex items-center space-x-2 px-3 py-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-full text-xs font-semibold w-fit mb-6">
               <Shield className="w-4 h-4 text-cyan-400" />
@@ -346,12 +430,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
                 </ul>
               </div>
 
-              <button
-                onClick={() => setIsProMonthlyModalOpen(true)}
-                className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 hover:border-cyan-500/50 transition"
+              <a
+                href="https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=2.99&amountHash=50954d4d775e1b695075d6cd0d1294c8cb703bee5b3b641c3ab061bf52f41803"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 hover:border-cyan-500/50 transition text-center block"
               >
                 Start 7-Day Free Trial ($2.99/mo)
-              </button>
+              </a>
             </div>
 
             <div className="bg-slate-900 border-2 border-cyan-500 rounded-3xl p-6 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10 transform lg:-translate-y-2">
@@ -374,19 +460,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
                 </ul>
               </div>
 
-              <button
-                onClick={() => setIsProAnnualModalOpen(true)}
-                className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition"
+              <a
+                href="https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=29.99&amountHash=a3d5f6510e8f99715faa83f4534261aa00ae5e18a916916a043e4b8fe2e303f4"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
               >
                 Get Annual Plan ($29.99/yr)
-              </button>
+              </a>
             </div>
 
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition">
               <div>
                 <h3 className="text-base font-bold text-white mb-1">Lifetime License</h3>
                 <p className="text-xs text-slate-400 mb-4">One-time investment forever.</p>
-                <div className="text-3xl font-extrabold text-white mb-6">$99.00 <span className="text-xs text-slate-500 font-normal">/ one-time</span></div>
+                <div className="text-3xl font-extrabold text-white mb-6">$99.99 <span className="text-xs text-slate-500 font-normal">/ one-time</span></div>
 
                 <ul className="space-y-3 text-xs text-slate-300">
                   <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
@@ -395,12 +483,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
                 </ul>
               </div>
 
-              <button
-                onClick={() => setIsLifetimeModalOpen(true)}
-                className="mt-8 w-full py-3 bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 hover:border-purple-500/60 transition"
+              <a
+                href="https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=99.99&amountHash=593108da3e6c466ca37c3e0c5928e9e8b068c04b3c02ba4d050060bf2dc7da69"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-8 w-full py-3 bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 hover:border-purple-500/60 transition text-center block"
               >
-                Buy Lifetime License ($99)
-              </button>
+                Buy Lifetime License ($99.99)
+              </a>
             </div>
           </div>
         </div>
@@ -779,18 +869,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
                   🚀 Activate 7-Day Free Trial & Start
                 </button>
 
-                <button
-                  onClick={() => {
-                    setIsProMonthlyModalOpen(false);
-                    try {
-                      localStorage.setItem('isa_pro_active', 'true');
-                    } catch (e) {}
-                    handleGateCheckAndLaunch();
-                  }}
-                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition"
+                <a
+                  href="https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=2.99&amountHash=50954d4d775e1b695075d6cd0d1294c8cb703bee5b3b641c3ab061bf52f41803"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
                 >
                   💳 Subscribe Now ($2.99/month)
-                </button>
+                </a>
               </div>
             </div>
           </div>
@@ -823,18 +909,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
                 <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /><span>14-Day Money-Back Guarantee</span></div>
               </div>
 
-              <button
-                onClick={() => {
-                  setIsProAnnualModalOpen(false);
-                  try {
-                    localStorage.setItem('isa_pro_annual_active', 'true');
-                  } catch (e) {}
-                  setIsDownloadModalOpen(true);
-                }}
-                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition"
+              <a
+                href="https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=29.99&amountHash=a3d5f6510e8f99715faa83f4534261aa00ae5e18a916916a043e4b8fe2e303f4"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
               >
                 💳 Complete Annual Checkout ($29.99/yr) →
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -855,7 +937,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white">Lifetime VIP License</h3>
-                <p className="text-xs text-purple-400 font-bold">$99.00 One-Time • Own Forever</p>
+                <p className="text-xs text-purple-400 font-bold">$99.99 One-Time • Own Forever</p>
               </div>
             </div>
 
@@ -866,18 +948,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunchEditor }) => {
                 <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Priority IT Support & Enterprise Specs</span></div>
               </div>
 
-              <button
-                onClick={() => {
-                  setIsLifetimeModalOpen(false);
-                  try {
-                    localStorage.setItem('isa_lifetime_vip', 'true');
-                  } catch (e) {}
-                  setIsDownloadModalOpen(true);
-                }}
-                className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition"
+              <a
+                href="https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=99.99&amountHash=593108da3e6c466ca37c3e0c5928e9e8b068c04b3c02ba4d050060bf2dc7da69"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
               >
-                💎 Pay Once $99.00 - Unlock Lifetime VIP →
-              </button>
+                💎 Pay Once $99.99 - Unlock Lifetime VIP →
+              </a>
             </div>
           </div>
         </div>
