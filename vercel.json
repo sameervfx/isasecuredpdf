@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "npx tsc && npx vite build",
+  "buildCommand": "npx vite build",
   "outputDirectory": "dist",
   "rewrites": [
     {

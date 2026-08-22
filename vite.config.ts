@@ -24,6 +24,9 @@ export default defineConfig(({ command }) => ({
   build: {
     target: 'esnext',
     outDir: 'dist',
+    commonjsOptions: {
+      include: [/mupdf/, /node_modules/],
+    },
     rollupOptions: {
       output: {
         // Chunk splitting for faster load
