@@ -24,6 +24,7 @@ import { createSamplePDF } from './utils/samplePdf';
 import { createBlankPDF, CreatePDFOptions } from './utils/blankPdf';
 import { saveSignatureToStorage } from './utils/savedSignatures';
 import { addRecentFile, RecentFileItem } from './utils/recentFiles';
+import { trackEvent } from './utils/analytics';
 import './types/electron.d';
 import {
   PDFDocumentState,
@@ -421,6 +422,7 @@ export const App: React.FC = () => {
       });
       setCurrentPage(1);
       setCurrentView('editor');
+      trackEvent('pdf_loaded');
 
       // Generate thumbnails in background
       const thumbs: string[] = [];
@@ -809,6 +811,7 @@ export const App: React.FC = () => {
         document.body.removeChild(link);
         setTimeout(() => URL.revokeObjectURL(url), 2000);
       }
+      trackEvent('export_downloaded');
     } catch (err) {
       console.error('Export error:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -1032,6 +1035,7 @@ export const App: React.FC = () => {
           activeTheme={activeTheme}
           onOpenThemeModal={() => setIsThemeModalOpen(true)}
           onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
+          isProActive={isProActive}
         />
         <ThemeModal
           isOpen={isThemeModalOpen}
@@ -1116,6 +1120,18 @@ export const App: React.FC = () => {
           setIsPasswordModalOpen(true);
         }}
         onOpenCompressModal={() => setIsCompressModalOpen(true)}
+        onOpenDesktopDownloadModal={() => {
+          const isSubscribed =
+            localStorage.getItem('isa_pro_subscribed') === 'true' ||
+            localStorage.getItem('isa_pro_recurring') === 'true';
+
+          if (!isSubscribed) {
+            setIsHelcimCheckoutOpen(true);
+          } else {
+            alert('Your active Pro subscription is verified! Downloading desktop package...');
+            window.location.href = '/dist_packages/Isa_Secure_PDF_Suite_v1.0.0_Portable_Windows.zip';
+          }
+        }}
         isProActive={isProActive}
         onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
       />

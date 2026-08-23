@@ -113,6 +113,7 @@ interface HeaderToolbarProps {
   onAddImageStamp?: (img: Omit<import('../types/pdf').ImageStampAnnotation, 'id'>) => void;
   onOpenPasswordModal?: (mode: 'protect' | 'unlock') => void;
   onOpenCompressModal?: () => void;
+  onOpenDesktopDownloadModal?: () => void;
   isProActive?: boolean;
   onOpenCheckout?: () => void;
 }
@@ -169,6 +170,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   onAddImageStamp,
   onOpenPasswordModal,
   onOpenCompressModal,
+  onOpenDesktopDownloadModal,
   isProActive = false,
   onOpenCheckout,
 }) => {
@@ -327,7 +329,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
         </div>
         <div>
-          <div className="flex items-center space-x-1.5 sm:space-x-2">
+          <div className="flex items-center space-x-3 gap-3">
             <h1
               onClick={onGoToLandingPage}
               className="font-bold text-xs sm:text-base tracking-tight text-white hover:text-cyan-400 cursor-pointer transition truncate max-w-[100px] sm:max-w-none"
@@ -337,10 +339,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             </h1>
 
             {/* File Menu Dropdown */}
-            <div className="relative" ref={fileMenuRef}>
+            <div className="relative ml-3" ref={fileMenuRef}>
               <button
                 onClick={() => toggleDropdown('file', fileMenuRef, 208)}
-                className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center space-x-1 transition shadow-sm"
+                className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center space-x-1 transition shadow-sm"
               >
                 <span>File</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -396,6 +398,20 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                       <span>Open PDF...</span>
                     </div>
                     <span className="text-[10px] text-slate-500">Ctrl+O</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsFileMenuOpen(false);
+                      if (onOpenDesktopDownloadModal) onOpenDesktopDownloadModal();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-white hover:bg-slate-800 rounded-xl transition"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <Download className="w-4 h-4 text-cyan-400" />
+                      <span>Download Desktop Apps (.zip)...</span>
+                    </div>
+                    <span className="text-[9px] font-extrabold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">PRO SUB</span>
                   </button>
 
                   {/* Open Recent Submenu Trigger */}

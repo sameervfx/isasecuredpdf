@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight } from 'lucide-react';
+import { trackEvent } from '../utils/analytics';
 
 interface HelcimCheckoutModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   };
 
   const handleHelcimCheckout = () => {
+    trackEvent('pricing_checkout_clicked', selectedPlan);
     const payUrl = HELCIM_PAY_URLS[selectedPlan];
     window.open(payUrl, '_blank', 'noopener,noreferrer');
   };
@@ -93,6 +95,12 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Desktop Beta Subscription Benefit Badge */}
+        <div className="mt-3 px-3.5 py-2 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl flex items-center space-x-2 text-xs font-semibold text-cyan-300">
+          <Sparkles className="w-4 h-4 text-yellow-300 flex-shrink-0" />
+          <span>Includes Standalone Offline Desktop Apps (.exe & .dmg)</span>
         </div>
 
         {/* Toggle Mode: Helcim Pay vs License Key */}

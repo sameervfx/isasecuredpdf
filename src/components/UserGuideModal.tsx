@@ -186,22 +186,50 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                 </p>
               </div>
 
-              <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-white text-sm">Download Native Desktop Installers</h4>
-                  <p className="text-xs text-slate-400">Air-gapped desktop edition for Windows & macOS</p>
+              <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 flex flex-col space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-white text-sm">Download Native Desktop Installers (.zip)</h4>
+                    <p className="text-xs text-slate-400">Air-gapped desktop edition for Windows & macOS (Requires Pro Recurring Subscription)</p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const isSub = localStorage.getItem('isa_pro_subscribed') === 'true' || localStorage.getItem('isa_pro_recurring') === 'true';
+                      if (!isSub) {
+                        onClose();
+                        if (onOpenCheckout) onOpenCheckout();
+                      }
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg border border-cyan-400/30 transition transform active:scale-95 flex items-center space-x-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Get Pro Desktop Beta</span>
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => {
-                    onClose();
-                    if (onOpenCheckout) onOpenCheckout();
-                  }}
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg border border-cyan-400/30 transition transform active:scale-95 flex items-center space-x-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Get Pro Download</span>
-                </button>
+                {/* Direct links for active subscribers */}
+                {(localStorage.getItem('isa_pro_subscribed') === 'true' || localStorage.getItem('isa_pro_recurring') === 'true') && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                    <a
+                      href="/dist_packages/Isa_Secure_PDF_Suite_v1.0.0_Portable_Windows.zip"
+                      download
+                      className="px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-xs font-bold rounded-xl flex items-center justify-between"
+                    >
+                      <span>Windows (.zip)</span>
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+
+                    <a
+                      href="/dist_packages/Isa_Secure_PDF_Suite_v1.0.0_Portable_Mac.zip"
+                      download
+                      className="px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300 text-xs font-bold rounded-xl flex items-center justify-between"
+                    >
+                      <span>macOS (.zip)</span>
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           )}

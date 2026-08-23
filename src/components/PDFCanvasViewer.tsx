@@ -305,15 +305,15 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
         <div className={`relative max-w-xl w-full p-10 rounded-3xl border-2 border-dashed flex flex-col items-center text-center backdrop-blur-xl transition-all ${
           isDragOver
-            ? 'border-cyan-400 bg-cyan-950/40 scale-105 shadow-2xl shadow-cyan-500/20'
-            : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+            ? 'border-cyan-400 bg-cyan-950/50 scale-105 shadow-2xl shadow-cyan-500/30 ring-2 ring-cyan-400/50'
+            : 'border-slate-700/80 bg-slate-900/70 hover:border-cyan-500/60 shadow-xl'
         }`}>
           <div className="w-20 h-20 rounded-2xl overflow-hidden mb-6 shadow-2xl shadow-cyan-500/30 ring-2 ring-cyan-500/40">
             <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Isa Secure PDF Suite</h2>
-          <p className="text-sm text-slate-400 mb-8 max-w-md">
-            100% client-side. Drag & drop a PDF, or use one of the options below. No data ever leaves your device.
+          <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">ISASecuredPDF Suite</h2>
+          <p className="text-xs sm:text-sm text-slate-400 mb-8 max-w-md leading-relaxed">
+            100% client-side air-gapped PDF engine. <span className="text-cyan-300 font-semibold">Drag & drop PDF anywhere or choose an option below</span>. No data ever leaves your device.
           </p>
 
           <input type="file" ref={fileInputRef} onChange={onOpenFile} accept="application/pdf" className="hidden" />
@@ -324,7 +324,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
               className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition active:scale-95"
             >
               <Upload className="w-4 h-4" />
-              <span>Upload PDF</span>
+              <span>Open PDF</span>
             </button>
 
             {onOpenCreateModal && (
@@ -348,35 +348,29 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
             )}
           </div>
 
-          {/* Desktop App Download Cards */}
-          <div className="mt-6 pt-6 border-t border-slate-800/80 w-full flex flex-col items-center">
-            <p className="text-xs font-bold text-slate-300 mb-3 tracking-wide uppercase flex items-center space-x-1.5">
-              <Download className="w-4 h-4 text-cyan-400" />
-              <span>Download Standalone Desktop Beta</span>
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-              <a
-                href="/Isa_Secure_PDF_Suite_v1.0.0_Beta_Windows.zip"
-                download="Isa_Secure_PDF_Suite_v1.0.0_Beta_Windows.zip"
-                className="flex items-center justify-center space-x-2 px-3 py-2.5 bg-slate-800 hover:bg-cyan-950/80 text-slate-200 hover:text-cyan-300 text-xs font-semibold rounded-xl border border-slate-700 hover:border-cyan-500/60 shadow transition group"
-              >
-                <Download className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
-                <span>🪟 Windows (.zip)</span>
-              </a>
-              <a
-                href="/Isa_Secure_PDF_Suite_v1.0.0_Beta_Mac.zip"
-                download="Isa_Secure_PDF_Suite_v1.0.0_Beta_Mac.zip"
-                className="flex items-center justify-center space-x-2 px-3 py-2.5 bg-slate-800 hover:bg-cyan-950/80 text-slate-200 hover:text-cyan-300 text-xs font-semibold rounded-xl border border-slate-700 hover:border-cyan-500/60 shadow transition group"
-              >
-                <Download className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
-                <span>🍎 macOS (.zip)</span>
-              </a>
+          {/* Drag & Drop Any PDF Dropzone Feature Box */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className={`mt-6 p-6 w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all group ${
+              isDragOver
+                ? 'border-cyan-400 bg-cyan-950/60 scale-102 shadow-lg shadow-cyan-500/20'
+                : 'border-cyan-500/30 bg-slate-950/60 hover:border-cyan-400 hover:bg-slate-900/90'
+            }`}
+          >
+            <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-xl mb-2.5 group-hover:scale-110 transition border border-cyan-500/20">
+              <Upload className="w-6 h-6 text-cyan-400" />
             </div>
+            <span className="text-xs font-bold text-slate-200 group-hover:text-cyan-300 transition">
+              Drag & Drop Any PDF File Here
+            </span>
+            <span className="text-[11px] text-slate-400 mt-1">
+              or click to browse local files from your device
+            </span>
           </div>
 
           <div className="mt-6 pt-6 border-t border-slate-800/80 flex items-center justify-center space-x-2 text-xs text-emerald-400 font-medium">
-            <ShieldCheck className="w-4 h-4" />
-            <span>100% In-Browser & Desktop Processing — Zero Server Upload</span>
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>100% On-Device & Air-Gapped Processing — Zero Server Upload</span>
           </div>
         </div>
       </main>
