@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Zap, ArrowRight, ShieldCheck, Download, AlertCircle, Sparkles } from 'lucide-react';
 import { securityService, CompressionResult } from '../services/securityService';
 
@@ -20,12 +20,26 @@ export const CompressModal: React.FC<CompressModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [result, setResult] = useState<CompressionResult | null>(null);
 
+  // Reset compression result and error state whenever the modal opens or a new document is loaded
+  useEffect(() => {
+    if (isOpen) {
+      setResult(null);
+      setErrorMessage('');
+    }
+  }, [isOpen, pdfBytes]);
+
   if (!isOpen) return null;
 
   const formatSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  const handleSelectPreset = (selectedPreset: 'medium' | 'high' | 'low') => {
+    setPreset(selectedPreset);
+    setResult(null);
+    setErrorMessage('');
   };
 
   const handleCompress = async () => {
@@ -103,7 +117,7 @@ export const CompressModal: React.FC<CompressModalProps> = ({
             <div className="space-y-2">
               {/* 1. Recommended / Medium */}
               <div
-                onClick={() => setPreset('medium')}
+                onClick={() => handleSelectPreset('medium')}
                 className={`p-3 rounded-xl border cursor-pointer transition flex items-start space-x-3 ${
                   preset === 'medium'
                     ? 'bg-cyan-950/50 border-cyan-500 ring-1 ring-cyan-500/30'
@@ -114,7 +128,7 @@ export const CompressModal: React.FC<CompressModalProps> = ({
                   type="radio"
                   name="preset"
                   checked={preset === 'medium'}
-                  onChange={() => setPreset('medium')}
+                  onChange={() => handleSelectPreset('medium')}
                   className="mt-0.5 text-cyan-500 focus:ring-cyan-500"
                 />
                 <div>
@@ -132,7 +146,7 @@ export const CompressModal: React.FC<CompressModalProps> = ({
 
               {/* 2. High Compression */}
               <div
-                onClick={() => setPreset('high')}
+                onClick={() => handleSelectPreset('high')}
                 className={`p-3 rounded-xl border cursor-pointer transition flex items-start space-x-3 ${
                   preset === 'high'
                     ? 'bg-amber-950/50 border-amber-500 ring-1 ring-amber-500/30'
@@ -143,7 +157,7 @@ export const CompressModal: React.FC<CompressModalProps> = ({
                   type="radio"
                   name="preset"
                   checked={preset === 'high'}
-                  onChange={() => setPreset('high')}
+                  onChange={() => handleSelectPreset('high')}
                   className="mt-0.5 text-amber-500 focus:ring-amber-500"
                 />
                 <div>
@@ -161,7 +175,7 @@ export const CompressModal: React.FC<CompressModalProps> = ({
 
               {/* 3. Low / Lossless */}
               <div
-                onClick={() => setPreset('low')}
+                onClick={() => handleSelectPreset('low')}
                 className={`p-3 rounded-xl border cursor-pointer transition flex items-start space-x-3 ${
                   preset === 'low'
                     ? 'bg-emerald-950/50 border-emerald-500 ring-1 ring-emerald-500/30'
@@ -172,7 +186,7 @@ export const CompressModal: React.FC<CompressModalProps> = ({
                   type="radio"
                   name="preset"
                   checked={preset === 'low'}
-                  onChange={() => setPreset('low')}
+                  onChange={() => handleSelectPreset('low')}
                   className="mt-0.5 text-emerald-500 focus:ring-emerald-500"
                 />
                 <div>

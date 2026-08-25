@@ -84,7 +84,8 @@ export const securityService = {
   },
 
   /**
-   * Compresses PDF file size using multi-tier image downscaling & stream compaction
+   * Compresses PDF file size using multi-tier image downscaling & stream compaction.
+   * Guaranteed never to return a file larger than the original input document.
    */
   async compressPDF(
     pdfBytes: Uint8Array,
@@ -92,22 +93,25 @@ export const securityService = {
   ): Promise<CompressionResult> {
     const originalSize = pdfBytes.length;
 
-    if (preset === 'low') {
-      // Lossless structural cleanup & object stream compaction
-      const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-      const compactBytes = await pdfDoc.save({ useObjectStreams: true });
-      
-      let finalBytes = compactBytes;
+    // 1. Always perform structural compaction first (mupdf + pdf-lib object stream cleanup)
+    let structuralBytes: Uint8Array = pdfBytes;
+    try {
+      const doc = mupdf.PDFDocument.openDocument(pdfBytes, 'pdf').asPDF();
+      if (doc) {
+        const raw = doc.saveToBuffer('garbage=compact,compress=yes,clean=yes').asUint8Array();
+        const clean = new Uint8Array(raw.length);
+        clean.set(raw);
+        structuralBytes = clean;
+      }
+    } catch (e) {
       try {
-        const doc = mupdf.PDFDocument.openDocument(compactBytes, 'pdf').asPDF();
-        if (doc) {
-          const raw = doc.saveToBuffer('garbage=compact,compress=yes').asUint8Array();
-          const clean = new Uint8Array(raw.length);
-          clean.set(raw);
-          finalBytes = clean;
-        }
-      } catch (e) {}
+        const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        structuralBytes = await pdfDoc.save({ useObjectStreams: true });
+      } catch (err) {}
+    }
 
+    if (preset === 'low') {
+      const finalBytes = structuralBytes.length < originalSize ? structuralBytes : pdfBytes;
       const compressedSize = finalBytes.length;
       const savedBytes = Math.max(0, originalSize - compressedSize);
       const savedPercentage = originalSize > 0 ? Math.round((savedBytes / originalSize) * 100) : 0;
@@ -121,41 +125,62 @@ export const securityService = {
       };
     }
 
-    // Medium (150 DPI, 0.70 JPEG) vs High (96 DPI, 0.50 JPEG)
-    const scale = preset === 'high' ? 0.8 : 1.25;
-    const jpegQuality = preset === 'high' ? 0.50 : 0.70;
+    // Medium & High Preset: Downscale images with balanced resolution & JPEG compression
+    // Medium: scale 0.75, quality 0.65 (balanced size & clarity)
+    // High: scale 0.50, quality 0.45 (smallest size)
+    const scale = preset === 'high' ? 0.50 : 0.75;
+    const jpegQuality = preset === 'high' ? 0.45 : 0.65;
 
-    const pdfDocProxy = await pdfRenderer.loadDocument(pdfBytes);
-    const numPages = pdfDocProxy.numPages;
-    const newPdfDoc = await PDFDocument.create();
+    let resampledBytes: Uint8Array | null = null;
+    try {
+      const pdfDocProxy = await pdfRenderer.loadDocument(pdfBytes);
+      const numPages = pdfDocProxy.numPages;
+      const newPdfDoc = await PDFDocument.create();
 
-    for (let i = 0; i < numPages; i++) {
-      const canvas = document.createElement('canvas');
-      const dimensions = await pdfRenderer.renderPageToCanvas(i, canvas, scale, 0, pdfBytes);
-      const dataUrl = canvas.toDataURL('image/jpeg', jpegQuality);
+      for (let i = 0; i < numPages; i++) {
+        const canvas = document.createElement('canvas');
+        const dimensions = await pdfRenderer.renderPageToCanvas(i, canvas, scale, 0, pdfBytes);
+        const dataUrl = canvas.toDataURL('image/jpeg', jpegQuality);
 
-      const imageEmbed = await newPdfDoc.embedJpg(dataUrl);
-      const page = newPdfDoc.addPage([dimensions.originalWidth, dimensions.originalHeight]);
+        const imageEmbed = await newPdfDoc.embedJpg(dataUrl);
+        const page = newPdfDoc.addPage([dimensions.originalWidth, dimensions.originalHeight]);
 
-      page.drawImage(imageEmbed, {
-        x: 0,
-        y: 0,
-        width: dimensions.originalWidth,
-        height: dimensions.originalHeight,
-      });
+        page.drawImage(imageEmbed, {
+          x: 0,
+          y: 0,
+          width: dimensions.originalWidth,
+          height: dimensions.originalHeight,
+        });
+      }
+
+      const rawResampled = await newPdfDoc.save({ useObjectStreams: true });
+      try {
+        const doc = mupdf.PDFDocument.openDocument(rawResampled, 'pdf').asPDF();
+        if (doc) {
+          const raw = doc.saveToBuffer('garbage=compact,compress=yes,clean=yes').asUint8Array();
+          const clean = new Uint8Array(raw.length);
+          clean.set(raw);
+          resampledBytes = clean;
+        } else {
+          resampledBytes = rawResampled;
+        }
+      } catch (e) {
+        resampledBytes = rawResampled;
+      }
+    } catch (e) {
+      console.error('Image resampling error during compression:', e);
     }
 
-    const resampledBytes = await newPdfDoc.save({ useObjectStreams: true });
-    let finalBytes = resampledBytes;
-    try {
-      const doc = mupdf.PDFDocument.openDocument(resampledBytes, 'pdf').asPDF();
-      if (doc) {
-        const raw = doc.saveToBuffer('garbage=compact,compress=yes').asUint8Array();
-        const clean = new Uint8Array(raw.length);
-        clean.set(raw);
-        finalBytes = clean;
-      }
-    } catch (e) {}
+    // Pick the best (smallest) result among resampled, structural, and original
+    let finalBytes = pdfBytes;
+
+    if (resampledBytes && resampledBytes.length < originalSize && resampledBytes.length < structuralBytes.length) {
+      finalBytes = resampledBytes;
+    } else if (structuralBytes.length < originalSize) {
+      finalBytes = structuralBytes;
+    } else {
+      finalBytes = structuralBytes.length < originalSize ? structuralBytes : pdfBytes;
+    }
 
     const compressedSize = finalBytes.length;
     const savedBytes = Math.max(0, originalSize - compressedSize);

@@ -181,6 +181,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   const [isTextDropdownOpen, setIsTextDropdownOpen] = useState(false);
   const [isSignDropdownOpen, setIsSignDropdownOpen] = useState(false);
   const [isAnnotateDropdownOpen, setIsAnnotateDropdownOpen] = useState(false);
+  const [isSecurityDropdownOpen, setIsSecurityDropdownOpen] = useState(false);
   const [isMoreToolsOpen, setIsMoreToolsOpen] = useState(false);
   const [savedSigs, setSavedSigs] = useState<SavedSignature[]>([]);
   const [recentFilesList, setRecentFilesList] = useState<RecentFileItem[]>([]);
@@ -226,11 +227,12 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   const textDropdownRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const annotateDropdownRef = useRef<HTMLDivElement>(null);
+  const securityDropdownRef = useRef<HTMLDivElement>(null);
   const moreToolsRef = useRef<HTMLDivElement>(null);
   const fileMenuRef = useRef<HTMLDivElement>(null);
 
   const toggleDropdown = (
-    name: 'text' | 'annotate' | 'sign' | 'tools' | 'file',
+    name: 'text' | 'annotate' | 'sign' | 'security' | 'tools' | 'file',
     ref: React.RefObject<HTMLDivElement>,
     popoverWidth = 256
   ) => {
@@ -239,6 +241,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
       setIsTextDropdownOpen(false);
       setIsAnnotateDropdownOpen(false);
       setIsSignDropdownOpen(false);
+      setIsSecurityDropdownOpen(false);
       setIsMoreToolsOpen(false);
       setIsFileMenuOpen(false);
       return;
@@ -255,6 +258,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
     setIsTextDropdownOpen(name === 'text');
     setIsAnnotateDropdownOpen(name === 'annotate');
     setIsSignDropdownOpen(name === 'sign');
+    setIsSecurityDropdownOpen(name === 'security');
     setIsMoreToolsOpen(name === 'tools');
     setIsFileMenuOpen(name === 'file');
   };
@@ -282,6 +286,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
         (textDropdownRef.current && textDropdownRef.current.contains(rawTarget)) ||
         (annotateDropdownRef.current && annotateDropdownRef.current.contains(rawTarget)) ||
         (dropdownRef.current && dropdownRef.current.contains(rawTarget)) ||
+        (securityDropdownRef.current && securityDropdownRef.current.contains(rawTarget)) ||
         (moreToolsRef.current && moreToolsRef.current.contains(rawTarget)) ||
         (fileMenuRef.current && fileMenuRef.current.contains(rawTarget));
 
@@ -290,6 +295,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
         setIsTextDropdownOpen(false);
         setIsAnnotateDropdownOpen(false);
         setIsSignDropdownOpen(false);
+        setIsSecurityDropdownOpen(false);
         setIsMoreToolsOpen(false);
         setIsFileMenuOpen(false);
         setIsRecentSubmenuOpen(false);
@@ -307,7 +313,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
     setToolMode(mode);
   };
 
-  const isAnnotateActive = ['draw', 'highlight', 'eraser', 'strikeout', 'checkmark', 'crossmark', 'form'].includes(toolMode);
+  const isAnnotateActive = ['draw', 'highlight', 'eraser', 'strikeout', 'checkmark', 'crossmark', 'form', 'line', 'rectangle', 'oval'].includes(toolMode);
 
   const handleDeleteSavedSig = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -845,7 +851,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           <div className="relative shrink-0" ref={annotateDropdownRef}>
             <button
               onClick={() => toggleDropdown('annotate', annotateDropdownRef, 208)}
-              title="Annotations, Markups, Stamps & Forms"
+              title="Annotations, Markups, Vector Shapes, Stamps & Forms"
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isAnnotateActive || (isAnnotateDropdownOpen && popoverPos.name === 'annotate')
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
@@ -859,6 +865,9 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               {toolMode === 'checkmark' && <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />}
               {toolMode === 'crossmark' && <XSquare className="w-3.5 h-3.5 text-rose-400" />}
               {toolMode === 'form' && <FormInput className="w-3.5 h-3.5 text-cyan-400" />}
+              {toolMode === 'line' && <Minus className="w-3.5 h-3.5 text-blue-400" />}
+              {toolMode === 'rectangle' && <Square className="w-3.5 h-3.5 text-blue-400" />}
+              {toolMode === 'oval' && <Circle className="w-3.5 h-3.5 text-blue-400" />}
               {!isAnnotateActive && <Pencil className="w-3.5 h-3.5 text-cyan-400" />}
               <span>
                 {toolMode === 'draw'
@@ -875,6 +884,12 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   ? 'Cross ✕'
                   : toolMode === 'form'
                   ? 'Fill Form'
+                  : toolMode === 'line'
+                  ? 'Line'
+                  : toolMode === 'rectangle'
+                  ? 'Rectangle'
+                  : toolMode === 'oval'
+                  ? 'Oval'
                   : 'Annotate'}
               </span>
               <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
@@ -890,10 +905,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   top: `${popoverPos.top}px`,
                   zIndex: 999999,
                 }}
-                className="w-52 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+                className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 animate-fadeIn"
               >
                 <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
-                  Markups & Stamps
+                  Markups & Freehand
                 </div>
 
                 <button
@@ -991,6 +1006,98 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   </div>
                   {toolMode === 'crossmark' && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
                 </button>
+
+                {/* Vector Shapes Section */}
+                <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800 space-y-1.5 my-1">
+                  <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Vector Shapes</div>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      onClick={() => {
+                        setToolMode('line');
+                        setIsAnnotateDropdownOpen(false);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
+                        toolMode === 'line' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                      title="Draw Line"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                      <span className="text-[9px]">Line</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setToolMode('rectangle');
+                        setIsAnnotateDropdownOpen(false);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
+                        toolMode === 'rectangle' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                      title="Draw Rectangle"
+                    >
+                      <Square className="w-3.5 h-3.5" />
+                      <span className="text-[9px]">Rect</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setToolMode('oval');
+                        setIsAnnotateDropdownOpen(false);
+                      }}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
+                        toolMode === 'oval' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}
+                      title="Draw Oval / Ellipse"
+                    >
+                      <Circle className="w-3.5 h-3.5" />
+                      <span className="text-[9px]">Oval</span>
+                    </button>
+                  </div>
+
+                  {/* Shape Controls: Stroke & Fill */}
+                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-slate-400">Stroke:</span>
+                      <input
+                        type="color"
+                        value={shapeStrokeColor || '#3b82f6'}
+                        onChange={(e) => setShapeStrokeColor && setShapeStrokeColor(e.target.value)}
+                        className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        title="Stroke Color"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-1">
+                      <span className="text-slate-400">Fill:</span>
+                      <select
+                        value={shapeFillColor || 'transparent'}
+                        onChange={(e) => setShapeFillColor && setShapeFillColor(e.target.value)}
+                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold"
+                      >
+                        <option value="transparent">None</option>
+                        <option value="#3b82f6">Blue</option>
+                        <option value="#ef4444">Red</option>
+                        <option value="#10b981">Green</option>
+                        <option value="#facc15">Yellow</option>
+                        <option value="#ffffff">White</option>
+                        <option value="#000000">Black</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center space-x-1">
+                      <span className="text-slate-400">Width:</span>
+                      <select
+                        value={shapeStrokeWidth || 2}
+                        onChange={(e) => setShapeStrokeWidth && setShapeStrokeWidth(Number(e.target.value))}
+                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold"
+                      >
+                        <option value={1}>1px</option>
+                        <option value={2}>2px</option>
+                        <option value={4}>4px</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>,
               document.body
             )}
@@ -1082,11 +1189,83 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             )}
           </div>
 
+          {/* Security Dropdown Button */}
+          <div className="relative shrink-0" ref={securityDropdownRef}>
+            <button
+              onClick={() => toggleDropdown('security', securityDropdownRef, 224)}
+              title="Protect PDF (AES-256 Password) & Unlock PDF (Remove Password)"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                isSecurityDropdownOpen && popoverPos.name === 'security'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Security</span>
+              <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
+            </button>
+
+            {/* Security Dropdown Popover */}
+            {isSecurityDropdownOpen && popoverPos.name === 'security' && createPortal(
+              <div
+                data-popover="true"
+                style={{
+                  position: 'fixed',
+                  left: `${popoverPos.left}px`,
+                  top: `${popoverPos.top}px`,
+                  zIndex: 999999,
+                }}
+                className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-1.5 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 animate-fadeIn"
+              >
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
+                  PDF Encryption & Password Control
+                </div>
+
+                {/* Protect PDF (Add Password) */}
+                <button
+                  onClick={() => {
+                    setIsSecurityDropdownOpen(false);
+                    if (onOpenPasswordModal) onOpenPasswordModal('protect');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Lock className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Protect PDF</div>
+                      <div className="text-[10px] text-slate-400">Add AES-256 password & permissions</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Protect</span>
+                </button>
+
+                {/* Unlock PDF (Remove Password) */}
+                <button
+                  onClick={() => {
+                    setIsSecurityDropdownOpen(false);
+                    if (onOpenPasswordModal) onOpenPasswordModal('unlock');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Unlock className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Unlock PDF</div>
+                      <div className="text-[10px] text-slate-400">Remove password & decrypt PDF</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Unlock</span>
+                </button>
+              </div>,
+              document.body
+            )}
+          </div>
+
           {/* Expanded Feature Modules Dropdown */}
           <div className="relative shrink-0" ref={moreToolsRef}>
             <button
               onClick={() => toggleDropdown('tools', moreToolsRef, 224)}
-              title="More Feature Modules (E-Sig, Templates, Watermark, AI)"
+              title="More Feature Modules (Compress, Watermark, Split, Templates)"
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isMoreToolsOpen && popoverPos.name === 'tools'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
@@ -1111,7 +1290,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
               >
                 <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
-                  Feature Modules & Shapes
+                  Feature Modules
                 </div>
 
                 {/* Add Image / Logo Attachment */}
@@ -1130,134 +1309,6 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     </div>
                   </div>
                   <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Stamp</span>
-                </button>
-
-                {/* Vector Shapes Submenu */}
-                <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800 space-y-1.5 my-1">
-                  <div className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Vector Shapes</div>
-                  <div className="grid grid-cols-3 gap-1">
-                    <button
-                      onClick={() => {
-                        setToolMode('line');
-                        setIsMoreToolsOpen(false);
-                      }}
-                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
-                        toolMode === 'line' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                      }`}
-                      title="Draw Line"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                      <span className="text-[9px]">Line</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setToolMode('rectangle');
-                        setIsMoreToolsOpen(false);
-                      }}
-                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
-                        toolMode === 'rectangle' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                      }`}
-                      title="Draw Rectangle"
-                    >
-                      <Square className="w-3.5 h-3.5" />
-                      <span className="text-[9px]">Rect</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setToolMode('oval');
-                        setIsMoreToolsOpen(false);
-                      }}
-                      className={`py-1.5 px-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center space-y-0.5 transition ${
-                        toolMode === 'oval' ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                      }`}
-                      title="Draw Oval / Ellipse"
-                    >
-                      <Circle className="w-3.5 h-3.5" />
-                      <span className="text-[9px]">Oval</span>
-                    </button>
-                  </div>
-
-                  {/* Shape Controls: Stroke & Fill */}
-                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800">
-                    <div className="flex items-center space-x-1">
-                      <span className="text-slate-400">Stroke:</span>
-                      <input
-                        type="color"
-                        value={shapeStrokeColor || '#3b82f6'}
-                        onChange={(e) => setShapeStrokeColor && setShapeStrokeColor(e.target.value)}
-                        className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
-                        title="Stroke Color"
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-1">
-                      <span className="text-slate-400">Fill:</span>
-                      <select
-                        value={shapeFillColor || 'transparent'}
-                        onChange={(e) => setShapeFillColor && setShapeFillColor(e.target.value)}
-                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold"
-                      >
-                        <option value="transparent">None</option>
-                        <option value="#3b82f6">Blue</option>
-                        <option value="#ef4444">Red</option>
-                        <option value="#10b981">Green</option>
-                        <option value="#facc15">Yellow</option>
-                        <option value="#ffffff">White</option>
-                        <option value="#000000">Black</option>
-                      </select>
-                    </div>
-
-                    <div className="flex items-center space-x-1">
-                      <span className="text-slate-400">Width:</span>
-                      <select
-                        value={shapeStrokeWidth || 2}
-                        onChange={(e) => setShapeStrokeWidth && setShapeStrokeWidth(Number(e.target.value))}
-                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold"
-                      >
-                        <option value={1}>1px</option>
-                        <option value={2}>2px</option>
-                        <option value={4}>4px</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Protect PDF (Add Password) */}
-                <button
-                  onClick={() => {
-                    setIsMoreToolsOpen(false);
-                    if (onOpenPasswordModal) onOpenPasswordModal('protect');
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <Lock className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Protect PDF</div>
-                      <div className="text-[10px] text-slate-400">Add AES-256 password & permissions</div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Security</span>
-                </button>
-
-                {/* Unlock PDF (Remove Password) */}
-                <button
-                  onClick={() => {
-                    setIsMoreToolsOpen(false);
-                    if (onOpenPasswordModal) onOpenPasswordModal('unlock');
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <Unlock className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Unlock PDF</div>
-                      <div className="text-[10px] text-slate-400">Remove password & decrypt PDF</div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Unlock</span>
                 </button>
 
                 {/* Compress PDF */}
@@ -1355,27 +1406,6 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     </div>
                   </div>
                   <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Watermark</span>
-                </button>
-
-                {/* 5. AI Assistant (Letter & Document Generator) */}
-                <button
-                  onClick={() => {
-                    setIsMoreToolsOpen(false);
-                    alert('AI Document Assistant: Powered by 100% Client-Side Local Model execution!');
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group border border-cyan-500/20 bg-cyan-950/20"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <Bot className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white flex items-center space-x-1">
-                        <span>AI Assistant</span>
-                        <Sparkles className="w-3 h-3 text-yellow-400" />
-                      </div>
-                      <div className="text-[10px] text-slate-400">Letter & Document Generator</div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-full shadow">AI Pro</span>
                 </button>
               </div>,
               document.body
