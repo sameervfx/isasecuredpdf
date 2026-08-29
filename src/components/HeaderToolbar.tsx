@@ -52,7 +52,8 @@ import {
   Circle,
   Minus,
   Lock,
-  Unlock
+  Unlock,
+  Camera
 } from 'lucide-react';
 import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
@@ -113,6 +114,7 @@ interface HeaderToolbarProps {
   onAddImageStamp?: (img: Omit<import('../types/pdf').ImageStampAnnotation, 'id'>) => void;
   onOpenPasswordModal?: (mode: 'protect' | 'unlock') => void;
   onOpenCompressModal?: () => void;
+  onOpenScanModal?: () => void;
   onOpenDesktopDownloadModal?: () => void;
   isProActive?: boolean;
   onOpenCheckout?: () => void;
@@ -147,10 +149,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   onSavePDF,
   onExportPDF,
   onPrintPDF,
-  isSaving,
-  isExporting,
-  isPrinting,
-  hasDocument,
+  isSaving = false,
+  isExporting = false,
+  isPrinting = false,
+  hasDocument = false,
   textFontSize = 14,
   setTextFontSize,
   textFontFamily,
@@ -170,6 +172,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   onAddImageStamp,
   onOpenPasswordModal,
   onOpenCompressModal,
+  onOpenScanModal,
   onOpenDesktopDownloadModal,
   isProActive = false,
   onOpenCheckout,
@@ -1292,6 +1295,24 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
                   Feature Modules
                 </div>
+
+                {/* Scan Document via Camera */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    if (onOpenScanModal) onOpenScanModal();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Camera className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+                    <div>
+                      <div className="font-bold text-white">Scan Document (Camera)</div>
+                      <div className="text-[10px] text-slate-400">Snap & convert paper to PDF</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Scanner</span>
+                </button>
 
                 {/* Add Image / Logo Attachment */}
                 <button

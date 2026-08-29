@@ -26,7 +26,9 @@ import {
   Grid,
   Combine,
   FileType,
-  BookOpen
+  BookOpen,
+  Camera,
+  Menu
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 
@@ -38,6 +40,7 @@ interface LandingPageProps {
   activeTheme?: ThemeConfig;
   onOpenThemeModal?: () => void;
   onOpenUserGuide?: () => void;
+  onOpenScanModal?: () => void;
   isProActive?: boolean;
 }
 
@@ -49,6 +52,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   activeTheme,
   onOpenThemeModal,
   onOpenUserGuide,
+  onOpenScanModal,
   isProActive = false,
 }) => {
   const [activeModal, setActiveModal] = useState<LegalModalType>(null);
@@ -58,6 +62,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isProMonthlyModalOpen, setIsProMonthlyModalOpen] = useState(false);
   const [isProAnnualModalOpen, setIsProAnnualModalOpen] = useState(false);
   const [isLifetimeModalOpen, setIsLifetimeModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleGateCheckAndLaunch = () => {
     // 1-click launch straight into editor workspace with zero registration barrier
@@ -113,46 +118,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className={`min-h-screen w-full max-w-[100vw] overflow-y-auto max-lg:overflow-x-auto lg:overflow-x-hidden touch-auto scroll-smooth ${bgClass} text-slate-100 font-sans selection:bg-cyan-500 selection:text-white flex flex-col transition-colors duration-500`}>
       {/* 1. Navigation Bar */}
-      <nav className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between max-w-[100vw] max-lg:overflow-x-auto">
+      <nav className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between w-full relative">
+        {/* Left: Brand Logo & Title */}
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
             <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
           </div>
-          <div>
-            <span className="text-sm sm:text-lg font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent tracking-tight">
+          <div className="flex items-center space-x-1.5">
+            <span className="text-sm sm:text-lg font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
               ISASecuredPDF
             </span>
-            <span className="hidden sm:inline-block ml-2 text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-full">
+            <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-full whitespace-nowrap">
               100% Client-Side
             </span>
           </div>
         </div>
 
-        <div className="hidden md:flex items-center space-x-8 text-xs font-semibold text-slate-300">
+        {/* Center: Desktop Navigation Links (Centrally Aligned for Desktop) */}
+        <div className="hidden md:flex items-center space-x-8 text-xs font-semibold text-slate-300 absolute left-1/2 -translate-x-1/2">
           <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-cyan-400 transition">Features</a>
           <a href="#security" onClick={(e) => scrollToSection(e, 'security')} className="hover:text-cyan-400 transition">Security & Compliance</a>
           <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-cyan-400 transition">Pricing</a>
           <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="hover:text-cyan-400 transition">FAQ</a>
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+        {/* Right: Desktop Buttons & Mobile Hamburger Button */}
+        <div className="flex items-center space-x-1.5 sm:space-x-3 flex-shrink-0">
           <button
             onClick={() => setIsDownloadModalOpen(true)}
             title="Download Standalone Desktop Apps (.zip for Windows/macOS)"
-            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/50 rounded-xl text-xs font-semibold text-cyan-300 transition active:scale-95 shadow"
+            className="hidden md:flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/50 rounded-xl text-xs font-semibold text-cyan-300 transition active:scale-95 shadow"
           >
             <Monitor className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline font-bold">Desktop Apps</span>
+            <span className="font-bold">Desktop Apps</span>
           </button>
 
           {onOpenUserGuide && (
             <button
               onClick={onOpenUserGuide}
               title="User Guide & Security Specs Whitepaper"
-              className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition active:scale-95 shadow"
+              className="hidden lg:flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition active:scale-95 shadow"
             >
               <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline font-bold">User Guide</span>
+              <span className="font-bold">User Guide</span>
             </button>
           )}
 
@@ -160,21 +168,111 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               onClick={onOpenThemeModal}
               title="Customize Themes & Dynamic Time-of-Day Backgrounds"
-              className="flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition active:scale-95 shadow"
+              className="hidden lg:flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl text-xs font-semibold text-slate-200 transition active:scale-95 shadow"
             >
               <Palette className={`w-3.5 h-3.5 ${accentTextClass}`} />
-              <span className="hidden sm:inline font-bold">Theme</span>
+              <span className="font-bold">Theme</span>
             </button>
           )}
 
           <button
             onClick={handleGateCheckAndLaunch}
-            className={`flex items-center space-x-1.5 sm:space-x-2 px-3.5 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r ${primaryBtnClass} text-xs sm:text-sm font-bold rounded-xl shadow-lg border transition transform active:scale-95`}
+            className={`flex items-center space-x-1 sm:space-x-2 px-2.5 py-1.5 sm:px-5 sm:py-2.5 bg-gradient-to-r ${primaryBtnClass} text-[11px] sm:text-sm font-extrabold rounded-xl shadow-lg border transition transform active:scale-95 whitespace-nowrap`}
           >
-            <Sparkles className="w-4 h-4 text-yellow-300" />
-            <span>Open Free Web Editor →</span>
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-300" />
+            <span>Open Free Editor →</span>
+          </button>
+
+          {/* Mobile Hamburger Toggle */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition"
+            aria-label="Toggle Navigation Menu"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-cyan-400" />}
           </button>
         </div>
+
+        {/* Mobile Dropdown Navigation Drawer with Solid Backdrops */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-slate-950/98 border-b-2 border-slate-800 p-4 space-y-2.5 shadow-2xl backdrop-blur-xl animate-fadeIn z-50">
+            <div className="flex flex-col space-y-2 font-extrabold text-sm text-slate-100">
+              <a
+                href="#features"
+                onClick={(e) => {
+                  scrollToSection(e, 'features');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-cyan-500/60 hover:text-cyan-300 transition flex items-center justify-between shadow-md active:scale-98"
+              >
+                <span>✨ Features</span>
+                <span className="text-xs text-slate-500 font-mono">→</span>
+              </a>
+
+              <a
+                href="#security"
+                onClick={(e) => {
+                  scrollToSection(e, 'security');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-cyan-500/60 hover:text-cyan-300 transition flex items-center justify-between shadow-md active:scale-98"
+              >
+                <span>🛡️ Security & Compliance</span>
+                <span className="text-xs text-slate-500 font-mono">→</span>
+              </a>
+
+              <a
+                href="#pricing"
+                onClick={(e) => {
+                  scrollToSection(e, 'pricing');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-cyan-500/60 hover:text-cyan-300 transition flex items-center justify-between shadow-md active:scale-98"
+              >
+                <span>💎 Pricing</span>
+                <span className="text-xs text-slate-500 font-mono">→</span>
+              </a>
+
+              <a
+                href="#faq"
+                onClick={(e) => {
+                  scrollToSection(e, 'faq');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-cyan-500/60 hover:text-cyan-300 transition flex items-center justify-between shadow-md active:scale-98"
+              >
+                <span>❓ FAQ</span>
+                <span className="text-xs text-slate-500 font-mono">→</span>
+              </a>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2 text-xs font-extrabold">
+              <button
+                onClick={() => {
+                  setIsDownloadModalOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="p-3 bg-slate-900 text-cyan-300 hover:text-white rounded-xl border border-slate-800 hover:border-cyan-500/60 flex items-center justify-center space-x-2 shadow-md transition active:scale-95"
+              >
+                <Monitor className="w-4 h-4 text-cyan-400" />
+                <span>💻 Desktop Apps</span>
+              </button>
+
+              {onOpenUserGuide && (
+                <button
+                  onClick={() => {
+                    onOpenUserGuide();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-3 bg-slate-900 text-emerald-300 hover:text-white rounded-xl border border-slate-800 hover:border-emerald-500/60 flex items-center justify-center space-x-2 shadow-md transition active:scale-95"
+                >
+                  <BookOpen className="w-4 h-4 text-emerald-400" />
+                  <span>📖 User Guide</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* 2. Hero Section */}
@@ -192,26 +290,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           Fill AcroForms, edit text, add vector shapes, encrypt, and compress PDFs locally in your browser. Zero data uploaded to cloud servers. Save up to 80% compared to traditional Acrobat subscriptions.
         </p>
 
-        {/* Hero CTAs */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto">
-          {/* Single Primary Glowing CTA */}
+        {/* Hero CTAs - Matching Scale Width, Height, Thickness & Live Camera Flashing Effect */}
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto w-full">
+          {/* Primary CTA: Open Free Web Editor */}
           <button
             onClick={handleGateCheckAndLaunch}
-            className={`w-full sm:w-auto flex items-center justify-center space-x-2.5 px-8 py-4 bg-gradient-to-r ${primaryBtnClass} text-white font-extrabold text-base rounded-2xl shadow-xl shadow-cyan-500/25 border transition transform active:scale-95 ring-2 ring-cyan-400/40`}
+            className={`w-full sm:w-1/2 flex items-center justify-center space-x-2.5 px-6 py-4 bg-gradient-to-r ${primaryBtnClass} text-white font-extrabold text-base rounded-2xl shadow-xl shadow-cyan-500/25 border-2 border-cyan-400/50 transition transform active:scale-95 ring-2 ring-cyan-400/40`}
           >
             <Sparkles className="w-5 h-5 text-yellow-300 flex-shrink-0" />
             <span>Open Free Web Editor →</span>
           </button>
 
-          {/* Secondary Ghost Link */}
-          <a
-            href="#pricing"
-            onClick={(e) => scrollToSection(e, 'pricing')}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2 px-7 py-4 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold text-base rounded-2xl border border-slate-700/80 transition transform active:scale-95 shadow-md"
+          {/* Camera Scanner CTA with Flashing Liveness Indicator & Single Camera Icon */}
+          <button
+            onClick={() => {
+              if (onOpenScanModal) onOpenScanModal();
+            }}
+            className="w-full sm:w-1/2 flex items-center justify-center space-x-2.5 px-6 py-4 bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white font-extrabold text-base rounded-2xl border-2 border-cyan-500/50 hover:border-cyan-400 transition transform active:scale-95 shadow-xl shadow-cyan-500/20 group relative"
           >
-            <ShieldCheck className="w-5 h-5 text-cyan-400 flex-shrink-0" />
-            <span>View Pricing & Security</span>
-          </a>
+            {/* Single Camera Icon with Liveness Flashing Pulse Badge */}
+            <div className="relative flex items-center justify-center flex-shrink-0">
+              <Camera className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border border-slate-900" />
+            </div>
+
+            <span>Scan Document (Camera)</span>
+          </button>
         </div>
 
         {/* Hero Interactive Drag-and-Drop Dropzone Mockup */}

@@ -8,7 +8,7 @@ import { DrawingCanvasOverlay } from './DrawingCanvasOverlay';
 import { ShapeOverlay } from './ShapeOverlay';
 import { ImageStampOverlay } from './ImageStampOverlay';
 import { ShapeAnnotation, ImageStampAnnotation } from '../types/pdf';
-import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, RotateCcw, XCircle, X } from 'lucide-react';
+import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, RotateCcw, XCircle, X, Camera } from 'lucide-react';
 import appLogo from '../assets/app_logo.jpg';
 
 interface PDFCanvasViewerProps {
@@ -37,6 +37,7 @@ interface PDFCanvasViewerProps {
   onLoadSample: () => void;
   onOpenCreateModal?: () => void;
   onOpenMergeModal?: () => void;
+  onOpenScanModal?: () => void;
   isLoading?: boolean;
   textColor?: string;
   textFontSize?: number;
@@ -318,32 +319,42 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
           <input type="file" ref={fileInputRef} onChange={onOpenFile} accept="application/pdf" className="hidden" />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition active:scale-95"
+              className="flex items-center justify-center space-x-1.5 px-3 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition active:scale-95"
             >
               <Upload className="w-4 h-4" />
               <span>Open PDF</span>
             </button>
 
+            {onOpenScanModal && (
+              <button
+                onClick={onOpenScanModal}
+                className="flex items-center justify-center space-x-1.5 px-3 py-3 bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold text-xs rounded-xl border border-cyan-500/40 transition"
+              >
+                <Camera className="w-4 h-4 text-cyan-400" />
+                <span>Scan Camera</span>
+              </button>
+            )}
+
             {onOpenCreateModal && (
               <button
                 onClick={onOpenCreateModal}
-                className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition"
+                className="flex items-center justify-center space-x-1.5 px-3 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition"
               >
                 <FilePlus className="w-4 h-4 text-cyan-400" />
-                <span>New Blank PDF</span>
+                <span>New Blank</span>
               </button>
             )}
 
             {onOpenMergeModal && (
               <button
                 onClick={onOpenMergeModal}
-                className="flex items-center justify-center space-x-2 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition"
+                className="flex items-center justify-center space-x-1.5 px-3 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition"
               >
                 <Combine className="w-4 h-4 text-cyan-400" />
-                <span>Combine PDFs</span>
+                <span>Combine</span>
               </button>
             )}
           </div>

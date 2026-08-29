@@ -16,6 +16,7 @@ import { UserGuideModal } from './components/UserGuideModal';
 import { HelcimCheckoutModal } from './components/HelcimCheckoutModal';
 import { PasswordModal } from './components/PasswordModal';
 import { CompressModal } from './components/CompressModal';
+import { ScanModal } from './components/ScanModal';
 import { ThemePreset, getActiveTheme } from './utils/themeManager';
 import { LandingPage } from './pages/LandingPage';
 import { pdfRenderer } from './services/pdfRenderer';
@@ -88,6 +89,7 @@ export const App: React.FC = () => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
   const [passwordModalMode, setPasswordModalMode] = useState<'protect' | 'unlock'>('protect');
   const [isCompressModalOpen, setIsCompressModalOpen] = useState<boolean>(false);
+  const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
   const [isProActive, setIsProActive] = useState<boolean>(
     () => localStorage.getItem('isa_pro_active') === 'true'
   );
@@ -123,6 +125,12 @@ export const App: React.FC = () => {
       const paymentVal = urlParams.get('payment');
       const statusVal = urlParams.get('status');
       const helcimStatusVal = urlParams.get('helcim_status');
+
+      const scanVal = urlParams.get('scan');
+      if (scanVal === '1') {
+        setIsScanModalOpen(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
 
       if (
         paymentVal === 'success' ||
@@ -1035,7 +1043,16 @@ export const App: React.FC = () => {
           activeTheme={activeTheme}
           onOpenThemeModal={() => setIsThemeModalOpen(true)}
           onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
+          onOpenScanModal={() => setIsScanModalOpen(true)}
           isProActive={isProActive}
+        />
+        <ScanModal
+          isOpen={isScanModalOpen}
+          onClose={() => setIsScanModalOpen(false)}
+          onScanComplete={(pdfBytes, fileName) => {
+            loadPDFData(pdfBytes, fileName);
+            setCurrentView('editor');
+          }}
         />
         <ThemeModal
           isOpen={isThemeModalOpen}
@@ -1120,6 +1137,7 @@ export const App: React.FC = () => {
           setIsPasswordModalOpen(true);
         }}
         onOpenCompressModal={() => setIsCompressModalOpen(true)}
+        onOpenScanModal={() => setIsScanModalOpen(true)}
         onOpenDesktopDownloadModal={() => {
           const isSubscribed =
             localStorage.getItem('isa_pro_subscribed') === 'true' ||
@@ -1199,6 +1217,7 @@ export const App: React.FC = () => {
           onLoadSample={handleLoadSample}
           onOpenCreateModal={() => setIsCreateModalOpen(true)}
           onOpenMergeModal={() => setIsMergeModalOpen(true)}
+          onOpenScanModal={() => setIsScanModalOpen(true)}
           onOpenSignatureModal={handleOpenSignatureModal}
           isLoading={isLoading}
           textColor={textColor}
@@ -1329,6 +1348,16 @@ export const App: React.FC = () => {
         onClose={() => setIsCompressModalOpen(false)}
         pdfBytes={docState.fileBytes}
         fileName={docState.fileName}
+      />
+
+      {/* Document Camera Scanner Modal */}
+      <ScanModal
+        isOpen={isScanModalOpen}
+        onClose={() => setIsScanModalOpen(false)}
+        onScanComplete={(pdfBytes, fileName) => {
+          loadPDFData(pdfBytes, fileName);
+          setCurrentView('editor');
+        }}
       />
 
       {/* Post-Payment Pro Welcome Modal */}
