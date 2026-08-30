@@ -66,6 +66,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const cropImageRef = useRef<HTMLImageElement>(null);
   const cropContainerRef = useRef<HTMLDivElement>(null);
   const liveCropCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -781,7 +782,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                         {cameraError || 'Initializing camera stream...'}
                       </p>
                       <button
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => cameraInputRef.current?.click()}
                         className="px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-2xl shadow-xl shadow-cyan-500/30 transition transform active:scale-95 flex items-center space-x-2.5 border border-cyan-400/40"
                       >
                         <Camera className="w-4 h-4 text-white" />
@@ -796,13 +797,16 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                       <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-cyan-400" />
                       <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-cyan-400" />
                       <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-cyan-400" />
+                    </div>
+                  )}
 
-                      <div className="flex items-center space-x-2 bg-slate-950/80 px-3.5 py-1.5 rounded-full border border-cyan-500/40 backdrop-blur-md">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        <span className="text-[11px] font-extrabold text-cyan-300">
-                          Live Native Stream • Hold Document in View
-                        </span>
-                      </div>
+                  {/* Compact Status Badge in Top-Left Corner Out of Document's Way */}
+                  {isCameraActive && (
+                    <div className="absolute top-3 left-3 flex items-center space-x-1.5 bg-slate-950/80 px-2.5 py-1 rounded-full border border-cyan-500/40 backdrop-blur-md z-10 pointer-events-none">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span className="text-[9px] sm:text-[10px] font-extrabold text-cyan-300">
+                        Live Stream Ready
+                      </span>
                     </div>
                   )}
 
@@ -827,7 +831,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         className="p-3 bg-slate-900/80 hover:bg-slate-800 text-slate-200 rounded-full border border-slate-700 shadow-lg backdrop-blur-md transition active:scale-95"
-                        title="Upload Photo Files"
+                        title="Upload Photo Files from Device Gallery"
                       >
                         <ImageIcon className="w-4 h-4" />
                       </button>
@@ -835,12 +839,22 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                   )}
                 </div>
 
+                {/* Photo Library / File Picker Input (NO capture attribute) */}
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileUpload}
-                  accept="image/*"
+                  accept="image/*,.jpg,.jpeg,.png,.webp"
                   multiple
+                  className="hidden"
+                />
+
+                {/* Camera Direct Fallback Input (WITH capture attribute) */}
+                <input
+                  type="file"
+                  ref={cameraInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/*"
                   capture="environment"
                   className="hidden"
                 />
