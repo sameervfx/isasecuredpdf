@@ -1,4 +1,4 @@
-export type ThemePreset = 'cyan' | 'emerald' | 'purple' | 'amber' | 'time_adaptive';
+export type ThemePreset = 'cyan' | 'light_pearl' | 'gold_sunlight' | 'emerald' | 'purple' | 'amber' | 'time_adaptive';
 
 export interface ThemeConfig {
   id: ThemePreset;
@@ -28,6 +28,32 @@ export const THEME_PRESETS: Record<ThemePreset, ThemeConfig> = {
     accentGlow: 'shadow-cyan-500/20',
     primaryBtn: 'from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-cyan-500/25 border-cyan-400/30',
     badgeBg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
+  },
+  light_pearl: {
+    id: 'light_pearl',
+    name: '📄 Crisp Pearl Light (Bright)',
+    desc: 'Clean, high-visibility bright light mode with platinum white canvas & cobalt cyan accents.',
+    badge: 'LIGHT MODE ☀️',
+    bgClass: 'bg-gradient-to-b from-slate-100 via-cyan-50 to-slate-100 text-slate-900',
+    accentGradient: 'from-cyan-600 via-teal-500 to-blue-600',
+    accentText: 'text-cyan-600 font-extrabold',
+    accentBorder: 'border-cyan-500/40',
+    accentGlow: 'shadow-cyan-500/30',
+    primaryBtn: 'from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30 border-cyan-400/40',
+    badgeBg: 'bg-cyan-500/15 text-cyan-700 border-cyan-500/40',
+  },
+  gold_sunlight: {
+    id: 'gold_sunlight',
+    name: '☀️ Sunlit Amber Gold (Warm Light)',
+    desc: 'Warm daylight theme with golden amber & sunlit ivory contrast for day readers.',
+    badge: 'WARM LIGHT 🌅',
+    bgClass: 'bg-gradient-to-b from-amber-50 via-orange-50/60 to-amber-50 text-slate-900',
+    accentGradient: 'from-amber-500 via-orange-400 to-rose-500',
+    accentText: 'text-amber-600 font-extrabold',
+    accentBorder: 'border-amber-500/40',
+    accentGlow: 'shadow-amber-500/30',
+    primaryBtn: 'from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-amber-500/30 border-amber-400/40',
+    badgeBg: 'bg-amber-500/15 text-amber-700 border-amber-500/40',
   },
   emerald: {
     id: 'emerald',

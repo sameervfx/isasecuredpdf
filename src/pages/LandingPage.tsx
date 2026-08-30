@@ -811,18 +811,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <Download className="w-4 h-4 text-slate-400 group-hover:text-indigo-400 transition" />
               </button>
             </div>
-
-            <div className="pt-2 text-center">
-              <button
-                onClick={() => {
-                  setIsDownloadModalOpen(false);
-                  handleGateCheckAndLaunch();
-                }}
-                className="text-xs text-cyan-400 hover:underline font-medium"
-              >
-                Or continue with Web Editor →
-              </button>
-            </div>
           </div>
         </div>
       )}

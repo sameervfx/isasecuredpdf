@@ -52,13 +52,30 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
 
-            <button
-              onClick={() => window.location.reload()}
-              className="flex items-center space-x-2 px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs rounded-xl shadow-lg transition"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Reload Application</span>
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null, errorInfo: null });
+                  window.location.reload();
+                }}
+                className="w-full sm:w-auto flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg transition active:scale-95"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Reload Application</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  try {
+                    localStorage.removeItem('isa_editor_unlocked');
+                  } catch (e) {}
+                  window.location.href = window.location.pathname;
+                }}
+                className="w-full sm:w-auto flex items-center justify-center space-x-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition active:scale-95"
+              >
+                <span>🏠 Return to Home Landing Page</span>
+              </button>
+            </div>
           </div>
         </div>
       );

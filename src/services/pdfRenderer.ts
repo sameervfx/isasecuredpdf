@@ -7,7 +7,12 @@ export class PDFRendererService {
 
   private ensureWorker() {
     if (!this.workerReady) {
-      GlobalWorkerOptions.workerSrc = workerUrl;
+      try {
+        // Primary bundled worker asset URL with cdnjs fallback for production web servers
+        GlobalWorkerOptions.workerSrc = workerUrl || 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      } catch (e) {
+        GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
       this.workerReady = true;
     }
   }

@@ -34,7 +34,7 @@ export const ThemeModal: React.FC<ThemeModalProps> = ({
     localStorage.getItem('isa_pro_annual_active') === 'true' ||
     localStorage.getItem('isa_lifetime_vip') === 'true';
 
-  const presets: ThemePreset[] = ['cyan', 'emerald', 'purple', 'amber', 'time_adaptive'];
+  const presets: ThemePreset[] = ['cyan', 'light_pearl', 'gold_sunlight', 'emerald', 'purple', 'amber', 'time_adaptive'];
 
   const handleSelect = (p: ThemePreset) => {
     if (p === 'time_adaptive' && !isProActive) {
