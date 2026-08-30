@@ -182,7 +182,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                   <span>Subscription Access & Unlimited Downloads</span>
                 </div>
                 <p className="text-slate-300">
-                  When users subscribe to a monthly ($9/mo), annual ($49/yr), or lifetime VIP pass, an encrypted license key is generated. Subscribed users enjoy unlimited PDF exports, multi-format conversions, and access to native desktop app installers (.exe / .dmg).
+                  When users subscribe to a monthly ($2.99/mo), annual ($29.99/yr), or lifetime VIP pass ($99.99), an encrypted license key is generated. Subscribed users enjoy unlimited PDF exports, multi-format conversions, and access to native desktop app installers (.exe / .dmg).
                 </p>
               </div>
 

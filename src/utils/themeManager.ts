@@ -13,6 +13,8 @@ export interface ThemeConfig {
   accentGlow: string;
   primaryBtn: string;
   badgeBg: string;
+  headingText?: string;
+  subText?: string;
 }
 
 export const THEME_PRESETS: Record<ThemePreset, ThemeConfig> = {
@@ -28,6 +30,8 @@ export const THEME_PRESETS: Record<ThemePreset, ThemeConfig> = {
     accentGlow: 'shadow-cyan-500/20',
     primaryBtn: 'from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-cyan-500/25 border-cyan-400/30',
     badgeBg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30',
+    headingText: 'text-white',
+    subText: 'text-slate-400',
   },
   light_pearl: {
     id: 'light_pearl',
@@ -41,19 +45,23 @@ export const THEME_PRESETS: Record<ThemePreset, ThemeConfig> = {
     accentGlow: 'shadow-cyan-500/30',
     primaryBtn: 'from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30 border-cyan-400/40',
     badgeBg: 'bg-cyan-500/15 text-cyan-700 border-cyan-500/40',
+    headingText: 'text-slate-900',
+    subText: 'text-slate-700',
   },
   gold_sunlight: {
     id: 'gold_sunlight',
     name: '☀️ Sunlit Amber Gold (Warm Light)',
     desc: 'Warm daylight theme with golden amber & sunlit ivory contrast for day readers.',
     badge: 'WARM LIGHT 🌅',
-    bgClass: 'bg-gradient-to-b from-amber-50 via-orange-50/60 to-amber-50 text-slate-900',
-    accentGradient: 'from-amber-500 via-orange-400 to-rose-500',
-    accentText: 'text-amber-600 font-extrabold',
-    accentBorder: 'border-amber-500/40',
-    accentGlow: 'shadow-amber-500/30',
-    primaryBtn: 'from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-amber-500/30 border-amber-400/40',
-    badgeBg: 'bg-amber-500/15 text-amber-700 border-amber-500/40',
+    bgClass: 'bg-gradient-to-b from-amber-50 via-orange-50/50 to-amber-100/60 text-amber-950',
+    accentGradient: 'from-amber-600 via-orange-500 to-rose-600',
+    accentText: 'text-amber-700 font-extrabold',
+    accentBorder: 'border-amber-600/40',
+    accentGlow: 'shadow-amber-600/30',
+    primaryBtn: 'from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-amber-600/30 border-amber-500/40',
+    badgeBg: 'bg-amber-500/20 text-amber-900 border-amber-500/40',
+    headingText: 'text-amber-950 font-black',
+    subText: 'text-amber-900 font-semibold',
   },
   emerald: {
     id: 'emerald',

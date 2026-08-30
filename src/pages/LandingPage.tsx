@@ -111,35 +111,70 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
+  const isLight = activeTheme?.id === 'light_pearl' || activeTheme?.id === 'gold_sunlight';
+
   const bgClass = activeTheme?.bgClass || 'bg-slate-950';
   const primaryBtnClass = activeTheme?.primaryBtn || 'from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-cyan-500/25 border-cyan-400/30';
   const accentTextClass = activeTheme?.accentText || 'text-cyan-400';
+  const headingTextClass = activeTheme?.headingText || (isLight ? 'text-slate-900 font-extrabold' : 'text-white font-bold');
+  const subTextClass = activeTheme?.subText || (isLight ? 'text-slate-700 font-medium' : 'text-slate-400');
+
+  const navBgClass = isLight
+    ? 'bg-white/95 backdrop-blur-md border-b border-slate-300 text-slate-900 shadow-sm'
+    : 'bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 text-slate-100';
+
+  const navLinkClass = isLight
+    ? 'text-slate-800 hover:text-cyan-700 transition font-bold'
+    : 'text-slate-300 hover:text-cyan-400 transition font-semibold';
+
+  const navBtnClass = isLight
+    ? 'bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 rounded-xl text-xs font-bold transition shadow-sm'
+    : 'bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/50 rounded-xl text-xs font-semibold text-cyan-300 transition shadow';
+
+  const brandTextClass = isLight
+    ? 'text-slate-900 font-extrabold text-sm sm:text-lg tracking-tight whitespace-nowrap'
+    : 'text-sm sm:text-lg font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent tracking-tight whitespace-nowrap';
+
+  const cardBgClass = isLight
+    ? 'bg-white border border-slate-200/90 shadow-lg text-slate-900'
+    : 'bg-slate-900/90 border border-slate-800 text-slate-100';
+
+  const cardTitleClass = isLight ? 'text-slate-900 font-extrabold' : 'text-white font-bold';
+  const cardDescClass = isLight ? 'text-slate-700 font-medium' : 'text-slate-400';
+
+  const sectionBgClass = isLight
+    ? 'bg-slate-200/50 border-y border-slate-300/80'
+    : 'bg-slate-900/50 border-y border-slate-800/60';
+
+  const cameraBtnClass = isLight
+    ? 'w-full sm:w-1/2 flex items-center justify-center space-x-2.5 px-6 py-4 bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-base rounded-2xl border-2 border-slate-300 hover:border-slate-400 transition transform active:scale-95 shadow-lg group relative'
+    : 'w-full sm:w-1/2 flex items-center justify-center space-x-2.5 px-6 py-4 bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white font-extrabold text-base rounded-2xl border-2 border-cyan-500/50 hover:border-cyan-400 transition transform active:scale-95 shadow-xl shadow-cyan-500/20 group relative';
 
   return (
-    <div className={`min-h-screen w-full max-w-[100vw] overflow-y-auto max-lg:overflow-x-auto lg:overflow-x-hidden touch-auto scroll-smooth ${bgClass} text-slate-100 font-sans selection:bg-cyan-500 selection:text-white flex flex-col transition-colors duration-500`}>
+    <div className={`min-h-screen w-full max-w-[100vw] overflow-y-auto max-lg:overflow-x-auto lg:overflow-x-hidden touch-auto scroll-smooth ${bgClass} ${isLight ? 'text-slate-900' : 'text-slate-100'} font-sans selection:bg-cyan-500 selection:text-white flex flex-col transition-colors duration-500`}>
       {/* 1. Navigation Bar */}
-      <nav className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/80 px-3 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between w-full relative">
+      <nav className={`sticky top-0 z-40 px-3 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between w-full relative ${navBgClass}`}>
         {/* Left: Brand Logo & Title */}
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
             <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
           </div>
           <div className="flex items-center space-x-1.5">
-            <span className="text-sm sm:text-lg font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
+            <span className={brandTextClass}>
               ISASecuredPDF
             </span>
-            <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-full whitespace-nowrap">
+            <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 rounded-full whitespace-nowrap">
               100% Client-Side
             </span>
           </div>
         </div>
 
         {/* Center: Desktop Navigation Links (Centrally Aligned for Desktop) */}
-        <div className="hidden md:flex items-center space-x-8 text-xs font-semibold text-slate-300 absolute left-1/2 -translate-x-1/2">
-          <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className="hover:text-cyan-400 transition">Features</a>
-          <a href="#security" onClick={(e) => scrollToSection(e, 'security')} className="hover:text-cyan-400 transition">Security & Compliance</a>
-          <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-cyan-400 transition">Pricing</a>
-          <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="hover:text-cyan-400 transition">FAQ</a>
+        <div className="hidden md:flex items-center space-x-8 text-xs font-semibold absolute left-1/2 -translate-x-1/2">
+          <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className={navLinkClass}>Features</a>
+          <a href="#security" onClick={(e) => scrollToSection(e, 'security')} className={navLinkClass}>Security & Compliance</a>
+          <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className={navLinkClass}>Pricing</a>
+          <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className={navLinkClass}>FAQ</a>
         </div>
 
         {/* Right: Desktop Buttons & Mobile Hamburger Button */}
@@ -282,11 +317,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <span>🔒 100% Client-Side • Zero Data Transmission • Phone, Tablet & Desktop Ready</span>
         </div>
 
-        <h1 className="text-2xl sm:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-5xl mx-auto px-2">
+        <h1 className={`text-2xl sm:text-6xl font-extrabold ${headingTextClass} tracking-tight leading-tight max-w-5xl mx-auto px-2`}>
           The 100% On-Device, Privacy-First PDF Suite for Modern Teams.
         </h1>
 
-        <p className="mt-6 text-base sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-normal">
+        <p className={`mt-6 text-base sm:text-xl ${subTextClass} max-w-3xl mx-auto leading-relaxed font-normal`}>
           Fill AcroForms, edit text, add vector shapes, encrypt, and compress PDFs locally in your browser. Zero data uploaded to cloud servers. Save up to 80% compared to traditional Acrobat subscriptions.
         </p>
 
@@ -306,11 +341,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             onClick={() => {
               if (onOpenScanModal) onOpenScanModal();
             }}
-            className="w-full sm:w-1/2 flex items-center justify-center space-x-2.5 px-6 py-4 bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white font-extrabold text-base rounded-2xl border-2 border-cyan-500/50 hover:border-cyan-400 transition transform active:scale-95 shadow-xl shadow-cyan-500/20 group relative"
+            className={cameraBtnClass}
           >
             {/* Single Camera Icon with Liveness Flashing Pulse Badge */}
             <div className="relative flex items-center justify-center flex-shrink-0">
-              <Camera className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <Camera className="w-5 h-5 text-cyan-500 group-hover:scale-110 transition-transform" />
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border border-slate-900" />
             </div>
@@ -333,27 +368,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               onLaunchEditor();
             }}
             onClick={onLaunchEditor}
-            className={`relative bg-slate-900/90 border-2 ${
-              isDragOverDropzone ? 'border-cyan-400 bg-slate-850/90 scale-102' : 'border-dashed border-cyan-500/40 hover:border-cyan-400'
+            className={`relative ${cardBgClass} border-2 ${
+              isDragOverDropzone ? 'border-cyan-400 scale-102' : 'border-dashed border-cyan-500/40 hover:border-cyan-400'
             } rounded-3xl p-8 sm:p-12 shadow-2xl transition cursor-pointer group backdrop-blur-xl`}
           >
             <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
             
             <div className="flex flex-col items-center justify-center text-center space-y-4">
-              <div className="w-16 h-16 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition shadow-lg shadow-cyan-500/20">
-                <FileText className="w-8 h-8 text-cyan-400" />
+              <div className="w-16 h-16 bg-cyan-500/10 text-cyan-500 border border-cyan-500/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition shadow-lg shadow-cyan-500/20">
+                <FileText className="w-8 h-8 text-cyan-500" />
               </div>
 
               <div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-cyan-300 transition">
+                <h3 className={`text-lg sm:text-xl font-extrabold ${cardTitleClass} group-hover:text-cyan-600 transition`}>
                   Drop your PDF here to edit privately in-browser
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-md mx-auto">
+                <p className={`text-xs sm:text-sm ${cardDescClass} mt-1 max-w-md mx-auto`}>
                   Click or drag any PDF file to open in Web Editor. 100% in-browser processing with zero server uploads.
                 </p>
               </div>
 
-              <span className="px-4 py-1.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-xs font-bold rounded-full">
+              <span className="px-4 py-1.5 bg-cyan-500/10 text-cyan-600 border border-cyan-500/30 text-xs font-bold rounded-full">
                 ⚡ Zero Registration Barrier • Instant Launch
               </span>
             </div>
@@ -362,84 +397,84 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 3. Feature Grid */}
-      <section id="features" className="scroll-mt-24 py-20 bg-slate-900/50 border-y border-slate-800/60 px-4 lg:px-8">
+      <section id="features" className={`scroll-mt-24 py-20 ${sectionBgClass} px-4 lg:px-8`}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-3">Complete PDF Worksuite</h2>
-            <p className="text-3xl sm:text-4xl font-extrabold text-white">Everything You Need to Edit, Sign & Organize PDFs</p>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500 mb-3">Complete PDF Worksuite</h2>
+            <p className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass}`}>Everything You Need to Edit, Sign & Organize PDFs</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* 1. Fillable AcroForms */}
-            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition group">
-              <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+            <div className={`${cardBgClass} p-6 rounded-2xl hover:border-cyan-500/50 hover:shadow-xl transition group`}>
+              <div className="p-3 bg-cyan-500/10 text-cyan-500 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <FileText className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Fillable AcroForms</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Interactive text fields, checkboxes, and radio buttons with auto-detected input fields.</p>
+              <h3 className={`text-base font-bold ${cardTitleClass} mb-2`}>Fillable AcroForms</h3>
+              <p className={`text-xs ${cardDescClass} leading-relaxed`}>Interactive text fields, checkboxes, and radio buttons with auto-detected input fields.</p>
             </div>
 
             {/* 2. Vector Text & Underline */}
-            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/10 transition group">
-              <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+            <div className={`${cardBgClass} p-6 rounded-2xl hover:border-emerald-500/50 hover:shadow-xl transition group`}>
+              <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <Edit3 className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Vector Text & Underline</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Razor-sharp typography with underline, text color, font size, and background redaction controls.</p>
+              <h3 className={`text-base font-bold ${cardTitleClass} mb-2`}>Vector Text & Underline</h3>
+              <p className={`text-xs ${cardDescClass} leading-relaxed`}>Razor-sharp typography with underline, text color, font size, and background redaction controls.</p>
             </div>
 
             {/* 3. Vector Shapes */}
-            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 transition group">
-              <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+            <div className={`${cardBgClass} p-6 rounded-2xl hover:border-indigo-500/50 hover:shadow-xl transition group`}>
+              <div className="p-3 bg-indigo-500/10 text-indigo-500 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <Grid className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Vector Shapes</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Draw Lines, Rectangles, and Ovals directly on PDF pages with custom stroke, fill, and opacity.</p>
+              <h3 className={`text-base font-bold ${cardTitleClass} mb-2`}>Vector Shapes</h3>
+              <p className={`text-xs ${cardDescClass} leading-relaxed`}>Draw Lines, Rectangles, and Ovals directly on PDF pages with custom stroke, fill, and opacity.</p>
             </div>
 
             {/* 4. Custom Image & Logo Stamping */}
-            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-amber-500/50 hover:shadow-xl hover:shadow-amber-500/10 transition group">
-              <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+            <div className={`${cardBgClass} p-6 rounded-2xl hover:border-amber-500/50 hover:shadow-xl transition group`}>
+              <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <Award className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Custom Image & Logo Stamping</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Embed PNG/JPG logos, corporate seals, and signature images directly into PDF pages in-memory.</p>
+              <h3 className={`text-base font-bold ${cardTitleClass} mb-2`}>Custom Image & Logo Stamping</h3>
+              <p className={`text-xs ${cardDescClass} leading-relaxed`}>Embed PNG/JPG logos, corporate seals, and signature images directly into PDF pages in-memory.</p>
             </div>
 
             {/* 5. Client-Side AES Encryption */}
-            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/10 transition group">
-              <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+            <div className={`${cardBgClass} p-6 rounded-2xl hover:border-purple-500/50 hover:shadow-xl transition group`}>
+              <div className="p-3 bg-purple-500/10 text-purple-500 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <Lock className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Client-Side AES Encryption</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Add or remove AES-128/256 password protection and permissions without sending data to servers.</p>
+              <h3 className={`text-base font-bold ${cardTitleClass} mb-2`}>Client-Side AES Encryption</h3>
+              <p className={`text-xs ${cardDescClass} leading-relaxed`}>Add or remove AES-128/256 password protection and permissions without sending data to servers.</p>
             </div>
 
             {/* 6. Smart PDF Compression */}
-            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-rose-500/50 hover:shadow-xl hover:shadow-rose-500/10 transition group">
-              <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+            <div className={`${cardBgClass} p-6 rounded-2xl hover:border-rose-500/50 hover:shadow-xl transition group`}>
+              <div className="p-3 bg-rose-500/10 text-rose-500 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <Zap className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Smart PDF Compression</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Reduce PDF file size with multi-preset client-side image resampling and stream compaction.</p>
+              <h3 className={`text-base font-bold ${cardTitleClass} mb-2`}>Smart PDF Compression</h3>
+              <p className={`text-xs ${cardDescClass} leading-relaxed`}>Reduce PDF file size with multi-preset client-side image resampling and stream compaction.</p>
             </div>
 
             {/* 7. Dynamic Stamps & Signatures */}
-            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/10 transition group">
-              <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+            <div className={`${cardBgClass} p-6 rounded-2xl hover:border-cyan-500/50 hover:shadow-xl transition group`}>
+              <div className="p-3 bg-cyan-500/10 text-cyan-500 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <PenTool className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Dynamic Stamps & Signatures</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Draw, type, and place legal signatures and official document stamps with drag-and-drop handles.</p>
+              <h3 className={`text-base font-bold ${cardTitleClass} mb-2`}>Dynamic Stamps & Signatures</h3>
+              <p className={`text-xs ${cardDescClass} leading-relaxed`}>Draw, type, and place legal signatures and official document stamps with drag-and-drop handles.</p>
             </div>
 
             {/* 8. Page Management */}
-            <div className="bg-slate-900/90 border border-slate-800 p-6 rounded-2xl hover:border-teal-500/50 hover:shadow-xl hover:shadow-teal-500/10 transition group">
-              <div className="p-3 bg-teal-500/10 text-teal-400 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
+            <div className={`${cardBgClass} p-6 rounded-2xl hover:border-teal-500/50 hover:shadow-xl transition group`}>
+              <div className="p-3 bg-teal-500/10 text-teal-500 rounded-xl w-fit mb-4 group-hover:scale-110 transition">
                 <Scissors className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Page Management</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Reorder, rotate, extract page ranges into new PDFs, and split multi-page documents visually.</p>
+              <h3 className={`text-base font-bold ${cardTitleClass} mb-2`}>Page Management</h3>
+              <p className={`text-xs ${cardDescClass} leading-relaxed`}>Reorder, rotate, extract page ranges into new PDFs, and split multi-page documents visually.</p>
             </div>
           </div>
         </div>
@@ -447,37 +482,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* 4. Security & Compliance Highlight */}
       <section id="security" className="scroll-mt-24 py-24 px-4 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 rounded-3xl p-8 sm:p-14 shadow-2xl relative max-lg:overflow-x-auto lg:overflow-hidden">
+        <div className={`${isLight ? 'bg-white border border-slate-200/90 shadow-2xl text-slate-900' : 'bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 border border-cyan-500/30 text-slate-100'} rounded-3xl p-8 sm:p-14 relative max-lg:overflow-x-auto lg:overflow-hidden`}>
           <div className="max-w-4xl">
-            <div className="flex items-center space-x-2 px-3 py-1 bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-full text-xs font-semibold w-fit mb-6">
-              <Shield className="w-4 h-4 text-cyan-400" />
+            <div className="flex items-center space-x-2 px-3 py-1 bg-cyan-500/10 text-cyan-500 border border-cyan-500/30 rounded-full text-xs font-semibold w-fit mb-6">
+              <Shield className="w-4 h-4 text-cyan-500" />
               <span>Enterprise IT Security & Compliance Specs</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-6">
+            <h2 className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass} mb-6`}>
               100% Client-Side Architecture. Zero Cloud Transmission.
             </h2>
 
-            <p className="text-slate-400 text-sm sm:text-base leading-relaxed mb-8">
+            <p className={`${cardDescClass} text-sm sm:text-base leading-relaxed mb-8`}>
               Unlike cloud-based PDF tools that upload sensitive contracts and financial documents to remote third-party servers, ISASecuredPDF executes 100% of PDF rendering, text editing, encryption, and compression directly inside your browser memory or desktop operating system RAM.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="flex items-start space-x-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span className="text-xs text-slate-400"><b>Zero Network Transfer:</b> PDF bytes never leave your local workstation.</span>
+              <div className={`flex items-start space-x-3 ${isLight ? 'bg-slate-100/80 border border-slate-200' : 'bg-slate-950/40 border border-slate-800/80'} p-4 rounded-xl`}>
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                <span className={`text-xs ${cardDescClass}`}><b className={cardTitleClass}>Zero Network Transfer:</b> PDF bytes never leave your local workstation.</span>
               </div>
-              <div className="flex items-start space-x-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span className="text-xs text-slate-400"><b>GDPR & HIPAA Compliant:</b> Eliminates third-party cloud data leak vectors.</span>
+              <div className={`flex items-start space-x-3 ${isLight ? 'bg-slate-100/80 border border-slate-200' : 'bg-slate-950/40 border border-slate-800/80'} p-4 rounded-xl`}>
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                <span className={`text-xs ${cardDescClass}`}><b className={cardTitleClass}>GDPR & HIPAA Compliant:</b> Eliminates third-party cloud data leak vectors.</span>
               </div>
-              <div className="flex items-start space-x-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span className="text-xs text-slate-400"><b>Offline Air-Gapped Capable:</b> Edit, encrypt, and compress documents without active internet connections.</span>
+              <div className={`flex items-start space-x-3 ${isLight ? 'bg-slate-100/80 border border-slate-200' : 'bg-slate-950/40 border border-slate-800/80'} p-4 rounded-xl`}>
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                <span className={`text-xs ${cardDescClass}`}><b className={cardTitleClass}>Offline Air-Gapped Capable:</b> Edit, encrypt, and compress documents without active internet connections.</span>
               </div>
-              <div className="flex items-start space-x-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/80">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span className="text-xs text-slate-400"><b>Instant Processing:</b> Zero latency with WebAssembly & local GPU acceleration.</span>
+              <div className={`flex items-start space-x-3 ${isLight ? 'bg-slate-100/80 border border-slate-200' : 'bg-slate-950/40 border border-slate-800/80'} p-4 rounded-xl`}>
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                <span className={`text-xs ${cardDescClass}`}><b className={cardTitleClass}>Instant Processing:</b> Zero latency with WebAssembly & local GPU acceleration.</span>
               </div>
             </div>
           </div>
@@ -485,46 +520,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 5. Pricing Section */}
-      <section id="pricing" className="scroll-mt-24 py-24 bg-slate-900/40 border-t border-slate-800/60 px-4 lg:px-8">
+      <section id="pricing" className={`scroll-mt-24 py-24 ${sectionBgClass} px-4 lg:px-8`}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-3">Flexible Plans</h2>
-            <p className="text-3xl sm:text-4xl font-extrabold text-white">Simple, Transparent Pricing</p>
-            <p className="text-sm text-slate-400 mt-3">No hidden subscriptions. 14-Day Money-Back Guarantee.</p>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500 mb-3">Flexible Plans</h2>
+            <p className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass}`}>Simple, Transparent Pricing</p>
+            <p className={`text-sm ${cardDescClass} mt-3`}>No hidden subscriptions. 14-Day Money-Back Guarantee.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-slate-700 transition">
+            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-slate-400 transition`}>
               <div>
-                <h3 className="text-base font-bold text-white mb-1">Free Starter</h3>
-                <p className="text-xs text-slate-400 mb-4">For casual web viewing & editing.</p>
-                <div className="text-3xl font-extrabold text-white mb-6">$0 <span className="text-xs text-slate-400 font-normal">/ forever</span></div>
+                <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Free Starter</h3>
+                <p className={`text-xs ${cardDescClass} mb-4`}>For casual web viewing & editing.</p>
+                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>$0 <span className={`text-xs ${cardDescClass} font-normal`}>/ forever</span></div>
 
-                <ul className="space-y-3 text-xs text-slate-400">
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Editing Tools</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Annotation</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" /><span>Zero Registration Barrier</span></li>
+                <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Editing Tools</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Annotation</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Zero Registration Barrier</span></li>
                 </ul>
               </div>
 
               <button
                 onClick={handleGateCheckAndLaunch}
-                className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition border border-slate-700/80 hover:border-cyan-500/50"
+                className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700/80'} text-xs font-bold rounded-xl transition border hover:border-cyan-500/50`}
               >
                 Use Free Web Editor
               </button>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition">
+            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition`}>
               <div>
-                <h3 className="text-base font-bold text-white mb-1">Pro Monthly</h3>
-                <p className="text-xs text-slate-400 mb-4">For active power users & creators.</p>
-                <div className="text-3xl font-extrabold text-white mb-6">$2.99 <span className="text-xs text-slate-400 font-normal">/ month</span></div>
+                <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Pro Monthly</h3>
+                <p className={`text-xs ${cardDescClass} mb-4`}>For active power users & creators.</p>
+                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>$2.99 <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span></div>
 
-                <ul className="space-y-3 text-xs text-slate-400">
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Unlimited In-Browser Compressions & Password Tools</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>High-DPI 4K Vector Supersampling</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Custom Image Seals & Unlimited Watermarks</span></li>
+                <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited In-Browser Compressions & Password Tools</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>High-DPI 4K Vector Supersampling</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Custom Image Seals & Unlimited Watermarks</span></li>
                 </ul>
               </div>
 
@@ -532,29 +567,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 href="https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=2.99&amountHash=50954d4d775e1b695075d6cd0d1294c8cb703bee5b3b641c3ab061bf52f41803"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-8 w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 hover:border-cyan-500/50 transition text-center block"
+                className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
               >
                 Start 7-Day Free Trial ($2.99/mo)
               </a>
             </div>
 
-            <div className="bg-slate-900 border-2 border-cyan-500 rounded-3xl p-6 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10 transform lg:-translate-y-2">
+            <div className={`${cardBgClass} border-2 border-cyan-500 rounded-3xl p-6 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10 transform lg:-translate-y-2`}>
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-lg whitespace-nowrap">
                 Most Popular
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-base font-bold text-white">Pro Annual</h3>
-                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">Save 20%</span>
+                  <h3 className={`text-base font-bold ${cardTitleClass}`}>Pro Annual</h3>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">Save 20%</span>
                 </div>
-                <p className="text-xs text-slate-400 mb-4">Complete web & desktop freedom.</p>
-                <div className="text-3xl font-extrabold text-white mb-6">$29.99 <span className="text-xs text-slate-400 font-normal">/ year</span></div>
+                <p className={`text-xs ${cardDescClass} mb-4`}>Complete web & desktop freedom.</p>
+                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>$29.99 <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span></div>
 
-                <ul className="space-y-3 text-xs text-slate-400">
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Everything in Monthly Plan</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Full Offline Standalone / PWA Execution</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" /><span>Air-Gapped Offline Execution</span></li>
+                <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Everything in Monthly Plan</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Full Offline Standalone / PWA Execution</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Air-Gapped Offline Execution</span></li>
                 </ul>
               </div>
 
@@ -568,16 +603,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </a>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition">
+            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition`}>
               <div>
-                <h3 className="text-base font-bold text-white mb-1">Lifetime License</h3>
-                <p className="text-xs text-slate-400 mb-4">One-time investment forever.</p>
-                <div className="text-3xl font-extrabold text-white mb-6">$99.99 <span className="text-xs text-slate-400 font-normal">/ one-time</span></div>
+                <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Lifetime License</h3>
+                <p className={`text-xs ${cardDescClass} mb-4`}>One-time investment forever.</p>
+                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>$99.99 <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span></div>
 
-                <ul className="space-y-3 text-xs text-slate-400">
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" /><span>All future Pro Web & Desktop App updates included</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" /><span>Priority IT & Compliance Support</span></li>
+                <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>All future Pro Web & Desktop App updates included</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>Priority IT & Compliance Support</span></li>
                 </ul>
               </div>
 
@@ -585,7 +620,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 href="https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=99.99&amountHash=593108da3e6c466ca37c3e0c5928e9e8b068c04b3c02ba4d050060bf2dc7da69"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-8 w-full py-3 bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white text-xs font-bold rounded-xl border border-slate-700 hover:border-purple-500/60 transition text-center block"
+                className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
               >
                 Buy Lifetime License ($99.99)
               </a>
@@ -597,8 +632,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* 6. FAQ Section */}
       <section id="faq" className="scroll-mt-24 py-20 px-4 lg:px-8 max-w-4xl mx-auto w-full">
         <div className="text-center mb-14">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-3">Got Questions?</h2>
-          <p className="text-3xl font-extrabold text-white">Frequently Asked Questions</p>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500 mb-3">Got Questions?</h2>
+          <p className={`text-3xl font-extrabold ${headingTextClass}`}>Frequently Asked Questions</p>
         </div>
 
         <div className="space-y-4">
@@ -624,16 +659,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               a: 'We offer a 14-day no-questions-asked money-back guarantee for all Pro license purchases.'
             }
           ].map((item, idx) => (
-            <div key={idx} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <div key={idx} className={`${cardBgClass} rounded-2xl overflow-hidden`}>
               <button
                 onClick={() => toggleFaq(idx)}
-                className="w-full p-5 text-left flex items-center justify-between text-sm font-semibold text-white hover:text-cyan-400 transition"
+                className={`w-full p-5 text-left flex items-center justify-between text-sm font-semibold ${cardTitleClass} hover:text-cyan-600 transition`}
               >
                 <span>{item.q}</span>
-                {openFaq === idx ? <ChevronUp className="w-4 h-4 text-cyan-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                {openFaq === idx ? <ChevronUp className="w-4 h-4 text-cyan-500" /> : <ChevronDown className={`w-4 h-4 ${cardDescClass}`} />}
               </button>
               {openFaq === idx && (
-                <div className="px-5 pb-5 text-xs text-slate-400 leading-relaxed border-t border-slate-800/60 pt-3 font-normal">
+                <div className={`px-5 pb-5 text-xs ${cardDescClass} leading-relaxed border-t ${isLight ? 'border-slate-200' : 'border-slate-800/60'} pt-3 font-normal`}>
                   {item.a}
                 </div>
               )}
@@ -643,20 +678,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 7. Comprehensive Footer */}
-      <footer className="mt-auto bg-slate-950 border-t border-slate-800/80 px-4 lg:px-8 py-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-400 font-normal">
+      <footer className={`mt-auto ${isLight ? 'bg-white border-t border-slate-200 text-slate-800' : 'bg-slate-950 border-t border-slate-800/80 text-slate-400'} px-4 lg:px-8 py-10`}>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs font-normal">
           <div className="flex items-center space-x-3">
-            <div className="p-1.5 bg-cyan-500/10 text-cyan-400 rounded-lg">
+            <div className="p-1.5 bg-cyan-500/10 text-cyan-500 rounded-lg">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <span className="font-semibold text-slate-200">ISASecuredPDF © 2026</span>
+            <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>ISASecuredPDF © 2026</span>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 font-medium">
-            <button onClick={() => setActiveModal('privacy')} className="hover:text-cyan-400 transition">Privacy Policy</button>
-            <button onClick={() => setActiveModal('terms')} className="hover:text-cyan-400 transition">Terms of Service</button>
-            <button onClick={() => setActiveModal('refund')} className="hover:text-cyan-400 transition">Refund & Cancellation Policy</button>
-            <button onClick={() => setActiveModal('contact')} className="hover:text-cyan-400 transition">Contact & Support</button>
+          <div className={`flex flex-wrap items-center justify-center gap-6 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
+            <button onClick={() => setActiveModal('privacy')} className="hover:text-cyan-600 transition">Privacy Policy</button>
+            <button onClick={() => setActiveModal('terms')} className="hover:text-cyan-600 transition">Terms of Service</button>
+            <button onClick={() => setActiveModal('refund')} className="hover:text-cyan-600 transition">Refund & Cancellation Policy</button>
+            <button onClick={() => setActiveModal('contact')} className="hover:text-cyan-600 transition">Contact & Support</button>
           </div>
         </div>
       </footer>

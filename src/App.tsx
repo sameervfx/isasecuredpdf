@@ -1081,9 +1081,12 @@ export const App: React.FC = () => {
   const activePagesCount = pageOrder.filter((idx) => !deletedPages.has(idx)).length;
   const hasDocument = Boolean(docState?.fileBytes);
 
+  const isLight = activeTheme?.id === 'light_pearl' || activeTheme?.id === 'gold_sunlight';
+
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-950 overflow-hidden text-slate-100 font-sans">
+    <div className={`flex flex-col h-screen w-screen ${activeTheme?.bgClass || 'bg-slate-950'} ${isLight ? 'text-slate-900' : 'text-slate-100'} overflow-hidden font-sans transition-colors duration-500`}>
       <HeaderToolbar
+        activeTheme={activeTheme}
         onGoToLandingPage={() => setCurrentView('landing')}
         onCloseDocument={handleCloseDocument}
         onUndo={handleUndo}

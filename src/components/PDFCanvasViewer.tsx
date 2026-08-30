@@ -294,6 +294,8 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     }
   };
 
+  const isLight = activeTheme?.id === 'light_pearl' || activeTheme?.id === 'gold_sunlight';
+
   // Show landing page when no document loaded (and not loading)
   if (!state.fileBytes && !isLoading) {
     return (
@@ -301,7 +303,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
-        className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-950 relative overflow-hidden"
+        className={`flex-1 flex flex-col items-center justify-center p-6 ${activeTheme?.bgClass || 'bg-slate-950'} ${isLight ? 'text-slate-900' : 'text-slate-100'} relative overflow-hidden transition-colors duration-500`}
       >
         {/* Background glows */}
         <div className="absolute w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none -top-40 -left-40" />
@@ -310,14 +312,16 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         <div className={`relative max-w-xl w-full p-10 rounded-3xl border-2 border-dashed flex flex-col items-center text-center backdrop-blur-xl transition-all ${
           isDragOver
             ? 'border-cyan-400 bg-cyan-950/50 scale-105 shadow-2xl shadow-cyan-500/30 ring-2 ring-cyan-400/50'
+            : isLight
+            ? 'border-slate-300 bg-white/95 text-slate-900 shadow-2xl'
             : 'border-slate-700/80 bg-slate-900/70 hover:border-cyan-500/60 shadow-xl'
         }`}>
           <div className="w-20 h-20 rounded-2xl overflow-hidden mb-6 shadow-2xl shadow-cyan-500/30 ring-2 ring-cyan-500/40">
             <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">ISASecuredPDF Suite</h2>
-          <p className="text-xs sm:text-sm text-slate-400 mb-8 max-w-md leading-relaxed">
-            100% client-side air-gapped PDF engine. <span className="text-cyan-300 font-semibold">Drag & drop PDF anywhere or choose an option below</span>. No data ever leaves your device.
+          <h2 className={`text-2xl font-extrabold ${isLight ? 'text-slate-900' : 'text-white'} mb-2 tracking-tight`}>ISASecuredPDF Suite</h2>
+          <p className={`text-xs sm:text-sm ${isLight ? 'text-slate-700' : 'text-slate-400'} mb-8 max-w-md leading-relaxed`}>
+            100% client-side air-gapped PDF engine. <span className="text-cyan-600 font-semibold">Drag & drop PDF anywhere or choose an option below</span>. No data ever leaves your device.
           </p>
 
           <input type="file" ref={fileInputRef} onChange={onOpenFile} accept="application/pdf" className="hidden" />

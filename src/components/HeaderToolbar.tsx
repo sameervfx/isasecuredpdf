@@ -118,9 +118,11 @@ interface HeaderToolbarProps {
   onOpenDesktopDownloadModal?: () => void;
   isProActive?: boolean;
   onOpenCheckout?: () => void;
+  activeTheme?: import('../utils/themeManager').ThemeConfig;
 }
 
 export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
+  activeTheme,
   onGoToLandingPage,
   onCloseDocument,
   onUndo,
@@ -329,8 +331,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
     setIsSignDropdownOpen(false);
   };
 
+  const isLight = activeTheme?.id === 'light_pearl' || activeTheme?.id === 'gold_sunlight';
+
   return (
-    <header className="border-b border-slate-800 bg-slate-900/95 backdrop-blur-md text-slate-100 flex flex-col lg:flex-row lg:items-center justify-between px-2 sm:px-4 py-2 lg:py-0 lg:h-16 sticky top-0 z-30 select-none gap-2 lg:gap-0">
+    <header className={`border-b ${isLight ? 'border-slate-300 bg-white/95 text-slate-900 shadow-md' : 'border-slate-800 bg-slate-900/95 text-slate-100'} backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between px-2 sm:px-4 py-2 lg:py-0 lg:h-16 sticky top-0 z-30 select-none gap-2 lg:gap-0 transition-colors duration-500`}>
       <div className="flex items-center justify-between w-full lg:w-auto">
         {/* Brand & File Menu */}
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -341,7 +345,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           <div className="flex items-center space-x-3 gap-3">
             <h1
               onClick={onGoToLandingPage}
-              className="font-bold text-xs sm:text-base tracking-tight text-white hover:text-cyan-400 cursor-pointer transition truncate max-w-[100px] sm:max-w-none"
+              className={`font-bold text-xs sm:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[100px] sm:max-w-none`}
               title="Return to Landing Page"
             >
               PDF Engine
