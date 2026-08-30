@@ -1076,8 +1076,10 @@ export const App: React.FC = () => {
     );
   }
 
-  const activePagesCount = docState.pageOrder.filter((idx) => !docState.deletedPages.has(idx)).length;
-  const hasDocument = Boolean(docState.fileBytes);
+  const pageOrder = docState?.pageOrder || [];
+  const deletedPages = docState?.deletedPages || new Set<number>();
+  const activePagesCount = pageOrder.filter((idx) => !deletedPages.has(idx)).length;
+  const hasDocument = Boolean(docState?.fileBytes);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 overflow-hidden text-slate-100 font-sans">

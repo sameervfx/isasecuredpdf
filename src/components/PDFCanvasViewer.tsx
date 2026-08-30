@@ -132,7 +132,9 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     }
   }, [toolMode, pendingSignatureDataUrl]);
 
-  const activePages = state.pageOrder.filter((idx) => !state.deletedPages.has(idx));
+  const pageOrder = state?.pageOrder || [];
+  const deletedPages = state?.deletedPages || new Set<number>();
+  const activePages = pageOrder.filter((idx) => !deletedPages.has(idx));
 
   // Ctrl/Cmd + Mouse Wheel Zooming directly on document canvas
   useEffect(() => {
