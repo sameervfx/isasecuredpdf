@@ -98,6 +98,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   onLoadSample,
   onOpenCreateModal,
   onOpenMergeModal,
+  onOpenScanModal,
   isLoading = false,
   textColor,
   textFontSize,
