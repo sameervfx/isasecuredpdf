@@ -1,0 +1,18 @@
+{
+  "short_name": "ISASecuredPDF",
+  "name": "ISASecuredPDF - On-Device Privacy PDF Suite",
+  "icons": [
+    {
+      "src": "/app_logo.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#020617",
+  "theme_color": "#06b6d4",
+  "display": "standalone",
+  "orientation": "any",
+  "categories": ["productivity", "utilities", "business"],
+  "description": "100% On-Device, Privacy-First PDF Suite. Fill AcroForms, edit text, add vector shapes, encrypt, sign, and compress PDFs locally."
+}
