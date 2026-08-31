@@ -441,15 +441,16 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         return (
           <div
             key={origIdx}
-            className="pdf-document-page relative bg-white shadow-2xl transition-all duration-150 my-4"
-            style={{ width: `${w}px`, height: `${h}px` }}
+            className="pdf-document-page relative bg-white shadow-2xl transition-all duration-150 my-4 flex-shrink-0"
+            style={{ width: `${w}px`, height: `${h}px`, maxHeight: `${h}px` }}
           >
             <canvas
               ref={(el) => {
                 if (el) canvasRefs.current.set(origIdx, el);
                 else canvasRefs.current.delete(origIdx);
               }}
-              className="block"
+              className="block max-w-none"
+              style={{ width: `${w}px`, height: `${h}px` }}
             />
 
             {dims && (

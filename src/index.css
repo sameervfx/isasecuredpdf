@@ -40,16 +40,12 @@
 
 /* Legal Document Fixed Container & Fluid Typography Standard */
 .pdf-document-page {
-  width: 8.5in;
-  min-height: 11in;
   margin: 0 auto 20px auto;
   background: #ffffff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-family: 'Times New Roman', Times, serif;
-  color: #000000;
   box-sizing: border-box;
   position: relative;
-  page-break-after: always;
+  overflow: hidden;
 }
 
 .legal-paragraph {
