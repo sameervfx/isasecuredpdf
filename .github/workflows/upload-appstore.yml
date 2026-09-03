@@ -81,12 +81,13 @@ jobs:
             -exportPath "$GITHUB_WORKSPACE/output"
 
       - name: Upload IPA to App Store Connect via Fastlane
+        env:
+          APP_STORE_CONNECT_API_KEY_KEY_ID: "VNY293MKDY"
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: "64b0aa54-c75b-42fc-a4a8-b4268bc6c53c"
+          APP_STORE_CONNECT_API_KEY_KEY_FILEPATH: "/Users/runner/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8"
         run: |
           IPA_FILE=$(find $GITHUB_WORKSPACE/output -name "*.ipa" | head -n 1)
           echo "Uploading IPA using Fastlane: $IPA_FILE"
           fastlane pilot upload \
             --ipa "$IPA_FILE" \
-            --key_id "VNY293MKDY" \
-            --issuer_id "64b0aa54-c75b-42fc-a4a8-b4268bc6c53c" \
-            --key_filepath "$HOME/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8" \
             --skip_waiting_for_build_processing true
