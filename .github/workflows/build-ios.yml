@@ -1,4 +1,4 @@
-name: Build iOS App (Cloud)
+name: Build Universal iOS App (Cloud)
 
 on:
   push:
@@ -27,30 +27,29 @@ jobs:
       - name: Sync Capacitor iOS Project
         run: npx cap sync ios
 
-      - name: Build iOS App Simulator Bundle
+      - name: Build Universal iOS App (All iPhones & iPads)
         run: |
-          SIM_ID=$(xcrun simctl list devices available | grep -m 1 'iPhone' | awk -F '[()]' '{print $2}')
-          echo "Building for iOS Simulator ID: $SIM_ID"
-          xcodebuild \
+          xcodebuild archive \
             -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
-            -sdk iphonesimulator \
-            -destination "id=$SIM_ID" \
-            -derivedDataPath ios/App/DerivedData \
-            CODE_SIGN_IDENTITY="" \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath ios/App/DerivedData/ISASecuredPDF.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
 
-      - name: Package iOS App Artifact
+      - name: Package Universal iOS App Artifact
         run: |
           mkdir -p build-output
-          cd ios/App/DerivedData/Build/Products/Release-iphonesimulator
-          zip -r ../../../../../../build-output/ISASecuredPDF_iOS_App.zip App.app
+          cd ios/App/DerivedData/ISASecuredPDF.xcarchive/Products/Applications
+          zip -r ../../../../../build-output/ISASecuredPDF_Universal_iOS.zip App.app
 
-      - name: Upload iOS App Artifact
+      - name: Upload Universal iOS App Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ISASecuredPDF_iOS_App
-          path: build-output/ISASecuredPDF_iOS_App.zip
+          name: ISASecuredPDF_Universal_iOS
+          path: build-output/ISASecuredPDF_Universal_iOS.zip
           retention-days: 14
