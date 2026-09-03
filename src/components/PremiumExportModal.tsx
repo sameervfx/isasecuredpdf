@@ -42,11 +42,14 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  const initialName = (state.fileName || 'Scanned_Document').replace(/\.[^/.]+$/, '');
+  const [customExportName, setCustomExportName] = useState<string>(initialName);
+
   if (!isOpen) return null;
 
   const pdfDoc = pdfRenderer.getDoc();
   const totalPages = pdfDoc?.numPages || state.pages.length || 1;
-  const fileNameWithoutExt = state.fileName.replace(/\.[^/.]+$/, '');
+  const fileNameWithoutExt = (customExportName.trim() || initialName).replace(/\.[^/.]+$/, '');
 
   const handleExport = async () => {
     if (!isProActive && selectedFormat !== 'jpg') {
@@ -88,8 +91,9 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
           }
 
           const fileExt = selectedFormat === 'tiff' ? 'tif' : selectedFormat;
+          const entryName = numPages === 1 ? `${fileNameWithoutExt}.${fileExt}` : `${fileNameWithoutExt}_page_${pageNum}.${fileExt}`;
           zipEntries.push({
-            name: `${fileNameWithoutExt}_page_${pageNum}.${fileExt}`,
+            name: entryName,
             data: bytes
           });
         }
@@ -317,6 +321,26 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
             <span className="text-xs font-bold">TIFF Package</span>
             <span className="text-[10px] text-slate-500">High Density Print</span>
           </button>
+        </div>
+
+        {/* Custom File Name Input */}
+        <div className="mb-5">
+          <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+            <span>Save File As Name:</span>
+            <span className="text-[10px] text-cyan-400 font-medium">Customize before saving</span>
+          </label>
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              value={customExportName}
+              onChange={(e) => setCustomExportName(e.target.value)}
+              placeholder="Enter desired file name..."
+              className="w-full bg-slate-950/80 border border-slate-700/80 focus:border-cyan-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition"
+            />
+            <span className="absolute right-3 text-xs font-mono font-bold text-slate-400 pointer-events-none">
+              .{selectedFormat === 'tiff' ? 'tif' : selectedFormat}
+            </span>
+          </div>
         </div>
 
         {/* Feature Specs */}
