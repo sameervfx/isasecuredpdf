@@ -4,6 +4,9 @@ const { app, BrowserWindow, Menu, shell, dialog, ipcMain } = require('electron')
 const path = require('path');
 const fs = require('fs');
 
+// Set Windows App UserModelID for taskbar & default app association
+app.setAppUserModelId('com.isasecuredpdf.app');
+
 // Fix Chromium GPU Shader Cache access denied lock on Windows
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('disable-gpu-program-cache');
@@ -65,13 +68,65 @@ app.on('open-file', (event, filePath) => {
   handleOpenedPdfFile(filePath);
 });
 
-function createWindow() {
+const http = require('http');
+
+let server = null;
+let serverUrl = null;
+
+function startLocalServer(distDir) {
+  return new Promise((resolve) => {
+    server = http.createServer((req, res) => {
+      let reqPath = decodeURIComponent(req.url.split('?')[0]);
+      if (reqPath === '/') reqPath = '/index.html';
+      let filePath = path.join(distDir, reqPath);
+
+      if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(distDir, 'index.html');
+      }
+
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes = {
+        '.html': 'text/html; charset=utf-8',
+        '.js': 'text/javascript; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.json': 'application/json; charset=utf-8',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon',
+        '.wasm': 'application/wasm',
+        '.pdf': 'application/pdf',
+      };
+
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      try {
+        const stream = fs.createReadStream(filePath);
+        res.writeHead(200, { 'Content-Type': contentType });
+        stream.pipe(res);
+      } catch (err) {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      serverUrl = `http://127.0.0.1:${port}`;
+      console.log('Embedded Local Server running at:', serverUrl);
+      resolve(serverUrl);
+    });
+  });
+}
+
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1024,
     minHeight: 600,
-    title: 'Isa Secure PDF Suite',
+    title: 'ISASecuredPDF Suite',
     icon: path.join(__dirname, 'icon.png'),
     backgroundColor: '#020617', // slate-950
     titleBarStyle: 'default',
@@ -88,7 +143,6 @@ function createWindow() {
   // Gracefully show after paint
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
 
     const initialPath = parsePdfPathFromArgs(process.argv);
     if (initialPath) {
@@ -96,21 +150,16 @@ function createWindow() {
     }
   });
 
-  const localDistPath = path.join(__dirname, '../dist/index.html');
-  const appDistPath = path.join(__dirname, 'dist/index.html');
-
   if (isDev && process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:3000').catch(() => {
-      if (fs.existsSync(localDistPath)) {
-        mainWindow.loadFile(localDistPath);
-      }
+    mainWindow.loadURL('http://localhost:3000').catch(async () => {
+      const distDir = path.join(app.getAppPath(), 'dist');
+      const url = await startLocalServer(distDir);
+      mainWindow.loadURL(url);
     });
-  } else if (fs.existsSync(localDistPath)) {
-    mainWindow.loadFile(localDistPath);
-  } else if (fs.existsSync(appDistPath)) {
-    mainWindow.loadFile(appDistPath);
   } else {
-    mainWindow.loadFile(path.resolve(__dirname, '../dist/index.html'));
+    const distDir = path.join(app.getAppPath(), 'dist');
+    const url = await startLocalServer(distDir);
+    mainWindow.loadURL(url);
   }
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
