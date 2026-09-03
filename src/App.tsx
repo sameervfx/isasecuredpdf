@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import { PDFDocument } from 'pdf-lib';
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { Sidebar } from './components/Sidebar';
 import { PDFCanvasViewer } from './components/PDFCanvasViewer';
@@ -19,8 +18,6 @@ import { CompressModal } from './components/CompressModal';
 import { ScanModal } from './components/ScanModal';
 import { ThemePreset, getActiveTheme } from './utils/themeManager';
 import { LandingPage } from './pages/LandingPage';
-import { pdfRenderer } from './services/pdfRenderer';
-import { pdfEngine } from './services/pdfEngine';
 import { createSamplePDF } from './utils/samplePdf';
 import { createBlankPDF, CreatePDFOptions } from './utils/blankPdf';
 import { saveSignatureToStorage } from './utils/savedSignatures';
@@ -335,6 +332,11 @@ export const App: React.FC = () => {
       // Record in recent files history
       addRecentFile(fileName);
 
+      // Dynamically load PDF engines on demand
+      const { pdfRenderer } = await import('./services/pdfRenderer');
+      const { PDFDocument } = await import('pdf-lib');
+      const { pdfEngine } = await import('./services/pdfEngine');
+
       // Load into PDF.js renderer with password handling
       let pdfjsDoc: any = null;
       try {
@@ -434,8 +436,9 @@ export const App: React.FC = () => {
 
       // Generate thumbnails in background
       const thumbs: string[] = [];
+      const { pdfRenderer: renderer } = await import('./services/pdfRenderer');
       for (let i = 0; i < numPages; i++) {
-        const t = await pdfRenderer.getPageThumbnail(i, 160);
+        const t = await renderer.getPageThumbnail(i, 160);
         thumbs.push(t);
       }
       setThumbnails(thumbs);
@@ -784,6 +787,7 @@ export const App: React.FC = () => {
     if (!docState.fileBytes) return;
     setIsExporting(true);
     try {
+      const { pdfEngine } = await import('./services/pdfEngine');
       const modifiedPdfBytes = await pdfEngine.exportDocument(docState);
       const defaultName = `Edited_${docState.fileName || 'document.pdf'}`;
 
@@ -833,6 +837,7 @@ export const App: React.FC = () => {
     if (!docState.fileBytes) return;
     setIsSaving(true);
     try {
+      const { pdfEngine } = await import('./services/pdfEngine');
       const modifiedPdfBytes = await pdfEngine.exportDocument(docState);
       const saveName = docState.fileName ? docState.fileName : 'document.pdf';
 
@@ -882,6 +887,7 @@ export const App: React.FC = () => {
     setIsPrinting(true);
     try {
       // Export current state (flattened text, signatures, forms & annotations)
+      const { pdfEngine } = await import('./services/pdfEngine');
       const modifiedPdfBytes = await pdfEngine.exportDocument(docState);
       const blob = new Blob([new Uint8Array(modifiedPdfBytes)], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
@@ -941,6 +947,7 @@ export const App: React.FC = () => {
       if (!docState.fileBytes) return;
       setIsExportingMultiple(true);
       try {
+        const { pdfEngine } = await import('./services/pdfEngine');
         const result = await pdfEngine.exportMultiplePDFs(docState, mode, customRanges);
 
         if (IS_ELECTRON && window.electronAPI) {
