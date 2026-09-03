@@ -1,21 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { Sidebar } from './components/Sidebar';
-import { PDFCanvasViewer } from './components/PDFCanvasViewer';
-import { SignatureModal } from './components/SignatureModal';
-import { PageManagerModal } from './components/PageManagerModal';
-import { CreatePDFModal } from './components/CreatePDFModal';
-import { MergePDFModal } from './components/MergePDFModal';
-import { SaveMultiplePDFsModal } from './components/SaveMultiplePDFsModal';
-import { WatermarkModal, WatermarkOptions } from './components/WatermarkModal';
-import { PremiumExportModal, ExportFormatType } from './components/PremiumExportModal';
-import { ThemeModal } from './components/ThemeModal';
-import { UserGuideModal } from './components/UserGuideModal';
-import { HelcimCheckoutModal } from './components/HelcimCheckoutModal';
-import { PasswordModal } from './components/PasswordModal';
-import { CompressModal } from './components/CompressModal';
-import { ScanModal } from './components/ScanModal';
 import { ThemePreset, getActiveTheme } from './utils/themeManager';
 import { LandingPage } from './pages/LandingPage';
 import { createSamplePDF } from './utils/samplePdf';
@@ -23,6 +9,24 @@ import { createBlankPDF, CreatePDFOptions } from './utils/blankPdf';
 import { saveSignatureToStorage } from './utils/savedSignatures';
 import { addRecentFile, RecentFileItem } from './utils/recentFiles';
 import { trackEvent } from './utils/analytics';
+import { WatermarkOptions } from './components/WatermarkModal';
+import { ExportFormatType } from './components/PremiumExportModal';
+
+// Code-split heavy editor modals and canvas viewer so LandingPage loads instantly in < 5ms
+const PDFCanvasViewer = React.lazy(() => import('./components/PDFCanvasViewer').then(m => ({ default: m.PDFCanvasViewer })));
+const SignatureModal = React.lazy(() => import('./components/SignatureModal').then(m => ({ default: m.SignatureModal })));
+const PageManagerModal = React.lazy(() => import('./components/PageManagerModal').then(m => ({ default: m.PageManagerModal })));
+const CreatePDFModal = React.lazy(() => import('./components/CreatePDFModal').then(m => ({ default: m.CreatePDFModal })));
+const MergePDFModal = React.lazy(() => import('./components/MergePDFModal').then(m => ({ default: m.MergePDFModal })));
+const SaveMultiplePDFsModal = React.lazy(() => import('./components/SaveMultiplePDFsModal').then(m => ({ default: m.SaveMultiplePDFsModal })));
+const WatermarkModal = React.lazy(() => import('./components/WatermarkModal').then(m => ({ default: m.WatermarkModal })));
+const PremiumExportModal = React.lazy(() => import('./components/PremiumExportModal').then(m => ({ default: m.PremiumExportModal })));
+const ThemeModal = React.lazy(() => import('./components/ThemeModal').then(m => ({ default: m.ThemeModal })));
+const UserGuideModal = React.lazy(() => import('./components/UserGuideModal').then(m => ({ default: m.UserGuideModal })));
+const HelcimCheckoutModal = React.lazy(() => import('./components/HelcimCheckoutModal').then(m => ({ default: m.HelcimCheckoutModal })));
+const PasswordModal = React.lazy(() => import('./components/PasswordModal').then(m => ({ default: m.PasswordModal })));
+const CompressModal = React.lazy(() => import('./components/CompressModal').then(m => ({ default: m.CompressModal })));
+const ScanModal = React.lazy(() => import('./components/ScanModal').then(m => ({ default: m.ScanModal })));
 import './types/electron.d';
 import {
   PDFDocumentState,
@@ -1043,7 +1047,7 @@ export const App: React.FC = () => {
 
   if (currentView === 'landing') {
     return (
-      <>
+      <Suspense fallback={null}>
         <LandingPage
           onLaunchEditor={handleLaunchEditor}
           themePreset={themePreset}
@@ -1053,33 +1057,39 @@ export const App: React.FC = () => {
           onOpenScanModal={() => setIsScanModalOpen(true)}
           isProActive={isProActive}
         />
-        <ScanModal
-          isOpen={isScanModalOpen}
-          onClose={() => setIsScanModalOpen(false)}
-          onScanComplete={(pdfBytes, fileName) => {
-            loadPDFData(pdfBytes, fileName);
-            setCurrentView('editor');
-          }}
-        />
-        <ThemeModal
-          isOpen={isThemeModalOpen}
-          onClose={() => setIsThemeModalOpen(false)}
-          currentPreset={themePreset}
-          onSelectPreset={(p) => {
-            setThemePreset(p);
-            try {
-              localStorage.setItem('isa_theme_preset', p);
-            } catch (e) {}
-          }}
-          onOpenCheckout={() => {
-            setIsThemeModalOpen(false);
-          }}
-        />
-        <UserGuideModal
-          isOpen={isUserGuideModalOpen}
-          onClose={() => setIsUserGuideModalOpen(false)}
-        />
-      </>
+        {isScanModalOpen && (
+          <ScanModal
+            isOpen={isScanModalOpen}
+            onClose={() => setIsScanModalOpen(false)}
+            onScanComplete={(pdfBytes, fileName) => {
+              loadPDFData(pdfBytes, fileName);
+              setCurrentView('editor');
+            }}
+          />
+        )}
+        {isThemeModalOpen && (
+          <ThemeModal
+            isOpen={isThemeModalOpen}
+            onClose={() => setIsThemeModalOpen(false)}
+            currentPreset={themePreset}
+            onSelectPreset={(p) => {
+              setThemePreset(p);
+              try {
+                localStorage.setItem('isa_theme_preset', p);
+              } catch (e) {}
+            }}
+            onOpenCheckout={() => {
+              setIsThemeModalOpen(false);
+            }}
+          />
+        )}
+        {isUserGuideModalOpen && (
+          <UserGuideModal
+            isOpen={isUserGuideModalOpen}
+            onClose={() => setIsUserGuideModalOpen(false)}
+          />
+        )}
+      </Suspense>
     );
   }
 
@@ -1091,7 +1101,8 @@ export const App: React.FC = () => {
   const isLight = activeTheme?.id === 'light_pearl' || activeTheme?.id === 'gold_sunlight';
 
   return (
-    <div className={`flex flex-col h-screen w-screen ${activeTheme?.bgClass || 'bg-slate-950'} ${isLight ? 'text-slate-900' : 'text-slate-100'} overflow-hidden font-sans transition-colors duration-500`}>
+    <Suspense fallback={null}>
+      <div className={`flex flex-col h-screen w-screen ${activeTheme?.bgClass || 'bg-slate-950'} ${isLight ? 'text-slate-900' : 'text-slate-100'} overflow-hidden font-sans transition-colors duration-500`}>
       <HeaderToolbar
         activeTheme={activeTheme}
         onGoToLandingPage={() => setCurrentView('landing')}
@@ -1394,5 +1405,6 @@ export const App: React.FC = () => {
         </div>
       )}
     </div>
+    </Suspense>
   );
 };
