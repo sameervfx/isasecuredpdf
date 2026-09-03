@@ -80,12 +80,13 @@ jobs:
             -exportOptionsPlist exportOptions.plist \
             -exportPath "$GITHUB_WORKSPACE/output"
 
-      - name: Upload IPA to App Store Connect
+      - name: Upload IPA to App Store Connect via Fastlane
         run: |
           IPA_FILE=$(find $GITHUB_WORKSPACE/output -name "*.ipa" | head -n 1)
-          echo "Uploading IPA: $IPA_FILE"
-          xcrun altool --upload-app \
-            -f "$IPA_FILE" \
-            -t ios \
-            --apiKey VNY293MKDY \
-            --apiIssuer 64b0aa54-c75b-42fc-a4a8-b4268bc6c53c
+          echo "Uploading IPA using Fastlane: $IPA_FILE"
+          fastlane pilot upload \
+            --ipa "$IPA_FILE" \
+            --key_id "VNY293MKDY" \
+            --issuer_id "64b0aa54-c75b-42fc-a4a8-b4268bc6c53c" \
+            --key_filepath "$HOME/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8" \
+            --skip_waiting_for_build_processing true
