@@ -29,17 +29,16 @@ jobs:
 
       - name: Build iOS App Simulator Bundle
         run: |
-          xcodebuild build \
-            -workspace ios/App/App.xcworkspace \
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
             -derivedDataPath ios/App/DerivedData \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Package iOS App Artifact
         run: |
