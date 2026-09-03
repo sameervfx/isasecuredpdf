@@ -34,24 +34,9 @@
       gtag('js', new Date());
       gtag('config', 'G-N5PQZTXWDZ');
     </script>
-    <!-- Preload app logo for zero load delay -->
-    <link rel="preload" href="/app_logo.jpg" as="image" />
   </head>
   <body class="w-full h-full min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-cyan-500 selection:text-white">
-    <div id="root">
-      <!-- Instant 0-delay visual placeholder before React mounts -->
-      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; background-color:#020617; color:#f8fafc; font-family:Inter, system-ui, sans-serif;">
-        <div style="position:relative; width:80px; height:80px; margin-bottom:20px; display:flex; align-items:center; justify-content:center;">
-          <img src="/app_logo.jpg" alt="ISASecuredPDF" style="width:64px; height:64px; border-radius:16px; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.4);" />
-          <div style="position:absolute; inset:-6px; border:2px solid transparent; border-top-color:#06b6d4; border-radius:24px; animation:spin 1s linear infinite;"></div>
-        </div>
-        <div style="font-weight:700; font-size:1.125rem; letter-spacing:-0.025em; color:#f8fafc; margin-bottom:6px;">ISASecuredPDF Suite</div>
-        <div style="font-size:0.875rem; color:#94a3b8; font-weight:500;">100% On-Device Privacy PDF Suite</div>
-      </div>
-      <style>
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-      </style>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
