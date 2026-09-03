@@ -45,11 +45,10 @@ jobs:
             -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
-            -destination 'generic/platform=iOS' \
+            -sdk iphoneos \
             -archivePath ios/App/DerivedData/App.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            DEVELOPMENT_TEAM="6298P795S6" \
+            CODE_SIGNING_ALLOWED=NO
 
           mkdir -p ios/App/DerivedData/App.xcarchive/Payload
           cp -r ios/App/DerivedData/App.xcarchive/Products/Applications/App.app ios/App/DerivedData/App.xcarchive/Payload/
