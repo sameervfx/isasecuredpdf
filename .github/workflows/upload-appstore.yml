@@ -31,13 +31,13 @@ jobs:
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           cat << 'EOF' > ~/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8
------BEGIN PRIVATE KEY-----
-MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgJP2wpHmHCTCxp0jk
-GLjnJerADJ8GG0iFSiEfW+wuJVKgCgYIKoZIzj0DAQehRANCAARHWksnziRfYynp
-zfClH1UDracQV2vzD0b7Py3yBu0jyxdj5rkHMDRIRGlRp4TdA/jEzU5g5qd/sLh1
-cvvp5T+R
------END PRIVATE KEY-----
-EOF
+          -----BEGIN PRIVATE KEY-----
+          MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgJP2wpHmHCTCxp0jk
+          GLjnJerADJ8GG0iFSiEfW+wuJVKgCgYIKoZIzj0DAQehRANCAARHWksnziRfYynp
+          zfClH1UDracQV2vzD0b7Py3yBu0jyxdj5rkHMDRIRGlRp4TdA/jEzU5g5qd/sLh1
+          cvvp5T+R
+          -----END PRIVATE KEY-----
+          EOF
 
       - name: Build iOS Archive & Export IPA
         run: |
