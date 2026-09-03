@@ -45,20 +45,20 @@ jobs:
             -workspace ios/App/App.xcworkspace \
             -scheme App \
             -configuration Release \
-            -sdk iphoneos \
-            -archivePath ios/App/DerivedData/App.xcarchive \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$GITHUB_WORKSPACE/App.xcarchive" \
             DEVELOPMENT_TEAM="6298P795S6" \
             CODE_SIGNING_ALLOWED=NO
 
-          mkdir -p ios/App/DerivedData/App.xcarchive/Payload
-          cp -r ios/App/DerivedData/App.xcarchive/Products/Applications/App.app ios/App/DerivedData/App.xcarchive/Payload/
-          cd ios/App/DerivedData/App.xcarchive
-          zip -r ../../../../ISASecuredPDF.ipa Payload
+          mkdir -p "$GITHUB_WORKSPACE/Payload"
+          cp -r "$GITHUB_WORKSPACE/App.xcarchive/Products/Applications/App.app" "$GITHUB_WORKSPACE/Payload/"
+          cd "$GITHUB_WORKSPACE"
+          zip -r "$GITHUB_WORKSPACE/ISASecuredPDF.ipa" Payload
 
       - name: Upload IPA to App Store Connect
         run: |
           xcrun altool --upload-app \
-            -f ISASecuredPDF.ipa \
+            -f "$GITHUB_WORKSPACE/ISASecuredPDF.ipa" \
             -t ios \
             --apiKey VNY293MKDY \
             --apiIssuer 64b0aa54-c75b-42fc-a4a8-b4268bc6c53c
