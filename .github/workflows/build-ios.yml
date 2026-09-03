@@ -1,4 +1,4 @@
-name: Build Universal iOS App (Cloud)
+name: Package iOS App (Cloud)
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
+  package-ios:
     runs-on: macos-latest
 
     steps:
@@ -27,29 +27,14 @@ jobs:
       - name: Sync Capacitor iOS Project
         run: npx cap sync ios
 
-      - name: Build Universal iOS App (All iPhones & iPads)
-        run: |
-          xcodebuild archive \
-            -workspace ios/App/App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -archivePath ios/App/DerivedData/ISASecuredPDF.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            PROVISIONING_PROFILE_SPECIFIER=""
-
-      - name: Package Universal iOS App Artifact
+      - name: Package iOS Project & Native Assets
         run: |
           mkdir -p build-output
-          cd ios/App/DerivedData/ISASecuredPDF.xcarchive/Products/Applications
-          zip -r ../../../../../build-output/ISASecuredPDF_Universal_iOS.zip App.app
+          zip -r build-output/ISASecuredPDF_iOS_Package.zip ios/App public dist capacitor.config.json
 
-      - name: Upload Universal iOS App Artifact
+      - name: Upload iOS App Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ISASecuredPDF_Universal_iOS
-          path: build-output/ISASecuredPDF_Universal_iOS.zip
+          name: ISASecuredPDF_iOS_Package
+          path: build-output/ISASecuredPDF_iOS_Package.zip
           retention-days: 14
