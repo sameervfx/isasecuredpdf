@@ -190,7 +190,7 @@ jobs:
           console.log('Provisioning profile written successfully');
           "
 
-      - name: Build, Sign & Direct Upload to App Store Connect
+      - name: Build, Sign & Upload to App Store Connect via iTMSTransporter
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           cat << 'EOF' > ~/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8
@@ -219,7 +219,7 @@ jobs:
                   <string>df148f46-fd2e-47d0-8bc0-e6fa500d3dd0</string>
               </dict>
               <key>destination</key>
-              <string>upload</string>
+              <string>export</string>
           </dict>
           </plist>
           EOF
@@ -238,8 +238,13 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$GITHUB_WORKSPACE/App.xcarchive" \
             -exportOptionsPlist exportOptions.plist \
-            -exportPath "$GITHUB_WORKSPACE/output" \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "VNY293MKDY" \
-            -authenticationKeyIssuerID "64b0aa54-c75b-42fc-a4a8-b4268bc6c53c" \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8"
+            -exportPath "$GITHUB_WORKSPACE/output"
+
+          IPA_FILE=$(find "$GITHUB_WORKSPACE/output" -name "*.ipa" | head -n 1)
+          echo "Generated IPA: $IPA_FILE"
+
+          xcrun iTMSTransporter -m upload \
+            -assetFile "$IPA_FILE" \
+            -apiKey VNY293MKDY \
+            -apiIssuer 64b0aa54-c75b-42fc-a4a8-b4268bc6c53c \
+            -v eOD
