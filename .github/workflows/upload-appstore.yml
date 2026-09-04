@@ -665,7 +665,7 @@ jobs:
           echo "Found IPA at: $IPA_FILE"
           echo "ipa_path=$IPA_FILE" >> $GITHUB_OUTPUT
 
-      - name: Upload IPA to App Store Connect via Native xcrun altool
+      - name: Upload IPA to App Store Connect via Fastlane Pilot
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           cat << 'EOF' > ~/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8
@@ -678,10 +678,12 @@ jobs:
           EOF
 
           IPA_FILE=$(find "$GITHUB_WORKSPACE/output" -name "*.ipa" | head -n 1)
-          echo "Uploading $IPA_FILE to App Store Connect..."
+          echo "Uploading $IPA_FILE to App Store Connect via Fastlane..."
 
-          xcrun altool --upload-app \
-            -f "$IPA_FILE" \
-            -t ios \
-            --apiKey VNY293MKDY \
-            --apiIssuer 64b0aa54-c75b-42fc-a4a8-b4268bc6c53c
+          fastlane pilot upload \
+            --ipa "$IPA_FILE" \
+            --api_key_path "$HOME/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8" \
+            --key_id "VNY293MKDY" \
+            --issuer_id "64b0aa54-c75b-42fc-a4a8-b4268bc6c53c" \
+            --skip_waiting_for_build_processing true \
+            --skip_submission true
