@@ -390,6 +390,9 @@ jobs:
             DEVELOPMENT_TEAM="6298P795S6" \
             CODE_SIGNING_ALLOWED="NO"
 
+          echo "=== Verifying Compiled Assets in Archive ==="
+          find "$GITHUB_WORKSPACE/App.xcarchive" -name "*AppIcon*" -o -name "Assets.car"
+
           xcodebuild -exportArchive \
             -archivePath "$GITHUB_WORKSPACE/App.xcarchive" \
             -exportOptionsPlist exportOptions.plist \
