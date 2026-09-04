@@ -209,7 +209,7 @@ jobs:
               <key>provisioningProfiles</key>
               <dict>
                   <key>com.isasecuredpdf.app</key>
-                  <string>df148f46-fd2e-47d0-8bc0-e6fa500d3dd0</string>
+                  <string>ISASecuredPDF AppStore Profile</string>
               </dict>
               <key>destination</key>
               <string>export</string>
@@ -227,7 +227,7 @@ jobs:
             -archivePath "$GITHUB_WORKSPACE/App.xcarchive" \
             DEVELOPMENT_TEAM="6298P795S6" \
             CODE_SIGN_STYLE="Manual" \
-            PROVISIONING_PROFILE_SPECIFIER="df148f46-fd2e-47d0-8bc0-e6fa500d3dd0" \
+            PROVISIONING_PROFILE_SPECIFIER="ISASecuredPDF AppStore Profile" \
             CODE_SIGN_IDENTITY="Apple Distribution"
 
           xcodebuild -exportArchive \
