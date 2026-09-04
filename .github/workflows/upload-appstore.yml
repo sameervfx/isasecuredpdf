@@ -381,14 +381,13 @@ jobs:
           </plist>
           EOF
 
-          cd ios/App && pod install && cd ../..
-
           xcodebuild archive \
-            -workspace ios/App/App.xcworkspace \
+            -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$GITHUB_WORKSPACE/App.xcarchive" \
+            DEVELOPMENT_TEAM="6298P795S6" \
             CODE_SIGNING_ALLOWED="NO"
 
           xcodebuild -exportArchive \
