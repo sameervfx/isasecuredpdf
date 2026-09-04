@@ -224,6 +224,8 @@ jobs:
           </plist>
           EOF
 
+          cd ios/App && pod install && cd ../..
+
           xcodebuild archive \
             -workspace ios/App/App.xcworkspace \
             -scheme App \
