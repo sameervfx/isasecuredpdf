@@ -70,5 +70,7 @@
 	<string>ISASecuredPDF requires camera access to scan physical documents directly into PDFs.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>ISASecuredPDF requires photo library access to import document images.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
