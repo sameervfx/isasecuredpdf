@@ -665,25 +665,16 @@ jobs:
           echo "Found IPA at: $IPA_FILE"
           echo "ipa_path=$IPA_FILE" >> $GITHUB_OUTPUT
 
-      - name: Upload IPA to App Store Connect via Fastlane Pilot
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          cat << 'EOF' > ~/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8
-          -----BEGIN PRIVATE KEY-----
-          MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgJP2wpHmHCTCxp0jk
-          GLjnJerADJ8GG0iFSiEfW+wuJVKgCgYIKoZIzj0DAQehRANCAARHWksnziRfYynp
-          zfClH1UDracQV2vzD0b7Py3yBu0jyxdj5rkHMDRIRGlRp4TdA/jEzU5g5qd/sLh1
-          cvvp5T+R
-          -----END PRIVATE KEY-----
-          EOF
-
-          IPA_FILE=$(find "$GITHUB_WORKSPACE/output" -name "*.ipa" | head -n 1)
-          echo "Uploading $IPA_FILE to App Store Connect via Fastlane..."
-
-          fastlane pilot upload \
-            --ipa "$IPA_FILE" \
-            --api_key_path "$HOME/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8" \
-            --key_id "VNY293MKDY" \
-            --issuer_id "64b0aa54-c75b-42fc-a4a8-b4268bc6c53c" \
-            --skip_waiting_for_build_processing true \
-            --skip_submission true
+      - name: Upload IPA to App Store Connect
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ${{ steps.export.outputs.ipa_path }}
+          issuer-id: "64b0aa54-c75b-42fc-a4a8-b4268bc6c53c"
+          api-key-id: "VNY293MKDY"
+          api-private-key: |
+            -----BEGIN PRIVATE KEY-----
+            MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgJP2wpHmHCTCxp0jk
+            GLjnJerADJ8GG0iFSiEfW+wuJVKgCgYIKoZIzj0DAQehRANCAARHWksnziRfYynp
+            zfClH1UDracQV2vzD0b7Py3yBu0jyxdj5rkHMDRIRGlRp4TdA/jEzU5g5qd/sLh1
+            cvvp5T+R
+            -----END PRIVATE KEY-----
