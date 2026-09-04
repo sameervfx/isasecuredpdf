@@ -190,18 +190,8 @@ jobs:
           console.log('Provisioning profile written successfully');
           "
 
-      - name: Build, Sign & Upload to App Store Connect via iTMSTransporter
+      - name: Build & Export Signed App Store IPA
         run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          cat << 'EOF' > ~/.appstoreconnect/private_keys/AuthKey_VNY293MKDY.p8
-          -----BEGIN PRIVATE KEY-----
-          MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgJP2wpHmHCTCxp0jk
-          GLjnJerADJ8GG0iFSiEfW+wuJVKgCgYIKoZIzj0DAQehRANCAARHWksnziRfYynp
-          zfClH1UDracQV2vzD0b7Py3yBu0jyxdj5rkHMDRIRGlRp4TdA/jEzU5g5qd/sLh1
-          cvvp5T+R
-          -----END PRIVATE KEY-----
-          EOF
-
           cat << 'EOF' > exportOptions.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -242,11 +232,8 @@ jobs:
             -exportOptionsPlist exportOptions.plist \
             -exportPath "$GITHUB_WORKSPACE/output"
 
-          IPA_FILE=$(find "$GITHUB_WORKSPACE/output" -name "*.ipa" | head -n 1)
-          echo "Generated IPA: $IPA_FILE"
-
-          xcrun iTMSTransporter -m upload \
-            -assetFile "$IPA_FILE" \
-            -apiKey VNY293MKDY \
-            -apiIssuer 64b0aa54-c75b-42fc-a4a8-b4268bc6c53c \
-            -v eOD
+      - name: Upload IPA Artifact for Transporter
+        uses: actions/upload-artifact@v4
+        with:
+          name: ISASecuredPDF_AppStore_Build
+          path: output/*.ipa
