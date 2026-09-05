@@ -39,22 +39,23 @@ jobs:
           const fs = require('fs');
           const files = [
             'android/build.gradle',
-            'android/capacitor-cordova-android-plugins/build.gradle'
+            'android/variables.gradle',
+            'android/app/build.gradle',
+            'android/capacitor-cordova-android-plugins/build.gradle',
+            'node_modules/@capacitor/android/capacitor/build.gradle'
           ];
           files.forEach(p => {
             if (fs.existsSync(p)) {
               let c = fs.readFileSync(p, 'utf8');
-              c = c.replace(/8\.13\.0/g, '8.2.2').replace(/VERSION_21/g, 'VERSION_17');
+              c = c.replace(/8\.13\.0/g, '8.2.2')
+                   .replace(/compileSdk = 36/g, 'compileSdk = 34')
+                   .replace(/targetSdkVersion = 36/g, 'targetSdkVersion = 34')
+                   .replace(/compileSdkVersion = 36/g, 'compileSdkVersion = 34')
+                   .replace(/VERSION_21/g, 'VERSION_17');
               fs.writeFileSync(p, c);
+              console.log('Patched:', p);
             }
           });
-          const v = 'android/variables.gradle';
-          if (fs.existsSync(v)) {
-            let c = fs.readFileSync(v, 'utf8');
-            c = c.replace(/compileSdkVersion = 36/g, 'compileSdkVersion = 34').replace(/targetSdkVersion = 36/g, 'targetSdkVersion = 34');
-            fs.writeFileSync(v, c);
-          }
-          console.log('Successfully patched Capacitor Android build files');
           "
 
       - name: Build Android APK (Debug / Test)
