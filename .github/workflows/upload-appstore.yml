@@ -27,6 +27,18 @@ jobs:
       - name: Sync Capacitor iOS Project
         run: npx cap sync ios
 
+      - name: Auto-Bump iOS Build Version Number
+        run: |
+          node -e "
+          const fs = require('fs');
+          const pbx = 'ios/App/App.xcodeproj/project.pbxproj';
+          let content = fs.readFileSync(pbx, 'utf8');
+          const runNum = process.env.GITHUB_RUN_NUMBER || '8';
+          content = content.replace(/CURRENT_PROJECT_VERSION = \d+/g, 'CURRENT_PROJECT_VERSION = ' + runNum);
+          fs.writeFileSync(pbx, content);
+          console.log('Successfully set CURRENT_PROJECT_VERSION to ' + runNum);
+          "
+
       - name: Import Apple Distribution Certificate
         uses: apple-actions/import-codesign-certs@v3
         with:
