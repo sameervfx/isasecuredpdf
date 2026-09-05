@@ -60,7 +60,8 @@ jobs:
             let c = fs.readFileSync(p, 'utf8');
             let updated = c.replace(/8\.13\.0/g, '8.4.0')
                            .replace(/8\.2\.2/g, '8.4.0')
-                           .replace(/36/g, '34');
+                           .replace(/36/g, '34')
+                           .replace(/10\.1\.1/g, '10.1.2');
             if (updated !== c) {
               fs.writeFileSync(p, updated);
               console.log('Patched:', p);
