@@ -60,9 +60,7 @@ jobs:
             let c = fs.readFileSync(p, 'utf8');
             let updated = c.replace(/8\.13\.0/g, '8.4.0')
                            .replace(/8\.2\.2/g, '8.4.0')
-                           .replace(/compileSdk = 36/g, 'compileSdk = 34')
-                           .replace(/targetSdkVersion = 36/g, 'targetSdkVersion = 34')
-                           .replace(/compileSdkVersion = 36/g, 'compileSdkVersion = 34');
+                           .replace(/36/g, '34');
             if (updated !== c) {
               fs.writeFileSync(p, updated);
               console.log('Patched:', p);
