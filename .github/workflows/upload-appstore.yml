@@ -28,15 +28,9 @@ jobs:
         run: npx cap sync ios
 
       - name: Import Apple Distribution Certificate
-        run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain-db
-          KEYCHAIN_PASSWORD="build"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security default-keychain -s $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -t 3600 -u $KEYCHAIN_PATH
-
-          cat << 'EOF' > cert.b64
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: >-
             MIIMvwIBAzCCDHUGCSqGSIb3DQEHAaCCDGYEggxiMIIMXjCCBsoGCSqGSIb3DQEH
             BqCCBrswgga3AgEAMIIGsAYJKoZIhvcNAQcBMF8GCSqGSIb3DQEFDTBSMDEGCSqG
             SIb3DQEFDDAkBBCQae3GrpmFI5gtJ06JkkOdAgIIADAMBggqhkiG9w0CCQUAMB0G
@@ -106,16 +100,7 @@ jobs:
             hkiG9w0BCRUxFgQUHCBAcOt/oldV29CxHw0I5sHbAe4wQTAxMA0GCWCGSAFlAwQC
             AQUABCCV3qJ7DAJFNEu/AOTDB1xHmDNwwryZTLuUTbPg7c5foQQIn3G0K1YPXWwC
             AggA
-          EOF
-
-          node -e "
-          const fs = require('fs');
-          const b64 = fs.readFileSync('cert.b64', 'utf8').replace(/\s+/g, '');
-          fs.writeFileSync('cert.p12', Buffer.from(b64, 'base64'));
-          "
-
-          security import cert.p12 -k $KEYCHAIN_PATH -P "123456" -T /usr/bin/codesign -T /usr/bin/productsign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          p12-password: "123456"
 
       - name: Install App Store Provisioning Profile
         run: |
