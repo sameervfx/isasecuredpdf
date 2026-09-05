@@ -1512,6 +1512,26 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
             <span>Redo</span>
           </button>
+
+          <button
+            onClick={onPrintPDF}
+            disabled={isPrinting}
+            title="Print Document"
+            className="lg:hidden flex items-center space-x-1 px-2.5 py-1.5 bg-slate-800 text-indigo-300 text-xs font-bold rounded-lg border border-slate-700 transition active:scale-95 disabled:opacity-50 shrink-0"
+          >
+            <Printer className="w-3.5 h-3.5 text-indigo-400" />
+            <span>{isPrinting ? '...' : 'Print'}</span>
+          </button>
+
+          <button
+            onClick={onExportPDF}
+            disabled={isExporting}
+            title="Export PDF"
+            className="lg:hidden flex items-center space-x-1 px-2.5 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold rounded-lg shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50 shrink-0"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{isExporting ? '...' : 'Export'}</span>
+          </button>
           </div>
         </div>
       )}

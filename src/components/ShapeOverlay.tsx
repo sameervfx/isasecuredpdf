@@ -45,12 +45,24 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
   const scaleY = originalHeight > 0 ? canvasHeight / originalHeight : 1;
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const getClientCoords = (e: MouseEvent | TouchEvent) => {
+      if ('touches' in e && e.touches.length > 0) {
+        return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+      }
+      if ('changedTouches' in e && e.changedTouches.length > 0) {
+        return { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY };
+      }
+      const mouseEv = e as MouseEvent;
+      return { clientX: mouseEv.clientX, clientY: mouseEv.clientY };
+    };
+
+    const handlePointerMove = (e: MouseEvent | TouchEvent) => {
+      const { clientX, clientY } = getClientCoords(e);
       if (dragState) {
         if (!containerRef.current || originalWidth <= 0 || originalHeight <= 0) return;
         const containerRect = containerRef.current.getBoundingClientRect();
-        const mouseX = e.clientX - containerRect.left;
-        const mouseY = e.clientY - containerRect.top;
+        const mouseX = clientX - containerRect.left;
+        const mouseY = clientY - containerRect.top;
 
         const newScreenX = mouseX - dragState.offsetX;
         const newScreenY = mouseY - dragState.offsetY;
@@ -83,8 +95,8 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
           });
         }
       } else if (resizeState) {
-        const deltaX = (e.clientX - resizeState.startMouseX) / scaleX;
-        const deltaY = (e.clientY - resizeState.startMouseY) / scaleY;
+        const deltaX = (clientX - resizeState.startMouseX) / scaleX;
+        const deltaY = (clientY - resizeState.startMouseY) / scaleY;
 
         const targetShape = pageShapes.find((s) => s.id === resizeState.shapeId);
         if (targetShape && targetShape.type === 'line') {
@@ -108,24 +120,30 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
       }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       if (dragState) setDragState(null);
       if (resizeState) setResizeState(null);
     };
 
     if (dragState || resizeState) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handlePointerMove);
+      window.addEventListener('mouseup', handlePointerUp);
+      window.addEventListener('touchmove', handlePointerMove, { passive: false });
+      window.addEventListener('touchend', handlePointerUp);
+      window.addEventListener('touchcancel', handlePointerUp);
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
+      window.removeEventListener('touchcancel', handlePointerUp);
     };
   }, [dragState, resizeState, scaleX, scaleY, originalWidth, originalHeight, onUpdateShape, pageShapes]);
 
   useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
       if (!selectedId) return;
       const target = e.target as HTMLElement;
       if (!target.closest('.shape-element')) {
@@ -133,12 +151,16 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
       }
     };
     window.addEventListener('mousedown', handleOutsideClick);
-    return () => window.removeEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('touchstart', handleOutsideClick);
+    };
   }, [selectedId]);
 
   if (pageShapes.length === 0 || originalWidth <= 0 || originalHeight <= 0) return null;
 
-  const handleMouseDownDrag = (e: React.MouseEvent, shape: ShapeAnnotation) => {
+  const handleStartDrag = (e: React.MouseEvent | React.TouchEvent, shape: ShapeAnnotation) => {
     e.stopPropagation();
     setSelectedId(shape.id);
 
@@ -156,8 +178,11 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
     const shapeScreenX = minX * scaleX;
     const shapeScreenY = minY * scaleY;
 
-    const mouseScreenX = e.clientX - containerRect.left;
-    const mouseScreenY = e.clientY - containerRect.top;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    const mouseScreenX = clientX - containerRect.left;
+    const mouseScreenY = clientY - containerRect.top;
 
     setDragState({
       shapeId: shape.id,
@@ -166,14 +191,17 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
     });
   };
 
-  const handleMouseDownResize = (e: React.MouseEvent, shape: ShapeAnnotation) => {
+  const handleStartResize = (e: React.MouseEvent | React.TouchEvent, shape: ShapeAnnotation) => {
     e.stopPropagation();
     setSelectedId(shape.id);
 
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
     setResizeState({
       shapeId: shape.id,
-      startMouseX: e.clientX,
-      startMouseY: e.clientY,
+      startMouseX: clientX,
+      startMouseY: clientY,
       startWidth: shape.width,
       startHeight: shape.height,
     });
@@ -215,7 +243,8 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
         return (
           <div
             key={shape.id}
-            onMouseDown={(e) => handleMouseDownDrag(e, shape)}
+            onMouseDown={(e) => handleStartDrag(e, shape)}
+            onTouchStart={(e) => handleStartDrag(e, shape)}
             className={`shape-element absolute pointer-events-auto cursor-grab active:cursor-grabbing select-none rounded p-0.5 transition-all ${
               isSelected
                 ? 'ring-2 ring-blue-500 bg-blue-500/10 shadow-2xl z-30'
@@ -271,6 +300,7 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
                 </span>
                 <button
                   onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteShape(shape.id);
@@ -285,7 +315,8 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
 
             {isSelected && (
               <div
-                onMouseDown={(e) => handleMouseDownResize(e, shape)}
+                onMouseDown={(e) => handleStartResize(e, shape)}
+                onTouchStart={(e) => handleStartResize(e, shape)}
                 className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-blue-500 border-2 border-white rounded-full cursor-se-resize shadow-lg flex items-center justify-center z-40 hover:scale-125 transition-transform"
                 title="Drag to resize shape"
               >

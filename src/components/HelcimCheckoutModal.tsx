@@ -81,7 +81,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
             <div>
               <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
                 <span>Unlock ISA Secure PDF Pro</span>
-                <span className="text-[10px] bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold px-2 py-0.5 rounded-full">
+                <span className="shrink-0 whitespace-nowrap text-[10px] bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold px-2.5 py-0.5 rounded-md">
                   Helcim Secure
                 </span>
               </h3>

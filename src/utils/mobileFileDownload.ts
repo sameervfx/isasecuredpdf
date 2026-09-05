@@ -73,11 +73,34 @@ export async function downloadFile(options: DownloadOptions): Promise<void> {
 /**
  * Universal print handler for PDF document blobs on Mobile & Desktop browsers.
  */
-export async function printPdfBlob(blob: Blob): Promise<void> {
+export async function printPdfBlob(blob: Blob, fileName: string = 'document.pdf'): Promise<void> {
   const blobUrl = URL.createObjectURL(blob);
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (typeof window !== 'undefined' && window.innerWidth < 768);
 
   if (isMobile) {
+    // 1. Try Web Share API on mobile (opens native iOS AirPrint / Android Print sheet)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        const file = new File([blob], fileName, { type: 'application/pdf' });
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: fileName,
+            text: `Print ${fileName}`,
+          });
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+      } catch (shareErr: any) {
+        if (shareErr?.name === 'AbortError') {
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+        console.warn('Web Share print fallback:', shareErr);
+      }
+    }
+
+    // 2. Window.open fallback
     const printWin = window.open(blobUrl, '_blank');
     if (printWin) {
       printWin.focus();
@@ -85,55 +108,38 @@ export async function printPdfBlob(blob: Blob): Promise<void> {
         try {
           printWin.print();
         } catch (e) {
-          console.log('Mobile print preview window opened:', e);
+          console.log('Mobile print window:', e);
         }
-      }, 500);
-    } else {
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.src = blobUrl;
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
-        setTimeout(() => {
-          try {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-          } catch (e) {
-            console.error('Print iframe error:', e);
-          }
-        }, 300);
-      };
+      }, 600);
+      return;
     }
-  } else {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    iframe.src = blobUrl;
-    document.body.appendChild(iframe);
-    iframe.onload = () => {
-      setTimeout(() => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch (e) {
-          console.error('Print iframe error:', e);
-        }
-        setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
-          }
-          URL.revokeObjectURL(blobUrl);
-        }, 3000);
-      }, 300);
-    };
   }
+
+  // 3. Desktop / Standard iframe print method
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  iframe.src = blobUrl;
+  document.body.appendChild(iframe);
+
+  iframe.onload = () => {
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (e) {
+        console.error('Print iframe error:', e);
+      }
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+        URL.revokeObjectURL(blobUrl);
+      }, 3000);
+    }, 300);
+  };
 }

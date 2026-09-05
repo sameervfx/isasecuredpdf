@@ -46,15 +46,27 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
   const scaleX = originalWidth > 0 ? canvasWidth / originalWidth : 1;
   const scaleY = originalHeight > 0 ? canvasHeight / originalHeight : 1;
 
-  // Mouse Move & Mouse Up Event Listeners MUST be unconditional
+  // Mouse & Touch Move & Up/End Event Listeners
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const getClientCoords = (e: MouseEvent | TouchEvent) => {
+      if ('touches' in e && e.touches.length > 0) {
+        return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+      }
+      if ('changedTouches' in e && e.changedTouches.length > 0) {
+        return { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY };
+      }
+      const mouseEv = e as MouseEvent;
+      return { clientX: mouseEv.clientX, clientY: mouseEv.clientY };
+    };
+
+    const handlePointerMove = (e: MouseEvent | TouchEvent) => {
+      const { clientX, clientY } = getClientCoords(e);
       if (dragState) {
         if (!containerRef.current || originalWidth <= 0 || originalHeight <= 0) return;
         const containerRect = containerRef.current.getBoundingClientRect();
         
-        const mouseX = e.clientX - containerRect.left;
-        const mouseY = e.clientY - containerRect.top;
+        const mouseX = clientX - containerRect.left;
+        const mouseY = clientY - containerRect.top;
 
         const newScreenX = mouseX - dragState.offsetX;
         const newScreenY = mouseY - dragState.offsetY;
@@ -67,8 +79,8 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
           y: Math.round(newPdfY),
         });
       } else if (resizeState) {
-        const deltaX = (e.clientX - resizeState.startMouseX) / scaleX;
-        const deltaY = (e.clientY - resizeState.startMouseY) / scaleY;
+        const deltaX = (clientX - resizeState.startMouseX) / scaleX;
+        const deltaY = (clientY - resizeState.startMouseY) / scaleY;
 
         const newW = Math.max(30, resizeState.startWidth + deltaX);
         const newH = Math.max(15, resizeState.startHeight + deltaY);
@@ -80,44 +92,51 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
       }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       if (dragState) setDragState(null);
       if (resizeState) setResizeState(null);
     };
 
     if (dragState || resizeState) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handlePointerMove);
+      window.addEventListener('mouseup', handlePointerUp);
+      window.addEventListener('touchmove', handlePointerMove, { passive: false });
+      window.addEventListener('touchend', handlePointerUp);
+      window.addEventListener('touchcancel', handlePointerUp);
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
+      window.removeEventListener('touchcancel', handlePointerUp);
     };
   }, [dragState, resizeState, scaleX, scaleY, originalWidth, originalHeight, onUpdateSignature]);
 
-  // Click outside listener to deselect signature handles
+  // Click / Touch outside listener to deselect signature handles
   useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
       if (!selectedId) return;
       const target = e.target as HTMLElement;
-      // If click target is outside any signature element, deselect
       if (!target.closest('.signature-element')) {
         setSelectedId(null);
       }
     };
 
     window.addEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('touchstart', handleOutsideClick);
     return () => {
       window.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('touchstart', handleOutsideClick);
     };
   }, [selectedId]);
 
   // Early return AFTER all hooks have been declared
   if (pageSigs.length === 0 || originalWidth <= 0 || originalHeight <= 0) return null;
 
-  // Handle Dragging
-  const handleMouseDownDrag = (e: React.MouseEvent, sig: SignatureAnnotation) => {
+  // Handle Dragging (Mouse or Touch)
+  const handleStartDrag = (e: React.MouseEvent | React.TouchEvent, sig: SignatureAnnotation) => {
     e.stopPropagation();
     setSelectedId(sig.id);
 
@@ -126,8 +145,11 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
     const sigScreenX = sig.x * scaleX;
     const sigScreenY = sig.y * scaleY;
 
-    const mouseScreenX = e.clientX - containerRect.left;
-    const mouseScreenY = e.clientY - containerRect.top;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    const mouseScreenX = clientX - containerRect.left;
+    const mouseScreenY = clientY - containerRect.top;
 
     setDragState({
       sigId: sig.id,
@@ -136,15 +158,18 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
     });
   };
 
-  // Handle Resize Handle Mouse Down
-  const handleMouseDownResize = (e: React.MouseEvent, sig: SignatureAnnotation) => {
+  // Handle Resize Handle (Mouse or Touch)
+  const handleStartResize = (e: React.MouseEvent | React.TouchEvent, sig: SignatureAnnotation) => {
     e.stopPropagation();
     setSelectedId(sig.id);
 
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
     setResizeState({
       sigId: sig.id,
-      startMouseX: e.clientX,
-      startMouseY: e.clientY,
+      startMouseX: clientX,
+      startMouseY: clientY,
       startWidth: sig.width,
       startHeight: sig.height,
     });
@@ -166,7 +191,8 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
         return (
           <div
             key={sig.id}
-            onMouseDown={(e) => handleMouseDownDrag(e, sig)}
+            onMouseDown={(e) => handleStartDrag(e, sig)}
+            onTouchStart={(e) => handleStartDrag(e, sig)}
             className={`signature-element absolute pointer-events-auto group cursor-grab active:cursor-grabbing select-none rounded p-1 transition-all ${
               isSelected
                 ? 'ring-2 ring-cyan-500 bg-cyan-500/10 shadow-2xl z-30'
@@ -197,6 +223,7 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
                 </span>
                 <button
                   onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDeleteSignature(sig.id);
@@ -212,7 +239,8 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
             {/* Bottom Right Resize Handle */}
             {isSelected && (
               <div
-                onMouseDown={(e) => handleMouseDownResize(e, sig)}
+                onMouseDown={(e) => handleStartResize(e, sig)}
+                onTouchStart={(e) => handleStartResize(e, sig)}
                 className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-cyan-500 border-2 border-white rounded-full cursor-se-resize shadow-lg flex items-center justify-center z-40 hover:scale-125 transition-transform"
                 title="Drag to resize signature"
               >

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, RefreshCw, Trash2, Check, Download, Image as ImageIcon, Sparkles, Sliders, ShieldCheck, ArrowRight, RotateCw, QrCode, Smartphone, Crop, Scissors, Wand2, Maximize2, RotateCcw, FileText, Eye, Sun, Contrast as ContrastIcon, SlidersHorizontal } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
+import { downloadFile } from '../utils/mobileFileDownload';
 
 interface ScanModalProps {
   isOpen: boolean;
@@ -639,14 +640,36 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     });
   };
 
-  const handleDownloadImages = (format: 'jpg' | 'png') => {
+  const handleDownloadImages = async (format: 'jpg' | 'png') => {
     if (pages.length === 0) return;
-    pages.forEach((p, idx) => {
-      const a = document.createElement('a');
-      a.download = `Scanned_Page_${idx + 1}.${format}`;
-      a.href = p.dataUrl;
-      a.click();
-    });
+    const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
+    for (let idx = 0; idx < pages.length; idx++) {
+      const p = pages[idx];
+      const img = new Image();
+      await new Promise<void>((resolve) => {
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            if (format === 'jpg') {
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            ctx.drawImage(img, 0, 0);
+          }
+          canvas.toBlob(async (blob) => {
+            if (blob) {
+              const fileName = `Scanned_Page_${idx + 1}.${format}`;
+              await downloadFile({ fileName, blob, mimeType });
+            }
+            resolve();
+          }, mimeType, 0.95);
+        };
+        img.src = p.dataUrl;
+      });
+    }
   };
 
   const handleAssemblePDF = async () => {

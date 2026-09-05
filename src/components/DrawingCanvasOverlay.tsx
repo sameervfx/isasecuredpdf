@@ -361,6 +361,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   const handleTouchStart = (e: React.TouchEvent<SVGSVGElement>) => {
     if (e.touches && e.touches.length >= 2) {
       setIsDrawing(false);
+      setIsDrawingShape(false);
       setCurrentPoints([]);
       return;
     }
@@ -372,6 +373,10 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       if (toolMode === 'eraser') {
         eraseDrawingsNearPoint(pt, eraserThickness);
       }
+    } else if (toolMode === 'line' || toolMode === 'rectangle' || toolMode === 'oval') {
+      setIsDrawingShape(true);
+      setShapeStartPt(pt);
+      setShapeCurrentPt(pt);
     } else {
       handleDropPoint(pt);
     }
@@ -380,12 +385,19 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   const handleTouchMove = (e: React.TouchEvent<SVGSVGElement>) => {
     if (e.touches && e.touches.length >= 2) {
       setIsDrawing(false);
+      setIsDrawingShape(false);
       setCurrentPoints([]);
       return;
     }
-    if (!isDrawing || (toolMode !== 'draw' && toolMode !== 'highlight' && toolMode !== 'eraser')) return;
     const pt = getPdfCoordsFromTouch(e);
     if (!pt) return;
+
+    if (isDrawingShape) {
+      setShapeCurrentPt(pt);
+      return;
+    }
+
+    if (!isDrawing || (toolMode !== 'draw' && toolMode !== 'highlight' && toolMode !== 'eraser')) return;
     setCurrentPoints((prev) => [...prev, pt]);
     if (toolMode === 'eraser') {
       eraseDrawingsNearPoint(pt, eraserThickness);

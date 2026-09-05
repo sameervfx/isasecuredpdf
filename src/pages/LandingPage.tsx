@@ -147,7 +147,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className={`min-h-screen w-full max-w-[100vw] overflow-y-auto max-lg:overflow-x-auto lg:overflow-x-hidden touch-auto scroll-smooth ${bgClass} ${isLight ? 'text-slate-900' : 'text-slate-100'} font-sans selection:bg-cyan-500 selection:text-white flex flex-col transition-colors duration-500`}>
       {/* 1. Navigation Bar */}
-      <nav className={`sticky top-0 z-40 px-3 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between w-full relative ${navBgClass}`}>
+      <nav
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)' }}
+        className={`sticky top-0 z-40 px-3 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between w-full relative ${navBgClass}`}
+      >
         {/* Left: Brand Logo & Title */}
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">

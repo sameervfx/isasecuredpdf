@@ -42,7 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {!isOpen && (
         <button
           onClick={onToggleSidebar}
-          className="md:hidden fixed left-2 top-20 z-40 bg-slate-900/95 text-cyan-300 border border-cyan-500/40 rounded-full px-3 py-1.5 shadow-2xl backdrop-blur-md flex items-center space-x-1.5 text-xs font-bold ring-1 ring-cyan-500/30 transition hover:scale-105"
+          className="md:hidden fixed left-2 top-[115px] z-40 bg-slate-900/95 text-cyan-300 border border-cyan-500/40 rounded-full px-3 py-1.5 shadow-2xl backdrop-blur-md flex items-center space-x-1.5 text-xs font-bold ring-1 ring-cyan-500/30 transition hover:scale-105"
           title="Open Pages & Combined PDF Thumbnails Panel"
         >
           <Layers className="w-3.5 h-3.5 text-cyan-400" />
@@ -54,12 +54,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {isOpen && (
         <div 
           onClick={onToggleSidebar} 
-          className="md:hidden fixed inset-0 top-16 bg-slate-950/70 backdrop-blur-sm z-30 transition-opacity" 
+          className="md:hidden fixed inset-0 top-[105px] bg-slate-950/70 backdrop-blur-sm z-30 transition-opacity" 
         />
       )}
 
       <aside
-        className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100dvh-4rem)] md:h-full bg-slate-900/95 backdrop-blur-md border-r border-slate-800 transition-all duration-300 flex flex-col z-40 select-none ${
+        className={`fixed md:relative top-[105px] md:top-0 bottom-0 left-0 h-[calc(100dvh-105px)] md:h-full bg-slate-900/95 backdrop-blur-md border-r border-slate-800 transition-all duration-300 flex flex-col z-40 select-none ${
           isOpen ? 'w-64 shadow-2xl md:shadow-none' : 'w-0 md:w-12 overflow-hidden border-none md:border-r'
         }`}
       >
