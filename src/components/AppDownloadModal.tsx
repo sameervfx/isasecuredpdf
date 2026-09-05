@@ -32,7 +32,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
             </div>
             <div>
               <h3 className="text-base font-extrabold text-white">Get ISASecuredPDF Suite</h3>
-              <p className="text-xs text-slate-400">Official Mobile & Desktop Installation</p>
+              <p className="text-xs text-slate-400">Official Android, iOS & Desktop Apps</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition">
@@ -41,20 +41,46 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
         </div>
 
         <div className="space-y-4">
-          {/* OPTION 1: Instant iPhone / iPad Install (No TestFlight Needed) */}
-          <div className="p-4 bg-slate-950/80 border border-cyan-500/40 rounded-2xl space-y-3 relative overflow-hidden">
+          {/* OPTION 1: Android Native App (.apk) */}
+          <div className="p-4 bg-slate-950/80 border border-emerald-500/40 rounded-2xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Apple className="w-5 h-5 text-cyan-400" />
-                <span className="text-xs font-extrabold text-white">1. Instant iPhone / iPad Install</span>
+                <Smartphone className="w-5 h-5 text-emerald-400" />
+                <span className="text-xs font-extrabold text-white">1. Android App (.apk Package)</span>
               </div>
               <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                RECOMMENDED • NO TESTFLIGHT
+                DIRECT APK INSTALL
               </span>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Open this website on <b>Safari</b> on your iPhone or iPad, tap the <b>Share icon</b> (<Share className="w-3.5 h-3.5 inline text-cyan-400" />), then tap <b>"Add to Home Screen"</b>. The app installs directly onto your iOS home screen!
+              Download the native Android APK package directly to your Android device to install and test instantly.
+            </p>
+
+            <a
+              href="/dist_packages/ISASecuredPDF_Android_v1.3.0.apk"
+              download="ISASecuredPDF_Android_v1.3.0.apk"
+              className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center justify-center space-x-2 text-center block"
+            >
+              <Download className="w-4 h-4 text-white" />
+              <span>Download Android APK (.apk)</span>
+            </a>
+          </div>
+
+          {/* OPTION 2: Instant iPhone / iPad Install (No TestFlight Needed) */}
+          <div className="p-4 bg-slate-950/80 border border-cyan-500/40 rounded-2xl space-y-3 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Apple className="w-5 h-5 text-cyan-400" />
+                <span className="text-xs font-extrabold text-white">2. Instant iPhone / iPad Install</span>
+              </div>
+              <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/30">
+                IOS SAFARI PWA
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Open this website on <b>Safari</b> on your iPhone, tap the <b>Share icon</b> (<Share className="w-3.5 h-3.5 inline text-cyan-400" />), then tap <b>"Add to Home Screen"</b>. The app installs directly onto your iOS home screen!
             </p>
 
             <button
@@ -75,12 +101,12 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
             </button>
           </div>
 
-          {/* OPTION 2: TestFlight Native iOS App Instructions */}
+          {/* OPTION 3: Apple TestFlight (Build 6) */}
           <div className="p-4 bg-slate-950/80 border border-purple-500/40 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Apple className="w-5 h-5 text-purple-400" />
-                <span className="text-xs font-extrabold text-white">2. Apple TestFlight (Build 6)</span>
+                <span className="text-xs font-extrabold text-white">3. Apple TestFlight (Build 6)</span>
               </div>
               <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/30">
                 TESTFLIGHT
@@ -112,12 +138,12 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
             </a>
           </div>
 
-          {/* OPTION 3: Standalone Desktop Installer (.exe) */}
+          {/* OPTION 4: Standalone Desktop Installer (.exe) */}
           <div className="p-4 bg-slate-950/80 border border-blue-500/40 rounded-2xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Monitor className="w-5 h-5 text-blue-400" />
-                <span className="text-xs font-extrabold text-white">3. Standalone Windows Desktop App</span>
+                <span className="text-xs font-extrabold text-white">4. Standalone Windows Desktop App</span>
               </div>
               <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/30">
                 WINDOWS EXE
@@ -131,7 +157,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
             <a
               href="/dist_packages/ISASecuredPDF_Suite_Windows_Setup.exe"
               download="ISASecuredPDF_Suite_Windows_Setup.exe"
-              className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center justify-center space-x-2 text-center block"
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-blue-500/20 transition flex items-center justify-center space-x-2 text-center block"
             >
               <Download className="w-4 h-4 text-white" />
               <span>Download Windows Setup Installer (.exe)</span>
