@@ -9,6 +9,7 @@ import { createBlankPDF, CreatePDFOptions } from './utils/blankPdf';
 import { saveSignatureToStorage } from './utils/savedSignatures';
 import { addRecentFile, RecentFileItem } from './utils/recentFiles';
 import { trackEvent } from './utils/analytics';
+import { downloadFile, printPdfBlob } from './utils/mobileFileDownload';
 import { WatermarkOptions } from './components/WatermarkModal';
 import { ExportFormatType } from './components/PremiumExportModal';
 
@@ -806,28 +807,7 @@ export const App: React.FC = () => {
         }
       } else {
         const blob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
-        if ('showSaveFilePicker' in window) {
-          try {
-            const handle = await (window as any).showSaveFilePicker({
-              suggestedName: defaultName,
-              types: [{ description: 'PDF Document', accept: { 'application/pdf': ['.pdf'] } }],
-            });
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            return;
-          } catch (pickerErr: any) {
-            if (pickerErr.name === 'AbortError') return;
-          }
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = defaultName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        await downloadFile({ fileName: defaultName, blob, mimeType: 'application/pdf' });
       }
       trackEvent('export_downloaded');
     } catch (err) {
@@ -856,28 +836,7 @@ export const App: React.FC = () => {
         }
       } else {
         const blob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
-        if ('showSaveFilePicker' in window) {
-          try {
-            const handle = await (window as any).showSaveFilePicker({
-              suggestedName: saveName,
-              types: [{ description: 'PDF Document', accept: { 'application/pdf': ['.pdf'] } }],
-            });
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            return;
-          } catch (pickerErr: any) {
-            if (pickerErr.name === 'AbortError') return;
-          }
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = saveName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        await downloadFile({ fileName: saveName, blob, mimeType: 'application/pdf' });
       }
     } catch (err) {
       console.error('Save error:', err);
@@ -892,53 +851,10 @@ export const App: React.FC = () => {
     if (!docState.fileBytes) return;
     setIsPrinting(true);
     try {
-      // Export current state (flattened text, signatures, forms & annotations)
       const { pdfEngine } = await import('./services/pdfEngine');
       const modifiedPdfBytes = await pdfEngine.exportDocument(docState);
       const blob = new Blob([new Uint8Array(modifiedPdfBytes)], { type: 'application/pdf' });
-      const blobUrl = URL.createObjectURL(blob);
-
-      // 1. Open dedicated browser Print Preview window with native PDF viewer
-      const printWin = window.open(blobUrl, '_blank');
-      if (printWin) {
-        printWin.focus();
-        // Trigger auto-print after viewer rendering
-        setTimeout(() => {
-          try {
-            printWin.print();
-          } catch (e) {
-            console.log('PDF Preview window opened successfully. User can trigger print via window control:', e);
-          }
-        }, 600);
-      } else {
-        // Fallback for pop-up blocked environments
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        iframe.src = blobUrl;
-
-        document.body.appendChild(iframe);
-        iframe.onload = () => {
-          setTimeout(() => {
-            try {
-              iframe.contentWindow?.focus();
-              iframe.contentWindow?.print();
-            } catch (e) {
-              console.error('Print iframe error:', e);
-            }
-            setTimeout(() => {
-              if (document.body.contains(iframe)) {
-                document.body.removeChild(iframe);
-              }
-              URL.revokeObjectURL(blobUrl);
-            }, 3000);
-          }, 300);
-        };
-      }
+      await printPdfBlob(blob);
     } catch (err) {
       console.error('Print error:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -960,19 +876,12 @@ export const App: React.FC = () => {
           const saveRes = await window.electronAPI.showSaveDialog(result.fileName);
           if (!saveRes.canceled && saveRes.filePath) {
             const base64 = convertBytesToBase64(result.data);
-            const writeResult = await window.electronAPI.writeFile(saveRes.filePath, base64);
+            const writeResult = await window.electronAPI.writeFile(saveRes.filePath, saveRes.filePath ? saveRes.filePath : result.fileName);
             if (!writeResult.success) throw new Error(writeResult.error);
           }
         } else {
           const blob = new Blob([result.data.buffer as ArrayBuffer], { type: 'application/zip' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = result.fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          await downloadFile({ fileName: result.fileName, blob, mimeType: 'application/zip' });
         }
       } catch (err) {
         console.error('Export multiple PDFs error:', err);

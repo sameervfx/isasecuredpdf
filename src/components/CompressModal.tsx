@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Zap, ArrowRight, ShieldCheck, Download, AlertCircle, Sparkles } from 'lucide-react';
 import { securityService, CompressionResult } from '../services/securityService';
+import { downloadFile } from '../utils/mobileFileDownload';
 
 interface CompressModalProps {
   isOpen: boolean;
@@ -62,16 +63,12 @@ export const CompressModal: React.FC<CompressModalProps> = ({
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!result) return;
-    const blob = new Blob([new Uint8Array(result.compressedBytes)], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     const baseName = fileName ? fileName.replace(/\.pdf$/i, '') : 'document';
-    link.download = `${baseName}_compressed.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const compressedName = `${baseName}_compressed.pdf`;
+    const blob = new Blob([new Uint8Array(result.compressedBytes)], { type: 'application/pdf' });
+    await downloadFile({ fileName: compressedName, blob, mimeType: 'application/pdf' });
   };
 
   return (

@@ -16,6 +16,7 @@ import { PDFDocumentState } from '../types/pdf';
 import { pdfRenderer } from '../services/pdfRenderer';
 import { pdfEngine } from '../services/pdfEngine';
 import { createZipBundle, ZipFileEntry } from '../utils/zipBuilder';
+import { downloadFile } from '../utils/mobileFileDownload';
 
 export type ExportFormatType = 'docx' | 'xlsx' | 'jpg' | 'png' | 'tiff' | 'pptx';
 
@@ -104,60 +105,15 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
         if (zipEntries.length === 1) {
           const single = zipEntries[0];
           const blob = new Blob([single.data as any], { type: mimeType });
-          if ('showSaveFilePicker' in window) {
-            try {
-              const handle = await (window as any).showSaveFilePicker({
-                suggestedName: single.name,
-                types: [{ description: `${selectedFormat.toUpperCase()} Image`, accept: { [mimeType]: [`.${single.name.split('.').pop()}`] } }],
-              });
-              const writable = await handle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-              finishExport();
-              return;
-            } catch (pickerErr: any) {
-              setIsProcessing(false);
-              if (pickerErr.name === 'AbortError') return;
-            }
-          }
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = single.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          await downloadFile({ fileName: single.name, blob, mimeType });
           finishExport();
           return;
         } else {
           // Multiple pages: package into ZIP file
           const zipBuffer = createZipBundle(zipEntries);
           const blob = new Blob([zipBuffer as any], { type: 'application/zip' });
-          if ('showSaveFilePicker' in window) {
-            try {
-              const handle = await (window as any).showSaveFilePicker({
-                suggestedName: `${fileNameWithoutExt}_${selectedFormat.toUpperCase()}_Images.zip`,
-                types: [{ description: 'ZIP Archive', accept: { 'application/zip': ['.zip'] } }],
-              });
-              const writable = await handle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-              finishExport();
-              return;
-            } catch (pickerErr: any) {
-              setIsProcessing(false);
-              if (pickerErr.name === 'AbortError') return;
-            }
-          }
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${fileNameWithoutExt}_${selectedFormat.toUpperCase()}_Images.zip`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          const zipName = `${fileNameWithoutExt}_${selectedFormat.toUpperCase()}_Images.zip`;
+          await downloadFile({ fileName: zipName, blob, mimeType: 'application/zip' });
           finishExport();
           return;
         }
@@ -188,14 +144,8 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
         }
 
         const blob = new Blob([contentStr], { type: blobType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${fileNameWithoutExt}_Converted.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        const convertedName = `${fileNameWithoutExt}_Converted.${ext}`;
+        await downloadFile({ fileName: convertedName, blob, mimeType: blobType });
         finishExport();
       }
     } catch (err) {

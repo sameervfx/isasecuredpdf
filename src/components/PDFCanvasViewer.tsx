@@ -411,7 +411,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     <main
       ref={containerRef}
       tabIndex={0}
-      className={`flex-1 h-[calc(100vh-4rem)] overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none touch-auto min-w-0 transition-colors duration-500`}
+      className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none touch-auto min-w-0 transition-colors duration-500`}
     >
       {onCloseDocument && (
         <div className="sticky top-2 sm:top-4 self-end z-30 mr-2 sm:mr-6 -mb-10 sm:-mb-12">

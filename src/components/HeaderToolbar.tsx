@@ -336,7 +336,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   const isLight = activeTheme?.id === 'light_pearl' || activeTheme?.id === 'gold_sunlight';
 
   return (
-    <header className={`border-b ${isLight ? 'border-slate-300 bg-white/95 text-slate-900 shadow-md' : 'border-slate-800 bg-slate-900/95 text-slate-100'} backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between px-2 sm:px-4 py-2 lg:py-0 lg:h-16 sticky top-0 z-30 select-none gap-2 lg:gap-0 transition-colors duration-500`}>
+    <header
+      style={{ paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)' }}
+      className={`border-b ${isLight ? 'border-slate-300 bg-white/95 text-slate-900 shadow-md' : 'border-slate-800 bg-slate-900/95 text-slate-100'} backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between px-2 sm:px-4 pb-2 lg:pb-0 lg:h-16 sticky top-0 z-30 select-none gap-2 lg:gap-0 transition-colors duration-500`}
+    >
       <div className="flex items-center justify-between w-full lg:w-auto">
         {/* Brand & File Menu */}
         <div className="flex items-center space-x-2 sm:space-x-3">
