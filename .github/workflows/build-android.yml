@@ -18,11 +18,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup Java JDK 17
+      - name: Setup Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install dependencies
         run: npm install
@@ -33,26 +33,37 @@ jobs:
       - name: Sync Capacitor Android Project
         run: npx cap sync android
 
-      - name: Patch Capacitor Android Plugin AGP Version
+      - name: Patch Capacitor Android Gradle Version Mismatches
         run: |
           node -e "
           const fs = require('fs');
-          const files = [
-            'android/build.gradle',
-            'android/variables.gradle',
-            'android/app/build.gradle',
-            'android/capacitor-cordova-android-plugins/build.gradle',
-            'node_modules/@capacitor/android/capacitor/build.gradle'
-          ];
-          files.forEach(p => {
-            if (fs.existsSync(p)) {
-              let c = fs.readFileSync(p, 'utf8');
-              c = c.replace(/8\.13\.0/g, '8.2.2')
-                   .replace(/compileSdk = 36/g, 'compileSdk = 34')
-                   .replace(/targetSdkVersion = 36/g, 'targetSdkVersion = 34')
-                   .replace(/compileSdkVersion = 36/g, 'compileSdkVersion = 34')
-                   .replace(/VERSION_21/g, 'VERSION_17');
-              fs.writeFileSync(p, c);
+          const path = require('path');
+
+          function walk(dir) {
+            let results = [];
+            if (!fs.existsSync(dir)) return results;
+            const list = fs.readdirSync(dir);
+            list.forEach(file => {
+              file = path.join(dir, file);
+              const stat = fs.statSync(file);
+              if (stat && stat.isDirectory()) {
+                results = results.concat(walk(file));
+              } else if (file.endsWith('.gradle')) {
+                results.push(file);
+              }
+            });
+            return results;
+          }
+
+          const gradleFiles = walk('android').concat(walk('node_modules/@capacitor'));
+          gradleFiles.forEach(p => {
+            let c = fs.readFileSync(p, 'utf8');
+            let updated = c.replace(/8\.13\.0/g, '8.2.2')
+                           .replace(/compileSdk = 36/g, 'compileSdk = 34')
+                           .replace(/targetSdkVersion = 36/g, 'targetSdkVersion = 34')
+                           .replace(/compileSdkVersion = 36/g, 'compileSdkVersion = 34');
+            if (updated !== c) {
+              fs.writeFileSync(p, updated);
               console.log('Patched:', p);
             }
           });
