@@ -403,3 +403,12 @@ jobs:
         with:
           name: ISASecuredPDF_AppStore_Build
           path: output/*.ipa
+
+      - name: Upload IPA Directly to App Store Connect & TestFlight
+        run: |
+          echo "=== Uploading Signed IPA to App Store Connect / TestFlight ==="
+          xcrun altool --upload-app \
+            -f output/*.ipa \
+            -t ios \
+            -u "isasecuredpdf@gmail.com" \
+            -p "jzgd-xgcr-nzqw-npgc"
