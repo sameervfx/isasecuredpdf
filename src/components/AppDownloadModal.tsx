@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Smartphone, Download, Share, CheckCircle2, Monitor, ExternalLink, Apple, ShieldCheck } from 'lucide-react';
+import { X, Smartphone, Download, Share, CheckCircle2, Monitor, ExternalLink, Apple, ShieldCheck, KeyRound } from 'lucide-react';
 
 interface AppDownloadModalProps {
   isOpen: boolean;
@@ -76,26 +76,30 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
           </div>
 
           {/* OPTION 2: TestFlight Native iOS App Instructions */}
-          <div className="p-4 bg-slate-950/80 border border-purple-500/40 rounded-2xl space-y-2.5">
+          <div className="p-4 bg-slate-950/80 border border-purple-500/40 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Apple className="w-5 h-5 text-purple-400" />
-                <span className="text-xs font-extrabold text-white">2. Apple TestFlight (iOS Native Build 6)</span>
+                <span className="text-xs font-extrabold text-white">2. Apple TestFlight (Build 6)</span>
               </div>
               <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/30">
-                APP STORE TESTFLIGHT
+                TESTFLIGHT
               </span>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              To test the native iOS binary via Apple TestFlight:
-              <br />
-              1. Download <b>TestFlight</b> from the App Store.
-              <br />
-              2. Open TestFlight and sign in with <b>isasecuredpdf@gmail.com</b> (or enter your email redeem code).
-              <br />
-              3. Tap <b>Install</b> next to <i>ISASecuredPDF Suite (Build 6)</i>.
-            </p>
+            <div className="p-3 bg-purple-950/40 border border-purple-800/60 rounded-xl space-y-2 text-xs text-purple-200">
+              <div className="flex items-center space-x-2 font-bold text-white">
+                <KeyRound className="w-4 h-4 text-purple-400" />
+                <span>How to redeem on "Ready to Test" screen:</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-slate-300">
+                If TestFlight shows <b>"Ready To Test"</b>:
+                <br />
+                1. Tap the blue <b>Redeem</b> button.
+                <br />
+                2. Enter the 8-character code sent to your email by Apple, OR sign in with <b>isasecuredpdf@gmail.com</b> in TestFlight.
+              </p>
+            </div>
 
             <a
               href="https://apps.apple.com/app/testflight/id899247664"
@@ -104,7 +108,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
               className="w-full py-2.5 bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 font-bold text-xs rounded-xl border border-purple-800/80 transition flex items-center justify-center space-x-2 text-center block"
             >
               <ExternalLink className="w-4 h-4 text-purple-400" />
-              <span>Get Apple TestFlight on App Store</span>
+              <span>Open Apple TestFlight App</span>
             </a>
           </div>
 
@@ -116,7 +120,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
                 <span className="text-xs font-extrabold text-white">3. Standalone Windows Desktop App</span>
               </div>
               <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/30">
-                NATIVE WINDOWS EXE
+                WINDOWS EXE
               </span>
             </div>
 
