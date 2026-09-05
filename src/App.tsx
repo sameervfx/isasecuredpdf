@@ -27,6 +27,7 @@ const HelcimCheckoutModal = React.lazy(() => import('./components/HelcimCheckout
 const PasswordModal = React.lazy(() => import('./components/PasswordModal').then(m => ({ default: m.PasswordModal })));
 const CompressModal = React.lazy(() => import('./components/CompressModal').then(m => ({ default: m.CompressModal })));
 const ScanModal = React.lazy(() => import('./components/ScanModal').then(m => ({ default: m.ScanModal })));
+const AppDownloadModal = React.lazy(() => import('./components/AppDownloadModal').then(m => ({ default: m.AppDownloadModal })));
 import './types/electron.d';
 import {
   PDFDocumentState,
@@ -91,6 +92,7 @@ export const App: React.FC = () => {
   const [passwordModalMode, setPasswordModalMode] = useState<'protect' | 'unlock'>('protect');
   const [isCompressModalOpen, setIsCompressModalOpen] = useState<boolean>(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
+  const [isAppDownloadModalOpen, setIsAppDownloadModalOpen] = useState<boolean>(false);
   const [isProActive, setIsProActive] = useState<boolean>(
     () => localStorage.getItem('isa_pro_active') === 'true'
   );
@@ -1161,18 +1163,7 @@ export const App: React.FC = () => {
         }}
         onOpenCompressModal={() => setIsCompressModalOpen(true)}
         onOpenScanModal={() => setIsScanModalOpen(true)}
-        onOpenDesktopDownloadModal={() => {
-          const isSubscribed =
-            localStorage.getItem('isa_pro_subscribed') === 'true' ||
-            localStorage.getItem('isa_pro_recurring') === 'true';
-
-          if (!isSubscribed) {
-            setIsHelcimCheckoutOpen(true);
-          } else {
-            alert('Your active Pro subscription is verified! Downloading desktop package...');
-            window.location.href = '/dist_packages/Isa_Secure_PDF_Suite_v1.0.0_Portable_Windows.zip';
-          }
-        }}
+        onOpenDesktopDownloadModal={() => setIsAppDownloadModalOpen(true)}
         isProActive={isProActive}
         onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
       />
@@ -1381,6 +1372,12 @@ export const App: React.FC = () => {
           loadPDFData(pdfBytes, fileName);
           setCurrentView('editor');
         }}
+      />
+
+      {/* App & Mobile Download Modal */}
+      <AppDownloadModal
+        isOpen={isAppDownloadModalOpen}
+        onClose={() => setIsAppDownloadModalOpen(false)}
       />
 
       {/* Post-Payment Pro Welcome Modal */}

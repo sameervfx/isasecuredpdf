@@ -87,6 +87,7 @@
   "devDependencies": {
     "electron": "^34.0.0",
     "electron-builder": "^25.1.8",
+    "playwright": "^1.63.0",
     "png-to-ico": "^3.0.2",
     "rcedit": "^4.0.1"
   }
