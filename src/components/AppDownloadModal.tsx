@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Smartphone, Download, Share, CheckCircle2, Monitor, ExternalLink, Sparkles, Apple } from 'lucide-react';
+import { X, Smartphone, Download, Share, CheckCircle2, Monitor, ExternalLink, Apple, ShieldCheck } from 'lucide-react';
 
 interface AppDownloadModalProps {
   isOpen: boolean;
@@ -31,8 +31,8 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
               <Smartphone className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-white">Get ISASecuredPDF App</h3>
-              <p className="text-xs text-slate-400">Install on iPhone, iPad, Android, or Desktop</p>
+              <h3 className="text-base font-extrabold text-white">Get ISASecuredPDF Suite</h3>
+              <p className="text-xs text-slate-400">Official Mobile & Desktop Installation</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition">
@@ -41,7 +41,7 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
         </div>
 
         <div className="space-y-4">
-          {/* OPTION 1: Install Direct Web App on iPhone (No TestFlight Needed) */}
+          {/* OPTION 1: Instant iPhone / iPad Install (No TestFlight Needed) */}
           <div className="p-4 bg-slate-950/80 border border-cyan-500/40 rounded-2xl space-y-3 relative overflow-hidden">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -49,12 +49,12 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
                 <span className="text-xs font-extrabold text-white">1. Instant iPhone / iPad Install</span>
               </div>
               <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                NO TESTFLIGHT NEEDED
+                RECOMMENDED • NO TESTFLIGHT
               </span>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Open this web page on <b>Safari</b> on your iPhone, tap the <b>Share button</b> (<Share className="w-3.5 h-3.5 inline text-cyan-400" />), then tap <b>"Add to Home Screen"</b>. The app icon installs directly to your home screen!
+              Open this website on <b>Safari</b> on your iPhone or iPad, tap the <b>Share icon</b> (<Share className="w-3.5 h-3.5 inline text-cyan-400" />), then tap <b>"Add to Home Screen"</b>. The app installs directly onto your iOS home screen!
             </p>
 
             <button
@@ -64,79 +64,74 @@ export const AppDownloadModal: React.FC<AppDownloadModalProps> = ({ isOpen, onCl
               {copiedLink ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span className="text-emerald-400">Web App Link Copied!</span>
+                  <span className="text-emerald-400">iPhone Link Copied!</span>
                 </>
               ) : (
                 <>
                   <Share className="w-4 h-4 text-cyan-400" />
-                  <span>Copy Web App Link for iPhone</span>
+                  <span>Copy Link to Open in iPhone Safari</span>
                 </>
               )}
             </button>
           </div>
 
-          {/* OPTION 2: TestFlight Native iOS App Link */}
-          <div className="p-4 bg-slate-950/80 border border-slate-800 hover:border-purple-500/40 rounded-2xl space-y-2.5 transition">
+          {/* OPTION 2: TestFlight Native iOS App Instructions */}
+          <div className="p-4 bg-slate-950/80 border border-purple-500/40 rounded-2xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Apple className="w-5 h-5 text-purple-400" />
-                <span className="text-xs font-extrabold text-white">2. TestFlight Native iOS App</span>
+                <span className="text-xs font-extrabold text-white">2. Apple TestFlight (iOS Native Build 6)</span>
               </div>
               <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/30">
-                TESTFLIGHT BETA
+                APP STORE TESTFLIGHT
               </span>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              If you prefer the native Apple TestFlight build, open TestFlight on your iPhone and enter your redeem code or tap the beta link.
+              To test the native iOS binary via Apple TestFlight:
+              <br />
+              1. Download <b>TestFlight</b> from the App Store.
+              <br />
+              2. Open TestFlight and sign in with <b>isasecuredpdf@gmail.com</b> (or enter your email redeem code).
+              <br />
+              3. Tap <b>Install</b> next to <i>ISASecuredPDF Suite (Build 6)</i>.
             </p>
 
             <a
-              href="https://testflight.apple.com"
+              href="https://apps.apple.com/app/testflight/id899247664"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full py-2.5 bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 font-bold text-xs rounded-xl border border-purple-800/80 transition flex items-center justify-center space-x-2 text-center block"
             >
               <ExternalLink className="w-4 h-4 text-purple-400" />
-              <span>Open Apple TestFlight Link</span>
+              <span>Get Apple TestFlight on App Store</span>
             </a>
           </div>
 
-          {/* OPTION 3: Desktop Standalone Apps (.zip) */}
-          <div className="p-4 bg-slate-950/80 border border-slate-800 hover:border-blue-500/40 rounded-2xl space-y-2.5 transition">
+          {/* OPTION 3: Standalone Desktop Installer (.exe) */}
+          <div className="p-4 bg-slate-950/80 border border-blue-500/40 rounded-2xl space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Monitor className="w-5 h-5 text-blue-400" />
-                <span className="text-xs font-extrabold text-white">3. Desktop Standalone Apps</span>
+                <span className="text-xs font-extrabold text-white">3. Standalone Windows Desktop App</span>
               </div>
               <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/30">
-                WINDOWS & MAC
+                NATIVE WINDOWS EXE
               </span>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Run offline native desktop apps for Windows (.exe) and macOS (.dmg) without web browser dependencies.
+              Full offline standalone desktop installer for Windows 10 & 11 (100% client-side execution).
             </p>
 
-            <div className="grid grid-cols-2 gap-2">
-              <a
-                href="/dist_packages/Isa_Secure_PDF_Suite_v1.0.0_Portable_Windows.zip"
-                download="Isa_Secure_PDF_Suite_v1.0.0_Portable_Windows.zip"
-                className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition flex items-center justify-center space-x-1.5"
-              >
-                <Download className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Windows .zip</span>
-              </a>
-
-              <a
-                href="/dist_packages/Isa_Secure_PDF_Suite_v1.0.0_Portable_Mac.zip"
-                download="Isa_Secure_PDF_Suite_v1.0.0_Portable_Mac.zip"
-                className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition flex items-center justify-center space-x-1.5"
-              >
-                <Download className="w-3.5 h-3.5 text-indigo-400" />
-                <span>macOS .zip</span>
-              </a>
-            </div>
+            <a
+              href="/dist_packages/ISASecuredPDF_Suite_Windows_Setup.exe"
+              download="ISASecuredPDF_Suite_Windows_Setup.exe"
+              className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center justify-center space-x-2 text-center block"
+            >
+              <Download className="w-4 h-4 text-white" />
+              <span>Download Windows Setup Installer (.exe)</span>
+            </a>
           </div>
         </div>
 

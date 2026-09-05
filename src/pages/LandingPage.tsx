@@ -79,14 +79,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       setIsDownloadModalOpen(false);
       setIsProAnnualModalOpen(true);
     } else {
-      const fileUrl =
-        platform === 'windows'
-          ? '/dist_packages/Isa_Secure_PDF_Suite_v1.0.0_Portable_Windows.zip'
-          : '/dist_packages/Isa_Secure_PDF_Suite_v1.0.0_Portable_Mac.zip';
-      const fileName =
-        platform === 'windows'
-          ? 'Isa_Secure_PDF_Suite_v1.0.0_Portable_Windows.zip'
-          : 'Isa_Secure_PDF_Suite_v1.0.0_Portable_Mac.zip';
+      const fileUrl = '/dist_packages/ISASecuredPDF_Suite_Windows_Setup.exe';
+      const fileName = 'ISASecuredPDF_Suite_Windows_Setup.exe';
 
       const a = document.createElement('a');
       a.href = fileUrl;
