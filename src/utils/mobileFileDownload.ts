@@ -1,3 +1,7 @@
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+
 export interface DownloadOptions {
   fileName: string;
   blob: Blob;
@@ -5,14 +9,62 @@ export interface DownloadOptions {
 }
 
 /**
- * Robust file downloader that works seamlessly on desktop, iOS Safari, Android WebViews, and mobile PWA.
- * Uses Web Share API on mobile to open native iOS/Android share & save sheets, and falls back to File System Access API or Blob link downloads.
+ * Helper to convert Blob to base64 string
+ */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1] || dataUrl;
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Robust file downloader that works seamlessly on desktop, iOS, Android WebViews, and mobile PWA.
+ * On native Android/iOS (Capacitor), uses Filesystem + Share API so native save/share sheets open instantly.
  */
 export async function downloadFile(options: DownloadOptions): Promise<void> {
   const { fileName, blob, mimeType = blob.type || 'application/octet-stream' } = options;
+
+  // 1. Native Capacitor (Android / iOS app)
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const base64Data = await blobToBase64(blob);
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
+
+      if (await Share.canShare()) {
+        await Share.share({
+          title: fileName,
+          text: `Export ${fileName}`,
+          url: savedFile.uri,
+          dialogTitle: `Save or Share ${fileName}`,
+        });
+      } else {
+        // Fallback to Documents directory
+        await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Documents,
+        });
+      }
+      return;
+    } catch (nativeErr) {
+      console.warn('Capacitor native download error, falling back:', nativeErr);
+    }
+  }
+
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (typeof window !== 'undefined' && window.innerWidth < 768);
 
-  // 1. Try Web Share API on mobile devices if file sharing is supported
+  // 2. Web Share API (Mobile Web Browsers)
   if (isMobile && typeof navigator !== 'undefined' && navigator.share) {
     try {
       const file = new File([blob], fileName, { type: mimeType });
@@ -25,15 +77,12 @@ export async function downloadFile(options: DownloadOptions): Promise<void> {
         return;
       }
     } catch (shareErr: any) {
-      if (shareErr?.name === 'AbortError') {
-        // User cancelled native share sheet
-        return;
-      }
-      console.warn('Web Share API failed, falling back to standard download methods:', shareErr);
+      if (shareErr?.name === 'AbortError') return;
+      console.warn('Web Share API failed, falling back:', shareErr);
     }
   }
 
-  // 2. Try File System Access API (Desktop Chrome / Edge / Opera)
+  // 3. Desktop File System Access API
   if ('showSaveFilePicker' in window && !isMobile) {
     try {
       const ext = fileName.split('.').pop() || 'pdf';
@@ -56,7 +105,7 @@ export async function downloadFile(options: DownloadOptions): Promise<void> {
     }
   }
 
-  // 3. Fallback: Standard Blob URL <a download> trigger
+  // 4. Standard Browser Link Download
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -66,19 +115,37 @@ export async function downloadFile(options: DownloadOptions): Promise<void> {
   link.click();
   document.body.removeChild(link);
 
-  // Clean up Blob URL after slight delay
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 /**
- * Universal print handler for PDF document blobs on Mobile & Desktop browsers.
+ * Universal print handler for PDF document blobs on Mobile & Desktop.
  */
 export async function printPdfBlob(blob: Blob, fileName: string = 'document.pdf'): Promise<void> {
+  // Native Capacitor App
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const base64Data = await blobToBase64(blob);
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
+      await Share.share({
+        title: fileName,
+        url: savedFile.uri,
+        dialogTitle: `Print ${fileName}`,
+      });
+      return;
+    } catch (nativeErr) {
+      console.warn('Capacitor native print fallback:', nativeErr);
+    }
+  }
+
   const blobUrl = URL.createObjectURL(blob);
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (typeof window !== 'undefined' && window.innerWidth < 768);
 
   if (isMobile) {
-    // 1. Try Web Share API on mobile (opens native iOS AirPrint / Android Print sheet)
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         const file = new File([blob], fileName, { type: 'application/pdf' });
@@ -96,11 +163,9 @@ export async function printPdfBlob(blob: Blob, fileName: string = 'document.pdf'
           URL.revokeObjectURL(blobUrl);
           return;
         }
-        console.warn('Web Share print fallback:', shareErr);
       }
     }
 
-    // 2. Window.open fallback
     const printWin = window.open(blobUrl, '_blank');
     if (printWin) {
       printWin.focus();
@@ -115,7 +180,7 @@ export async function printPdfBlob(blob: Blob, fileName: string = 'document.pdf'
     }
   }
 
-  // 3. Desktop / Standard iframe print method
+  // Desktop / Standard iframe print method
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
