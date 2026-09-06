@@ -25,17 +25,27 @@ allprojects {
 }
 
 subprojects {
-    afterEvaluate { subproject ->
-        if (subproject.hasProperty('android')) {
-            subproject.android {
-                compileSdkVersion 35
-                defaultConfig {
-                    targetSdkVersion 34
-                }
-                compileOptions {
-                    sourceCompatibility JavaVersion.VERSION_17
-                    targetCompatibility JavaVersion.VERSION_17
-                }
+    plugins.withId('com.android.application') {
+        android {
+            compileSdk = 35
+            defaultConfig {
+                targetSdk = 34
+            }
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
+            }
+        }
+    }
+    plugins.withId('com.android.library') {
+        android {
+            compileSdk = 35
+            defaultConfig {
+                targetSdk = 34
+            }
+            compileOptions {
+                sourceCompatibility = JavaVersion.VERSION_17
+                targetCompatibility = JavaVersion.VERSION_17
             }
         }
     }
