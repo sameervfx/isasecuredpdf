@@ -74,15 +74,15 @@ jobs:
           });
           "
 
-      - name: Build Android APK (Debug / Test)
+      - name: Build Android APK & Play Store AAB
         run: |
           cd android
           chmod +x gradlew
           sed -i 's/\r$//' gradlew
           export TERM=dumb
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace --console=plain 2>&1 | tee build-debug.log || {
-            echo "::error::Gradle assembleDebug failed! Duplicate class and error summary below:"
+          ./gradlew assembleDebug bundleRelease --stacktrace --console=plain 2>&1 | tee build-debug.log || {
+            echo "::error::Gradle build failed! Duplicate class and error summary below:"
             grep -i -E "duplicate|found in|error|failed|exception" build-debug.log | head -n 35 | while IFS= read -r line || [ -n "$line" ]; do
               echo "::error::$line"
             done
@@ -96,10 +96,17 @@ jobs:
           name: gradle-build-log
           path: android/build-debug.log
 
-      - name: Upload Android APK Artifact
+      - name: Upload Android APK Artifact (For Testing)
         uses: actions/upload-artifact@v4
         with:
           name: ISASecuredPDF_Android_App
           path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+      - name: Upload Android AAB Artifact (For Google Play Store)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ISASecuredPDF_Android_PlayStore_AAB
+          path: android/app/build/outputs/bundle/**/*.aab
           retention-days: 14
 
