@@ -84,7 +84,14 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --console=plain
+          ./gradlew assembleDebug --stacktrace --console=plain > build-debug.log 2>&1
+
+      - name: Upload Build Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: android/build-debug.log
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@v4
