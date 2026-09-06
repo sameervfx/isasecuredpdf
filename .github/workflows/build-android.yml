@@ -84,7 +84,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --console=plain > build-debug.log 2>&1
+          ./gradlew assembleDebug --stacktrace --console=plain > build-debug.log 2>&1 || (echo "=== GRADLE FAILURE LOG START ===" && cat build-debug.log && echo "=== GRADLE FAILURE LOG END ===" && exit 1)
 
       - name: Upload Build Log Artifact
         if: always()
