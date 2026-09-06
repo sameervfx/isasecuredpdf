@@ -79,8 +79,15 @@ jobs:
           cd android
           chmod +x gradlew
           sed -i 's/\r$//' gradlew
+          export TERM=dumb
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-debug.log || (echo "=== GRADLE FAILURE LOG ===" && cat build-debug.log && exit 1)
+          ./gradlew assembleDebug --stacktrace --console=plain 2>&1 | tee build-debug.log || {
+            echo "::error::Gradle assembleDebug failed! Root cause summary below:"
+            grep -i -E "error|failed|exception|could not|cannot" build-debug.log | head -n 20 | while IFS= read -r line || [ -n "$line" ]; do
+              echo "::error::$line"
+            done
+            exit 1
+          }
 
       - name: Upload Build Log Artifact
         if: always()
