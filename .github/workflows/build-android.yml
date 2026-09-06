@@ -24,6 +24,9 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install dependencies
         run: npm install
 
@@ -60,8 +63,11 @@ jobs:
             let c = fs.readFileSync(p, 'utf8');
             let updated = c.replace(/8\.13\.0/g, '8.4.0')
                            .replace(/8\.2\.2/g, '8.4.0')
-                           .replace(/36/g, '34')
-                           .replace(/10\.1\.1/g, '10.1.2');
+                           .replace(/compileSdk = 36/g, 'compileSdk = 34')
+                           .replace(/targetSdk = 36/g, 'targetSdk = 34')
+                           .replace(/targetSdkVersion 36/g, 'targetSdkVersion 34')
+                           .replace(/10\.1\.1/g, '14.0.1')
+                           .replace(/10\.1\.2/g, '14.0.1');
             if (updated !== c) {
               fs.writeFileSync(p, updated);
               console.log('Patched:', p);
@@ -81,3 +87,4 @@ jobs:
           name: ISASecuredPDF_Android_App
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
+
