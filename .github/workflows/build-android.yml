@@ -79,7 +79,8 @@ jobs:
           cd android
           chmod +x gradlew
           sed -i 's/\r$//' gradlew
-          ./gradlew assembleDebug --stacktrace
+          set -o pipefail
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee build-debug.log || (echo "=== GRADLE FAILURE LOG ===" && cat build-debug.log && exit 1)
 
       - name: Upload Build Log Artifact
         if: always()
