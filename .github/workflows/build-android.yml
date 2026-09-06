@@ -82,8 +82,8 @@ jobs:
           export TERM=dumb
           set -o pipefail
           ./gradlew assembleDebug --stacktrace --console=plain 2>&1 | tee build-debug.log || {
-            echo "::error::Gradle assembleDebug failed! Root cause summary below:"
-            grep -i -E "error|failed|exception|could not|cannot" build-debug.log | head -n 20 | while IFS= read -r line || [ -n "$line" ]; do
+            echo "::error::Gradle assembleDebug failed! Duplicate class and error summary below:"
+            grep -i -E "duplicate|found in|error|failed|exception" build-debug.log | head -n 35 | while IFS= read -r line || [ -n "$line" ]; do
               echo "::error::$line"
             done
             exit 1
