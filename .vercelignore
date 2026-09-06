@@ -1,8 +1,14 @@
 node_modules
 dist
 release
+dist_packages
+android
+ios
+electron
 .git
 .vscode
 .gemini
 *.exe
 *.zip
+*.apk
+
