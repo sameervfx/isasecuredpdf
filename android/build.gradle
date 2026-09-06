@@ -27,25 +27,25 @@ allprojects {
 subprojects {
     plugins.withId('com.android.application') {
         android {
-            compileSdk = 35
+            compileSdk = 36
             defaultConfig {
-                targetSdk = 34
+                targetSdk = 36
             }
             compileOptions {
-                sourceCompatibility = JavaVersion.VERSION_17
-                targetCompatibility = JavaVersion.VERSION_17
+                sourceCompatibility = JavaVersion.VERSION_21
+                targetCompatibility = JavaVersion.VERSION_21
             }
         }
     }
     plugins.withId('com.android.library') {
         android {
-            compileSdk = 35
+            compileSdk = 36
             defaultConfig {
-                targetSdk = 34
+                targetSdk = 36
             }
             compileOptions {
-                sourceCompatibility = JavaVersion.VERSION_17
-                targetCompatibility = JavaVersion.VERSION_17
+                sourceCompatibility = JavaVersion.VERSION_21
+                targetCompatibility = JavaVersion.VERSION_21
             }
         }
     }
