@@ -72,6 +72,16 @@ jobs:
               console.log('Patched:', p);
             }
           });
+
+          const appGradle = 'android/app/build.gradle';
+          if (fs.existsSync(appGradle)) {
+            let c = fs.readFileSync(appGradle, 'utf8');
+            let runNum = process.env.GITHUB_RUN_NUMBER || '2';
+            let updated = c.replace(/versionCode\s+\d+/g, `versionCode ${runNum}`)
+                           .replace(/versionName\s+["'].*?["']/g, 'versionName "1.3.0"');
+            fs.writeFileSync(appGradle, updated);
+            console.log('Bumped versionCode to:', runNum);
+          }
           "
 
       - name: Build Android APK & Play Store AAB
