@@ -63,9 +63,11 @@ jobs:
             let c = fs.readFileSync(p, 'utf8');
             let updated = c.replace(/8\.13\.0/g, '8.4.0')
                            .replace(/8\.2\.2/g, '8.4.0')
-                           .replace(/compileSdk = 36/g, 'compileSdk = 34')
-                           .replace(/targetSdk = 36/g, 'targetSdk = 34')
-                           .replace(/targetSdkVersion 36/g, 'targetSdkVersion 34')
+                           .replace(/compileSdk\s*=\s*36/g, 'compileSdk = 34')
+                           .replace(/compileSdkVersion\s*36/g, 'compileSdkVersion 34')
+                           .replace(/targetSdk\s*=\s*36/g, 'targetSdk = 34')
+                           .replace(/targetSdkVersion\s*36/g, 'targetSdkVersion 34')
+                           .replace(/: 36/g, ': 34')
                            .replace(/10\.1\.1/g, '14.0.1')
                            .replace(/10\.1\.2/g, '14.0.1');
             if (updated !== c) {
