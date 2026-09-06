@@ -28,7 +28,7 @@ subprojects {
     afterEvaluate { subproject ->
         if (subproject.hasProperty('android')) {
             subproject.android {
-                compileSdkVersion 34
+                compileSdkVersion 35
                 defaultConfig {
                     targetSdkVersion 34
                 }
