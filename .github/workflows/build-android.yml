@@ -63,7 +63,9 @@ jobs:
           const gradleFiles = walk('android').concat(walk('node_modules/@capacitor'));
           gradleFiles.forEach(p => {
             let c = fs.readFileSync(p, 'utf8');
-            let updated = c.replace(/10\.1\.1/g, '14.0.1')
+            let updated = c.replace(/8\.13\.0/g, '8.4.0')
+                           .replace(/8\.2\.2/g, '8.4.0')
+                           .replace(/10\.1\.1/g, '14.0.1')
                            .replace(/10\.1\.2/g, '14.0.1');
             if (updated !== c) {
               fs.writeFileSync(p, updated);
