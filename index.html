@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/jpeg" href="/app_logo.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="apple-itunes-app" content="app-id=YOUR_APPLE_APP_ID" />
     
     <!-- Primary SEO Meta Tags -->
     <title>ISA Secure PDF - Best Free PDF Editor, Scanner & Converter (100% Client-Side)</title>
@@ -121,6 +122,14 @@
       <header style="display:none;">
         <h1>ISA Secure PDF - Best Free PDF Editor, Scanner & Secured PDF Tool</h1>
         <p>The best free scanner and PDF editor. Edit, scan, sign, compress, encrypt, fill AcroForms, and convert secured PDFs 100% locally on your device with zero server uploads.</p>
+        <div class="app-downloads" style="display:flex; gap:16px; justify-content:center; align-items:center; margin-top:24px; flex-wrap:wrap;">
+          <a id="btn-app-store" href="https://apps.apple.com/app/idYOUR_APPLE_APP_ID" target="_blank" rel="noopener noreferrer">
+            <img src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83" alt="Download on the App Store" style="height: 44px; border-radius: 7px; border: 1px solid #1e293b;" />
+          </a>
+          <a id="btn-google-play" href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app" target="_blank" rel="noopener noreferrer">
+            <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" style="height: 64px; margin: -10px 0;" />
+          </a>
+        </div>
         <h2>Features</h2>
         <ul>
           <li>Best free PDF editor and document scanner</li>
@@ -132,5 +141,34 @@
       </header>
     </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var appStoreBtn = document.getElementById('btn-app-store');
+        if (appStoreBtn) {
+          appStoreBtn.addEventListener('click', function() {
+            if (typeof gtag === 'function') {
+              gtag('event', 'app_store_click', {
+                'event_category': 'App Acquisition',
+                'event_label': 'iOS App Store',
+                'platform': 'iOS'
+              });
+            }
+          });
+        }
+
+        var googlePlayBtn = document.getElementById('btn-google-play');
+        if (googlePlayBtn) {
+          googlePlayBtn.addEventListener('click', function() {
+            if (typeof gtag === 'function') {
+              gtag('event', 'google_play_click', {
+                'event_category': 'App Acquisition',
+                'event_label': 'Google Play Store',
+                'platform': 'Android'
+              });
+            }
+          });
+        }
+      });
+    </script>
   </body>
 </html>

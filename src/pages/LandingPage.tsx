@@ -351,6 +351,52 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </button>
         </div>
 
+        {/* Mobile App Store & Google Play Download Badges */}
+        <div className="app-downloads" style={{ display: 'flex', gap: '16px', justifyContent: 'center', alignItems: 'center', marginTop: '24px', flexWrap: 'wrap' }}>
+          <a
+            id="btn-app-store"
+            href="https://apps.apple.com/app/idYOUR_APPLE_APP_ID"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
+                (window as any).gtag('event', 'app_store_click', {
+                  event_category: 'App Acquisition',
+                  event_label: 'iOS App Store',
+                  platform: 'iOS'
+                });
+              }
+            }}
+          >
+            <img
+              src="https://tools.applemediaservices.com/api/badges/download-on-the-app-store/black/en-us?size=250x83"
+              alt="Download on the App Store"
+              style={{ height: '44px', borderRadius: '7px', border: '1px solid #1e293b' }}
+            />
+          </a>
+          <a
+            id="btn-google-play"
+            href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
+                (window as any).gtag('event', 'google_play_click', {
+                  event_category: 'App Acquisition',
+                  event_label: 'Google Play Store',
+                  platform: 'Android'
+                });
+              }
+            }}
+          >
+            <img
+              src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+              alt="Get it on Google Play"
+              style={{ height: '64px', margin: '-10px 0' }}
+            />
+          </a>
+        </div>
+
         {/* Hero Interactive Drag-and-Drop Dropzone Mockup */}
         <div className="mt-14 relative max-w-4xl mx-auto">
           <div
