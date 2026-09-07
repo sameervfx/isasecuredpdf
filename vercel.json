@@ -3,12 +3,6 @@
   "installCommand": "npm install",
   "buildCommand": "npx vite build",
   "outputDirectory": "dist",
-  "rewrites": [
-    {
-      "source": "/((?!sitemap\\.xml|robots\\.txt|.*\\..*).*)",
-      "destination": "/index.html"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
