@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
 
-async function generateLinkedInBanner() {
+async function generateLinkedInBannerExact() {
   const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -67,7 +67,7 @@ async function generateLinkedInBanner() {
     .banner-container {
       width: 100%;
       height: 100%;
-      padding: 24px 60px 24px 200px; /* Left padding 200px leaves safe space for LinkedIn Profile Avatar */
+      padding: 24px 60px 24px 220px; /* Generous 220px left padding protects text from LinkedIn Avatar */
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -172,112 +172,94 @@ async function generateLinkedInBanner() {
       height: 360px;
     }
 
-    /* 3D Padlock Logo Container */
-    .thick-3d-lock {
+    /* Thick 3D Extruded Shield Badge */
+    .thick-3d-shield {
       width: 155px;
-      height: 150px;
+      height: 175px;
       position: relative;
       transform-style: preserve-3d;
-      transform: rotateY(-16deg) rotateX(10deg);
+      transform: rotateY(-18deg) rotateX(8deg);
       z-index: 5;
-      margin-top: 36px;
     }
 
-    /* SVG 3D Metallic Lock Shackle (Arch) */
-    .lock-shackle-svg {
-      position: absolute;
-      top: -66px;
-      left: 50%;
-      transform: translateX(-50%) translateZ(0px);
-      width: 125px;
-      height: 110px;
-      z-index: 1;
-      filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.75));
-    }
-
-    /* 3D Lock Body Extrusion Walls */
     .wall {
       position: absolute;
-      background: linear-gradient(135deg, #0284c7, #0f172a 60%, #10b981);
+      background: linear-gradient(to right, #0284c7, #0f172a, #10b981);
       border: 1px solid rgba(56, 189, 248, 0.6);
-      box-shadow: inset 0 0 12px rgba(6, 182, 212, 0.5);
+      box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.5);
     }
 
     .wall-top {
       width: 155px;
-      height: 32px;
-      top: -16px;
+      height: 30px;
+      top: -15px;
       left: 0;
       transform: rotateX(90deg);
-      border-radius: 14px 14px 0 0;
+      border-radius: 18px 18px 0 0;
     }
 
     .wall-bottom {
       width: 155px;
-      height: 32px;
-      bottom: -16px;
+      height: 30px;
+      bottom: -15px;
       left: 0;
       transform: rotateX(-90deg);
-      border-radius: 0 0 14px 14px;
+      border-radius: 0 0 18px 18px;
     }
 
     .wall-left {
-      width: 32px;
-      height: 150px;
-      left: -16px;
+      width: 30px;
+      height: 175px;
+      left: -15px;
       top: 0;
       transform: rotateY(-90deg);
-      border-radius: 14px 0 0 14px;
+      border-radius: 18px 0 0 18px;
     }
 
     .wall-right {
-      width: 32px;
-      height: 150px;
-      right: -16px;
+      width: 30px;
+      height: 175px;
+      right: -15px;
       top: 0;
       transform: rotateY(90deg);
-      border-radius: 0 14px 14px 0;
+      border-radius: 0 18px 18px 0;
     }
 
     .face-front {
       position: absolute;
       inset: 0;
-      transform: translateZ(16px);
-      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(6, 182, 212, 0.35));
+      transform: translateZ(15px);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(6, 182, 212, 0.25));
       border: 2.5px solid #38bdf8;
-      border-radius: 22px;
+      border-radius: 24px;
       box-shadow: 
-        0 20px 45px rgba(0, 0, 0, 0.8),
-        0 0 35px rgba(6, 182, 212, 0.45),
-        inset 0 2px 4px rgba(255, 255, 255, 0.5);
+        0 20px 40px rgba(0, 0, 0, 0.7),
+        0 0 35px rgba(6, 182, 212, 0.4),
+        inset 0 1px 2px rgba(255, 255, 255, 0.4);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 12px 10px;
-      z-index: 2;
+      padding: 14px;
     }
 
-    .lock-icon-wrap {
-      width: 52px;
-      height: 52px;
-      background: radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, rgba(15, 23, 42, 0.85) 100%);
-      border-radius: 16px;
+    .shield-icon-wrap {
+      width: 58px;
+      height: 58px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(15, 23, 42, 0) 70%);
+      border-radius: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 6px;
-      border: 1.5px solid rgba(56, 189, 248, 0.7);
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+      margin-bottom: 8px;
+      border: 1.5px solid rgba(56, 189, 248, 0.6);
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
     }
 
-    .lock-svg {
-      width: 28px;
-      height: 28px;
-      fill: none;
-      stroke: #38bdf8;
-      stroke-width: 2;
-      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+    .shield-svg {
+      width: 30px;
+      height: 30px;
+      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.8));
     }
 
     .shield-title {
@@ -286,16 +268,19 @@ async function generateLinkedInBanner() {
       color: #f8fafc;
       letter-spacing: 0.04em;
     }
+
     .shield-sub {
       font-size: 8.5px;
       font-weight: 800;
       color: #34d399;
       margin-top: 3px;
       background: rgba(6, 78, 59, 0.85);
-      padding: 2px 8px;
+      padding: 2.5px 8px;
       border-radius: 9999px;
       border: 1px solid rgba(16, 185, 129, 0.5);
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 3px;
     }
 
     /* Floating Orbit Feature Cards */
@@ -313,29 +298,29 @@ async function generateLinkedInBanner() {
       z-index: 6;
     }
 
-    .fc-password {
+    .fc-watermark {
       top: 5px;
       left: 15px;
+      border-color: rgba(6, 182, 212, 0.5);
+      box-shadow: 0 8px 20px rgba(6, 182, 212, 0.2);
+    }
+    .fc-split {
+      top: 5px;
+      right: 15px;
+      border-color: rgba(251, 146, 60, 0.5);
+      box-shadow: 0 8px 20px rgba(251, 146, 60, 0.2);
+    }
+    .fc-scanner {
+      bottom: 5px;
+      right: 20px;
       border-color: rgba(16, 185, 129, 0.5);
       box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
     }
-    .fc-signature {
-      top: 5px;
-      right: 15px;
-      border-color: rgba(168, 85, 247, 0.5);
-      box-shadow: 0 8px 20px rgba(168, 85, 247, 0.2);
-    }
-    .fc-compress {
-      bottom: 5px;
-      right: 20px;
-      border-color: rgba(56, 189, 248, 0.5);
-      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.2);
-    }
-    .fc-acroforms {
+    .fc-edit {
       bottom: 5px;
       left: 15px;
-      border-color: rgba(251, 146, 60, 0.5);
-      box-shadow: 0 8px 20px rgba(251, 146, 60, 0.2);
+      border-color: rgba(168, 85, 247, 0.5);
+      box-shadow: 0 8px 20px rgba(168, 85, 247, 0.2);
     }
 
     .icon-box {
@@ -386,7 +371,7 @@ async function generateLinkedInBanner() {
       </h1>
 
       <p class="subtitle">
-        Edit text, fill AcroForms, draw signatures, scan 4K documents, compress, split & encrypt PDFs locally with zero cloud uploads.
+        Edit text, add watermarks, split & merge, scan 4K documents, fill AcroForms, compress & sign PDFs locally with zero cloud uploads.
       </p>
 
       <div class="pills-row">
@@ -395,25 +380,29 @@ async function generateLinkedInBanner() {
           Zero Server Uploads
         </div>
         <div class="pill">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          4K Native Camera Scanner
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit & Sign Text
         </div>
         <div class="pill">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
-          Watermark Tool
+          Watermark Remover
         </div>
         <div class="pill">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
           Split & Merge Pages
         </div>
+        <div class="pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          4K Native Camera Scanner
+        </div>
       </div>
     </div>
 
-    <!-- Right Column (Orbital Features with 3D Padlock Logo) -->
+    <!-- Right Column (Orbital Features with 3D Shield Badge) -->
     <div class="right-col">
       <!-- Orbital Arc Graphic Rings -->
       <svg class="orbit-ring-svg" viewBox="0 0 360 360">
-        <circle cx="180" cy="180" r="150" fill="none" stroke="url(#orbitGrad)" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.6"/>
+        <circle cx="180" cy="180" r="160" fill="none" stroke="url(#orbitGrad)" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.6"/>
         <defs>
           <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="#38bdf8"/>
@@ -423,90 +412,66 @@ async function generateLinkedInBanner() {
         </defs>
       </svg>
 
-      <!-- 3D Padlock Logo with Extruded Metallic Shackle Arch -->
-      <div class="thick-3d-lock">
-        <!-- SVG 3D Metallic Lock Shackle (Arch) -->
-        <svg class="lock-shackle-svg" viewBox="0 -20 140 130">
-          <defs>
-            <linearGradient id="shackleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#7dd3fc"/>
-              <stop offset="35%" stop-color="#38bdf8"/>
-              <stop offset="70%" stop-color="#0284c7"/>
-              <stop offset="100%" stop-color="#0369a1"/>
-            </linearGradient>
-            <filter id="shackleGlow" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="5" result="blur"/>
-              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-            </filter>
-          </defs>
-          <!-- Back Shackle Shadow -->
-          <path d="M 34 95 V 50 A 36 36 0 0 1 106 50 V 95" fill="none" stroke="#090d16" stroke-width="18" stroke-linecap="round"/>
-          <!-- Main Metallic Glowing Shackle Arch -->
-          <path d="M 34 95 V 50 A 36 36 0 0 1 106 50 V 95" fill="none" stroke="url(#shackleGrad)" stroke-width="14" stroke-linecap="round" filter="url(#shackleGlow)"/>
-          <!-- Inner Highlight Rim -->
-          <path d="M 36 95 V 50 A 34 34 0 0 1 104 50 V 95" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-
-        <!-- 3D Body Extrusion Walls -->
+      <!-- 3D Extruded Shield Badge -->
+      <div class="thick-3d-shield">
         <div class="wall wall-top"></div>
         <div class="wall wall-bottom"></div>
         <div class="wall wall-left"></div>
         <div class="wall wall-right"></div>
 
-        <!-- Front Face -->
         <div class="face-front">
-          <div class="lock-icon-wrap">
-            <svg class="lock-svg" viewBox="0 0 24 24">
-              <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="#38bdf8"/>
-              <path d="M12 14v3.5" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+          <div class="shield-icon-wrap">
+            <svg class="shield-svg" viewBox="0 0 24 24" fill="none">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="rgba(6,182,212,0.2)" stroke="#38bdf8" stroke-width="2"/>
+              <path d="m9 12 2 2 4-4" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
           <div class="shield-title">ISA SECURED</div>
-          <div class="shield-sub">100% Client Protection</div>
+          <div class="shield-sub">⚡ 100% Client-Side</div>
         </div>
       </div>
 
-      <!-- Orbital Feature 1: Password Protection (AES Encryption) -->
-      <div class="float-card fc-password">
-        <div class="icon-box ib-emerald">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </div>
-        <div>
-          <div class="fc-text">Password Protection</div>
-          <div class="fc-sub">AES-256 Encryption Lock</div>
-        </div>
-      </div>
-
-      <!-- Orbital Feature 2: Digital Signature -->
-      <div class="float-card fc-signature">
-        <div class="icon-box ib-purple">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg>
-        </div>
-        <div>
-          <div class="fc-text">Digital Signature</div>
-          <div class="fc-sub">Sign Contracts Privately</div>
-        </div>
-      </div>
-
-      <!-- Orbital Feature 3: Smart Compression -->
-      <div class="float-card fc-compress">
+      <!-- Orbital Feature 1: Watermark Tool -->
+      <div class="float-card fc-watermark">
         <div class="icon-box ib-cyan">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
         </div>
         <div>
-          <div class="fc-text">Smart Compression</div>
-          <div class="fc-sub">Up to 80% Smaller File</div>
+          <div class="fc-text">Watermark Tool</div>
+          <div class="fc-sub">Add & Remove Watermarks</div>
         </div>
       </div>
 
-      <!-- Orbital Feature 4: Fill & Edit AcroForms -->
-      <div class="float-card fc-acroforms">
+      <!-- Orbital Feature 2: Split & Merge -->
+      <div class="float-card fc-split">
         <div class="icon-box ib-orange">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+        </div>
+        <div>
+          <div class="fc-text">Split & Merge</div>
+          <div class="fc-sub">Reorder & Combine PDF Pages</div>
+        </div>
+      </div>
+
+      <!-- Orbital Feature 3: PDF Text & Shape Edit -->
+      <div class="float-card fc-edit">
+        <div class="icon-box ib-purple">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </div>
         <div>
-          <div class="fc-text">Fill & Edit AcroForms</div>
-          <div class="fc-sub">Interactive Form Fields</div>
+          <div class="fc-text">PDF Text & Shape Edit</div>
+          <div class="fc-sub">Fill Forms & Digital Signatures</div>
+        </div>
+      </div>
+
+      <!-- Orbital Feature 4: 4K Native Scanner -->
+      <div class="float-card fc-scanner">
+        <div class="icon-box ib-emerald">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <div>
+          <div class="fc-text">4K Native Scanner</div>
+          <div class="fc-sub">Ultra-HD Document Scan</div>
         </div>
       </div>
 
@@ -519,11 +484,11 @@ async function generateLinkedInBanner() {
   const browser = await chromium.launch();
   const page = await browser.newPage({
     viewport: { width: 1584, height: 396 },
-    deviceScaleFactor: 2
+    deviceScaleFactor: 1 // Fixed 1:1 scale for exact 1584 x 396 px
   });
 
   await page.setContent(htmlContent);
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(500);
 
   const outputPathPublic = path.resolve('public/linkedin_banner_1584x396.png');
   const outputPathBrain = path.resolve('C:\\Users\\samee\\.gemini\\antigravity\\brain\\3e407dab-5038-42b5-8e5e-91e7710b8279\\linkedin_banner_1584x396.png');
@@ -535,7 +500,7 @@ async function generateLinkedInBanner() {
   await page.screenshot({ path: outputPathBrain, type: 'png' });
 
   await browser.close();
-  console.log('Successfully generated LinkedIn Cover Banner (1584 x 396 px)!');
+  console.log('Successfully generated Exact LinkedIn Cover Banner (1584 x 396 px)!');
 }
 
-generateLinkedInBanner().catch(console.error);
+generateLinkedInBannerExact().catch(console.error);
