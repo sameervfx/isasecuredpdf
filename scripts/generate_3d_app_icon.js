@@ -1,7 +1,6 @@
 import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
-import { execSync } from 'child_process';
 
 async function generate3DAppIcon() {
   const htmlContent = `
@@ -29,8 +28,8 @@ async function generate3DAppIcon() {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 440px;
-      height: 440px;
+      width: 460px;
+      height: 460px;
       background: radial-gradient(circle, rgba(6, 182, 212, 0.45) 0%, rgba(16, 185, 129, 0.2) 50%, rgba(2, 6, 23, 0) 75%);
       filter: blur(40px);
     }
@@ -52,19 +51,19 @@ async function generate3DAppIcon() {
       position: relative;
       transform-style: preserve-3d;
       transform: rotateY(-14deg) rotateX(10deg);
-      margin-top: 50px;
+      margin-top: 55px;
     }
 
     /* SVG 3D Metallic Lock Shackle (Arch) */
     .lock-shackle-svg {
       position: absolute;
-      top: -82px;
+      top: -95px;
       left: 50%;
       transform: translateX(-50%) translateZ(-4px);
-      width: 160px;
-      height: 120px;
+      width: 175px;
+      height: 155px;
       z-index: 1;
-      filter: drop-shadow(0 0 25px rgba(6, 182, 212, 0.8));
+      filter: drop-shadow(0 0 25px rgba(6, 182, 212, 0.85));
     }
 
     /* 3D Lock Body Extrusion Walls */
@@ -181,8 +180,8 @@ async function generate3DAppIcon() {
 
   <div class="perspective-container">
     <div class="thick-3d-lock">
-      <!-- SVG 3D Metallic Lock Shackle (Arch) -->
-      <svg class="lock-shackle-svg" viewBox="0 0 120 90">
+      <!-- SVG 3D Metallic Lock Shackle (Arch) with expanded viewBox to prevent clipping -->
+      <svg class="lock-shackle-svg" viewBox="0 -20 140 130">
         <defs>
           <linearGradient id="shackleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="#7dd3fc"/>
@@ -190,17 +189,17 @@ async function generate3DAppIcon() {
             <stop offset="70%" stop-color="#0284c7"/>
             <stop offset="100%" stop-color="#0369a1"/>
           </linearGradient>
-          <filter id="shackleGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="4" result="blur"/>
+          <filter id="shackleGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
             <feComposite in="SourceGraphic" in2="blur" operator="over"/>
           </filter>
         </defs>
         <!-- Back Shackle Shadow -->
-        <path d="M 24 82 V 38 A 36 36 0 0 1 96 38 V 82" fill="none" stroke="#090d16" stroke-width="18" stroke-linecap="round"/>
+        <path d="M 34 95 V 50 A 36 36 0 0 1 106 50 V 95" fill="none" stroke="#090d16" stroke-width="18" stroke-linecap="round"/>
         <!-- Main Metallic Glowing Shackle Arch -->
-        <path d="M 24 82 V 38 A 36 36 0 0 1 96 38 V 82" fill="none" stroke="url(#shackleGrad)" stroke-width="14" stroke-linecap="round" filter="url(#shackleGlow)"/>
+        <path d="M 34 95 V 50 A 36 36 0 0 1 106 50 V 95" fill="none" stroke="url(#shackleGrad)" stroke-width="14" stroke-linecap="round" filter="url(#shackleGlow)"/>
         <!-- Inner Highlight Rim -->
-        <path d="M 26 82 V 38 A 34 34 0 0 1 94 38 V 82" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M 36 95 V 50 A 34 34 0 0 1 104 50 V 95" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round"/>
       </svg>
 
       <!-- 3D Body Extrusion Walls -->
@@ -245,12 +244,12 @@ async function generate3DAppIcon() {
   for (const target of targets) {
     if (fs.existsSync(path.dirname(target))) {
       await page.screenshot({ path: target, type: 'png' });
-      console.log(`Saved 3D App Icon: ${target}`);
+      console.log(`Saved Uncut 3D App Icon: ${target}`);
     }
   }
 
   await browser.close();
-  console.log('Successfully generated 512x512 3D Metallic Padlock App Icon!');
+  console.log('Successfully generated 512x512 Uncut 3D Metallic Padlock App Icon!');
 }
 
 generate3DAppIcon().catch(console.error);
