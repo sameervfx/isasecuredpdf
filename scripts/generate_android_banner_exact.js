@@ -480,11 +480,11 @@ async function generateAndroidBannerExact() {
   const browser = await chromium.launch();
   const page = await browser.newPage({
     viewport: { width: 1024, height: 500 },
-    deviceScaleFactor: 2
+    deviceScaleFactor: 1 // Fixed to exact 1024 x 500 px for Google Play Store upload
   });
 
   await page.setContent(htmlContent);
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(500);
 
   const outputPathPublic = path.resolve('public/google_play_feature_graphic_1024x500.png');
   const outputPathBrain = path.resolve('C:\\Users\\samee\\.gemini\\antigravity\\brain\\3e407dab-5038-42b5-8e5e-91e7710b8279\\google_play_feature_graphic_1024x500.png');
@@ -496,7 +496,7 @@ async function generateAndroidBannerExact() {
   await page.screenshot({ path: outputPathBrain, type: 'png' });
 
   await browser.close();
-  console.log('Successfully generated Exact Version Android App Feature Graphic (1024 x 500 px)!');
+  console.log('Successfully generated EXACT 1024 x 500 px Feature Graphic!');
 }
 
 generateAndroidBannerExact().catch(console.error);
