@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
 
-async function generateSimpleV1Banner() {
+async function generateSmoothV1Banner() {
   const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -20,6 +20,8 @@ async function generateSimpleV1Banner() {
       align-items: center;
       justify-content: center;
       position: relative;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     /* Ambient Glowing Neons */
@@ -161,7 +163,7 @@ async function generateSimpleV1Banner() {
       display: flex;
       align-items: center;
       justify-content: center;
-      perspective: 1000px;
+      perspective: 1200px;
     }
 
     /* Orbital Motion Rings */
@@ -171,67 +173,52 @@ async function generateSimpleV1Banner() {
       height: 340px;
     }
 
-    /* Thick 3D Extruded Shield */
-    .thick-3d-shield {
-      width: 170px;
+    /* Ultra-Smooth Seamless 3D Emblem (Zero Sharp/Jagged Corner Walls) */
+    .smooth-3d-shield {
+      width: 175px;
       height: 195px;
       position: relative;
       transform-style: preserve-3d;
-      transform: rotateY(-18deg) rotateX(8deg);
+      transform: rotateY(-16deg) rotateX(8deg);
       z-index: 5;
     }
 
-    .wall {
+    /* Seamless Back Extrusion Layer with Soft Rounded Edges */
+    .shield-back-layer {
       position: absolute;
-      background: linear-gradient(to right, #0284c7, #0f172a, #10b981);
-      border: 1px solid rgba(56, 189, 248, 0.6);
-      box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.5);
+      inset: -4px;
+      transform: translateZ(-14px);
+      background: linear-gradient(135deg, #0284c7 0%, #0f172a 60%, #10b981 100%);
+      border-radius: 32px;
+      border: 2px solid rgba(56, 189, 248, 0.75);
+      box-shadow: 
+        0 25px 50px rgba(0, 0, 0, 0.85),
+        0 0 35px rgba(6, 182, 212, 0.5);
     }
 
-    .wall-top {
-      width: 170px;
-      height: 32px;
-      top: -16px;
-      left: 0;
-      transform: rotateX(90deg);
-      border-radius: 12px 12px 0 0;
-    }
-    .wall-bottom {
-      width: 170px;
-      height: 32px;
-      bottom: -16px;
-      left: 0;
-      transform: rotateX(-90deg);
-      border-radius: 0 0 12px 12px;
-    }
-    .wall-left {
-      width: 32px;
-      height: 195px;
-      left: -16px;
-      top: 0;
-      transform: rotateY(-90deg);
-      border-radius: 12px 0 0 12px;
-    }
-    .wall-right {
-      width: 32px;
-      height: 195px;
-      right: -16px;
-      top: 0;
-      transform: rotateY(90deg);
-      border-radius: 0 12px 12px 0;
+    /* Seamless Mid Layer */
+    .shield-mid-layer {
+      position: absolute;
+      inset: -2px;
+      transform: translateZ(0px);
+      background: linear-gradient(145deg, rgba(2, 132, 199, 0.85), rgba(15, 23, 42, 0.95));
+      border-radius: 30px;
+      border: 2px solid rgba(56, 189, 248, 0.6);
+      box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.6);
     }
 
+    /* Front Face Layer */
     .face-front {
       position: absolute;
       inset: 0;
       transform: translateZ(16px);
-      background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(6, 182, 212, 0.25));
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(6, 182, 212, 0.3));
       border: 2.5px solid #38bdf8;
       border-radius: 28px;
       box-shadow: 
-        0 20px 40px rgba(0, 0, 0, 0.7),
-        0 0 35px rgba(6, 182, 212, 0.4),
-        inset 0 1px 2px rgba(255, 255, 255, 0.4);
+        0 0 35px rgba(6, 182, 212, 0.5),
+        inset 0 2px 4px rgba(255, 255, 255, 0.6),
+        inset 0 -2px 6px rgba(15, 23, 42, 0.8);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -243,13 +230,13 @@ async function generateSimpleV1Banner() {
       width: 64px;
       height: 64px;
       background: radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(15, 23, 42, 0) 70%);
-      border-radius: 18px;
+      border-radius: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 8px;
-      border: 1.5px solid rgba(56, 189, 248, 0.6);
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+      border: 1.5px solid rgba(56, 189, 248, 0.7);
+      box-shadow: 0 0 22px rgba(6, 182, 212, 0.45);
     }
 
     .lock-svg {
@@ -258,7 +245,7 @@ async function generateSimpleV1Banner() {
       fill: none;
       stroke: #38bdf8;
       stroke-width: 2;
-      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.85));
     }
 
     .shield-title {
@@ -272,10 +259,10 @@ async function generateSimpleV1Banner() {
       font-weight: 800;
       color: #34d399;
       margin-top: 3px;
-      background: rgba(6, 78, 59, 0.8);
-      padding: 2px 8px;
+      background: rgba(6, 78, 59, 0.85);
+      padding: 2.5px 8px;
       border-radius: 9999px;
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      border: 1px solid rgba(16, 185, 129, 0.45);
     }
 
     /* Floating Orbit Feature Cards */
@@ -389,7 +376,7 @@ async function generateSimpleV1Banner() {
       </div>
     </div>
 
-    <!-- Right Column (Orbital Features with 3D Object Shield) -->
+    <!-- Right Column (Orbital Features with Ultra-Smooth 3D Emblem) -->
     <div class="right-col">
       <!-- Orbital Arc Graphic Rings -->
       <svg class="orbit-ring-svg" viewBox="0 0 340 340">
@@ -403,12 +390,10 @@ async function generateSimpleV1Banner() {
         </defs>
       </svg>
 
-      <!-- Thick 3D Extruded Object Shield with Lock in Center -->
-      <div class="thick-3d-shield">
-        <div class="wall wall-top"></div>
-        <div class="wall wall-bottom"></div>
-        <div class="wall wall-left"></div>
-        <div class="wall wall-right"></div>
+      <!-- Ultra-Smooth 3D Emblem (Zero Jagged Box Walls) -->
+      <div class="smooth-3d-shield">
+        <div class="shield-back-layer"></div>
+        <div class="shield-mid-layer"></div>
 
         <div class="face-front">
           <div class="lock-icon-wrap">
@@ -474,25 +459,53 @@ async function generateSimpleV1Banner() {
   `;
 
   const browser = await chromium.launch();
+  // Render at 2x scale (2048 x 1000) for sub-pixel anti-aliasing
   const page = await browser.newPage({
     viewport: { width: 1024, height: 500 },
-    deviceScaleFactor: 1 // Exact 1024 x 500 px scale
+    deviceScaleFactor: 2
   });
 
   await page.setContent(htmlContent);
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(600);
 
+  const tempPath = path.resolve('public/temp_v1_2048x1000.png');
   const outputPathPublic = path.resolve('public/google_play_feature_graphic_1024x500.png');
   const outputPathBrain = path.resolve('C:\\Users\\samee\\.gemini\\antigravity\\brain\\3e407dab-5038-42b5-8e5e-91e7710b8279\\google_play_feature_graphic_1024x500.png');
+
+  await page.screenshot({ path: tempPath, type: 'png' });
+  await browser.close();
+
+  // Downsample 2048x1000 -> 1024x500 with smooth bicubic anti-aliasing via canvas
+  const downsamplePage = await (await chromium.launch()).newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 });
+  const base64Img = fs.readFileSync(tempPath).toString('base64');
+  
+  await downsamplePage.setContent(`
+    <html><body style="margin:0;padding:0;overflow:hidden;background:#020617;">
+      <canvas id="c" width="1024" height="500"></canvas>
+      <script>
+        const img = new Image();
+        img.onload = () => {
+          const c = document.getElementById('c');
+          const ctx = c.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, 1024, 500);
+        };
+        img.src = "data:image/png;base64,${base64Img}";
+      </script>
+    </body></html>
+  `);
+  await downsamplePage.waitForTimeout(600);
 
   try { fs.unlinkSync(outputPathPublic); } catch(e) {}
   try { fs.unlinkSync(outputPathBrain); } catch(e) {}
 
-  await page.screenshot({ path: outputPathPublic, type: 'png' });
-  await page.screenshot({ path: outputPathBrain, type: 'png' });
+  await downsamplePage.screenshot({ path: outputPathPublic, type: 'png' });
+  await downsamplePage.screenshot({ path: outputPathBrain, type: 'png' });
 
-  await browser.close();
-  console.log('Successfully generated Requested Version 1 Banner (Exact 1024 x 500 px)!');
+  try { fs.unlinkSync(tempPath); } catch(e) {}
+
+  console.log('Successfully generated Ultra-Smooth Anti-Aliased Version 1 Graphic (1024 x 500 px)!');
 }
 
-generateSimpleV1Banner().catch(console.error);
+generateSmoothV1Banner().catch(console.error);
