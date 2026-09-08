@@ -167,43 +167,39 @@ async function generateLivelyBanner() {
     /* Orbital Motion Rings */
     .orbit-ring-svg {
       position: absolute;
-      width: 340px;
-      height: 340px;
+      width: 360px;
+      height: 360px;
     }
 
-    /* Thick 3D Extruded Object Shield */
-    .thick-3d-shield {
+    /* 3D Padlock Logo Container */
+    .thick-3d-lock {
       width: 170px;
-      height: 195px;
+      height: 165px;
       position: relative;
       transform-style: preserve-3d;
-      transform: rotateY(-18deg) rotateX(8deg);
+      transform: rotateY(-16deg) rotateX(10deg);
       z-index: 5;
+      margin-top: 40px;
     }
 
-    .face-front {
+    /* SVG 3D Metallic Lock Shackle (Arch) */
+    .lock-shackle-svg {
       position: absolute;
-      inset: 0;
-      transform: translateZ(16px);
-      background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(6, 182, 212, 0.25));
-      border: 2.5px solid #38bdf8;
-      border-radius: 28px;
-      box-shadow: 
-        0 20px 40px rgba(0, 0, 0, 0.7),
-        0 0 35px rgba(6, 182, 212, 0.4),
-        inset 0 1px 2px rgba(255, 255, 255, 0.4);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
+      top: -62px;
+      left: 50%;
+      transform: translateX(-50%) translateZ(-4px);
+      width: 124px;
+      height: 94px;
+      z-index: 1;
+      filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.7));
     }
 
+    /* 3D Padlock Body Walls */
     .wall {
       position: absolute;
-      background: linear-gradient(to right, #0284c7, #0f172a, #10b981);
+      background: linear-gradient(135deg, #0284c7, #0f172a 60%, #10b981);
       border: 1px solid rgba(56, 189, 248, 0.6);
-      box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.5);
+      box-shadow: inset 0 0 12px rgba(6, 182, 212, 0.5);
     }
 
     .wall-top {
@@ -212,7 +208,7 @@ async function generateLivelyBanner() {
       top: -16px;
       left: 0;
       transform: rotateX(90deg);
-      border-radius: 12px 12px 0 0;
+      border-radius: 16px 16px 0 0;
     }
     .wall-bottom {
       width: 170px;
@@ -220,65 +216,85 @@ async function generateLivelyBanner() {
       bottom: -16px;
       left: 0;
       transform: rotateX(-90deg);
-      border-radius: 0 0 12px 12px;
+      border-radius: 0 0 16px 16px;
     }
     .wall-left {
       width: 32px;
-      height: 195px;
+      height: 165px;
       left: -16px;
       top: 0;
       transform: rotateY(-90deg);
-      border-radius: 12px 0 0 12px;
+      border-radius: 16px 0 0 16px;
     }
     .wall-right {
       width: 32px;
-      height: 195px;
+      height: 165px;
       right: -16px;
       top: 0;
       transform: rotateY(90deg);
-      border-radius: 0 12px 12px 0;
+      border-radius: 0 16px 16px 0;
+    }
+
+    .face-front {
+      position: absolute;
+      inset: 0;
+      transform: translateZ(16px);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(6, 182, 212, 0.35));
+      border: 3px solid #38bdf8;
+      border-radius: 24px;
+      box-shadow: 
+        0 20px 45px rgba(0, 0, 0, 0.8),
+        0 0 35px rgba(6, 182, 212, 0.45),
+        inset 0 2px 4px rgba(255, 255, 255, 0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 12px;
+      z-index: 2;
     }
 
     .lock-icon-wrap {
-      width: 64px;
-      height: 64px;
-      background: radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(15, 23, 42, 0) 70%);
+      width: 58px;
+      height: 58px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, rgba(15, 23, 42, 0.85) 100%);
       border-radius: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
       margin-bottom: 8px;
-      border: 1.5px solid rgba(56, 189, 248, 0.6);
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+      border: 1.5px solid rgba(56, 189, 248, 0.7);
+      box-shadow: 0 0 22px rgba(6, 182, 212, 0.5);
     }
 
     .lock-svg {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       fill: none;
       stroke: #38bdf8;
       stroke-width: 2;
-      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8));
+      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
     }
 
     .shield-title {
       font-size: 14px;
       font-weight: 900;
       color: #f8fafc;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.04em;
     }
     .shield-sub {
       font-size: 9px;
       font-weight: 800;
       color: #34d399;
-      margin-top: 3px;
-      background: rgba(6, 78, 59, 0.8);
-      padding: 2px 8px;
+      margin-top: 4px;
+      background: rgba(6, 78, 59, 0.85);
+      padding: 3px 9px;
       border-radius: 9999px;
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
     }
 
-    /* Floating Rotating Feature Badge Cards */
+    /* Floating Orbit Feature Cards */
     .float-card {
       position: absolute;
       padding: 8px 12px;
@@ -389,11 +405,11 @@ async function generateLivelyBanner() {
       </div>
     </div>
 
-    <!-- Right Column (Orbital Features with Thick 3D Object) -->
+    <!-- Right Column (Orbital Features with 3D Padlock Logo) -->
     <div class="right-col">
       <!-- Orbital Arc Graphic Rings -->
-      <svg class="orbit-ring-svg" viewBox="0 0 340 340">
-        <circle cx="170" cy="170" r="150" fill="none" stroke="url(#orbitGrad)" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.6"/>
+      <svg class="orbit-ring-svg" viewBox="0 0 360 360">
+        <circle cx="180" cy="180" r="160" fill="none" stroke="url(#orbitGrad)" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.6"/>
         <defs>
           <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="#38bdf8"/>
@@ -403,19 +419,42 @@ async function generateLivelyBanner() {
         </defs>
       </svg>
 
-      <!-- Thick 3D Extruded Object Shield with Lock in Center -->
-      <div class="thick-3d-shield">
+      <!-- 3D Padlock Logo with Extruded Metallic Shackle Arch -->
+      <div class="thick-3d-lock">
+        <!-- SVG 3D Metallic Lock Shackle (Arch) -->
+        <svg class="lock-shackle-svg" viewBox="0 0 120 90">
+          <defs>
+            <linearGradient id="shackleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#7dd3fc"/>
+              <stop offset="35%" stop-color="#38bdf8"/>
+              <stop offset="70%" stop-color="#0284c7"/>
+              <stop offset="100%" stop-color="#0369a1"/>
+            </linearGradient>
+            <filter id="shackleGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+          <!-- Back Shackle Shadow -->
+          <path d="M 24 82 V 38 A 36 36 0 0 1 96 38 V 82" fill="none" stroke="#090d16" stroke-width="18" stroke-linecap="round"/>
+          <!-- Main Metallic Glowing Shackle Arch -->
+          <path d="M 24 82 V 38 A 36 36 0 0 1 96 38 V 82" fill="none" stroke="url(#shackleGrad)" stroke-width="14" stroke-linecap="round" filter="url(#shackleGlow)"/>
+          <!-- Inner Highlight Rim -->
+          <path d="M 26 82 V 38 A 34 34 0 0 1 94 38 V 82" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+
+        <!-- 3D Body Extrusion Walls -->
         <div class="wall wall-top"></div>
         <div class="wall wall-bottom"></div>
         <div class="wall wall-left"></div>
         <div class="wall wall-right"></div>
 
+        <!-- Front Face -->
         <div class="face-front">
           <div class="lock-icon-wrap">
             <svg class="lock-svg" viewBox="0 0 24 24">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              <circle cx="12" cy="16" r="1.5" fill="#34d399"/>
+              <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="#38bdf8"/>
+              <path d="M12 14v3.5" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
             </svg>
           </div>
           <div class="shield-title">ISA SECURED</div>
@@ -492,7 +531,7 @@ async function generateLivelyBanner() {
   await page.screenshot({ path: outputPathBrain, type: 'png' });
 
   await browser.close();
-  console.log('Successfully generated thick 3D block banner!');
+  console.log('Successfully generated banner with SVG 3D Metallic Lock Shackle Logo!');
 }
 
 generateLivelyBanner().catch(console.error);
