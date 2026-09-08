@@ -238,29 +238,29 @@ async function generateLivelyBanner() {
       z-index: 6;
     }
 
-    .fc-watermark {
+    .fc-password {
       top: 15px;
-      left: 15px;
-      border-color: rgba(56, 189, 248, 0.5);
-      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.2);
-    }
-    .fc-split {
-      top: 15px;
-      right: 15px;
-      border-color: rgba(251, 146, 60, 0.5);
-      box-shadow: 0 8px 20px rgba(251, 146, 60, 0.2);
-    }
-    .fc-edit {
-      bottom: 20px;
       left: 10px;
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+    }
+    .fc-signature {
+      top: 15px;
+      right: 5px;
       border-color: rgba(168, 85, 247, 0.5);
       box-shadow: 0 8px 20px rgba(168, 85, 247, 0.2);
     }
-    .fc-scanner {
+    .fc-compress {
       bottom: 20px;
       right: 10px;
-      border-color: rgba(16, 185, 129, 0.5);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.2);
+    }
+    .fc-acroforms {
+      bottom: 20px;
+      left: 5px;
+      border-color: rgba(251, 146, 60, 0.5);
+      box-shadow: 0 8px 20px rgba(251, 146, 60, 0.2);
     }
 
     .icon-box {
@@ -273,9 +273,9 @@ async function generateLivelyBanner() {
       flex-shrink: 0;
     }
     .ib-cyan { background: rgba(6, 182, 212, 0.2); color: #38bdf8; }
-    .ib-orange { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
-    .ib-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
     .ib-emerald { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .ib-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+    .ib-orange { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
 
     .fc-text {
       font-size: 11px;
@@ -311,7 +311,7 @@ async function generateLivelyBanner() {
       </h1>
 
       <p class="subtitle">
-        Edit text, add watermarks, split & merge, scan 4K documents, fill AcroForms, compress & sign PDFs locally with zero cloud uploads.
+        Edit text, fill AcroForms, draw signatures, scan 4K documents, compress, split & encrypt PDFs locally with zero cloud uploads.
       </p>
 
       <div class="pills-row">
@@ -320,20 +320,16 @@ async function generateLivelyBanner() {
           Zero Server Uploads
         </div>
         <div class="pill">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Edit & Sign Text
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          4K Native Camera Scanner
         </div>
         <div class="pill">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
-          Watermark Remover
+          Watermark Tool
         </div>
         <div class="pill">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
           Split & Merge Pages
-        </div>
-        <div class="pill">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          4K Native Camera Scanner
         </div>
       </div>
     </div>
@@ -364,47 +360,47 @@ async function generateLivelyBanner() {
         <div class="shield-sub">⚡ 100% Client-Side</div>
       </div>
 
-      <!-- Rotating Orbital Feature 1: Watermark -->
-      <div class="float-card fc-watermark">
-        <div class="icon-box ib-cyan">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
+      <!-- Orbital Feature 1: Password Protection (AES Encryption) -->
+      <div class="float-card fc-password">
+        <div class="icon-box ib-emerald">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
         <div>
-          <div class="fc-text">Watermark Tool</div>
-          <div class="fc-sub">Add & Remove Watermarks</div>
+          <div class="fc-text">Password Protection</div>
+          <div class="fc-sub">AES-256 Encryption Lock</div>
         </div>
       </div>
 
-      <!-- Rotating Orbital Feature 2: Split & Merge -->
-      <div class="float-card fc-split">
-        <div class="icon-box ib-orange">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
-        </div>
-        <div>
-          <div class="fc-text">Split & Merge</div>
-          <div class="fc-sub">Reorder & Combine PDF Pages</div>
-        </div>
-      </div>
-
-      <!-- Rotating Orbital Feature 3: Edit & Sign -->
-      <div class="float-card fc-edit">
+      <!-- Orbital Feature 2: Digital Signature -->
+      <div class="float-card fc-signature">
         <div class="icon-box ib-purple">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg>
+        </div>
+        <div>
+          <div class="fc-text">Digital Signature</div>
+          <div class="fc-sub">Sign Contracts Privately</div>
+        </div>
+      </div>
+
+      <!-- Orbital Feature 3: Smart Compression -->
+      <div class="float-card fc-compress">
+        <div class="icon-box ib-cyan">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/></svg>
+        </div>
+        <div>
+          <div class="fc-text">Smart Compression</div>
+          <div class="fc-sub">Up to 80% Smaller File</div>
+        </div>
+      </div>
+
+      <!-- Orbital Feature 4: Fill & Edit AcroForms -->
+      <div class="float-card fc-acroforms">
+        <div class="icon-box ib-orange">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </div>
         <div>
-          <div class="fc-text">PDF Text & Shape Edit</div>
-          <div class="fc-sub">Fill Forms & Digital Signatures</div>
-        </div>
-      </div>
-
-      <!-- Rotating Orbital Feature 4: 4K Scanner -->
-      <div class="float-card fc-scanner">
-        <div class="icon-box ib-emerald">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        </div>
-        <div>
-          <div class="fc-text">4K Native Scanner</div>
-          <div class="fc-sub">Ultra-HD Document Scan</div>
+          <div class="fc-text">Fill & Edit AcroForms</div>
+          <div class="fc-sub">Interactive Form Fields</div>
         </div>
       </div>
 
@@ -433,7 +429,7 @@ async function generateLivelyBanner() {
   await page.screenshot({ path: outputPathBrain, type: 'png' });
 
   await browser.close();
-  console.log('Successfully generated orbital feature banner!');
+  console.log('Successfully generated clean non-duplicated orbital banner!');
 }
 
 generateLivelyBanner().catch(console.error);
