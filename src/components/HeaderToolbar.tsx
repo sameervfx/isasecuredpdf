@@ -344,17 +344,19 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
         {/* Brand & File Menu */}
         <div className="flex items-center space-x-2 sm:space-x-3">
         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
-          <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
+          <img src={appLogo} alt="ISASecuredPDF Suite Logo" className="w-full h-full object-cover" />
         </div>
         <div>
           <div className="flex items-center space-x-3 gap-3">
-            <h1
-              onClick={onGoToLandingPage}
-              className={`font-bold text-xs sm:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[100px] sm:max-w-none`}
-              title="Return to Landing Page"
-            >
-              PDF Engine
-            </h1>
+            <div className="flex flex-col justify-center">
+              <h1
+                onClick={onGoToLandingPage}
+                className={`font-extrabold text-xs sm:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[160px] sm:max-w-none`}
+                title="Return to Landing Page"
+              >
+                ISASecuredPDF Suite
+              </h1>
+            </div>
 
             {/* File Menu Dropdown */}
             <div className="relative ml-3" ref={fileMenuRef}>
@@ -418,33 +420,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     <span className="text-[10px] text-slate-500">Ctrl+O</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setIsFileMenuOpen(false);
-                      if (onOpenDesktopDownloadModal) onOpenDesktopDownloadModal();
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-white hover:bg-slate-800 rounded-xl transition"
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <Smartphone className="w-4 h-4 text-cyan-400" />
-                      <span>iOS & Mobile App Options...</span>
-                    </div>
-                    <span className="text-[9px] font-extrabold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">iOS / PWA</span>
-                  </button>
 
-                  <button
-                    onClick={() => {
-                      setIsFileMenuOpen(false);
-                      if (onOpenDesktopDownloadModal) onOpenDesktopDownloadModal();
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-white hover:bg-slate-800 rounded-xl transition"
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <Download className="w-4 h-4 text-indigo-400" />
-                      <span>Download Desktop Apps (.zip)...</span>
-                    </div>
-                    <span className="text-[9px] font-extrabold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">PRO SUB</span>
-                  </button>
 
                   {/* Open Recent Submenu Trigger */}
                   <div
@@ -1337,23 +1313,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Scanner</span>
                 </button>
 
-                {/* iOS & Mobile App Install */}
-                <button
-                  onClick={() => {
-                    setIsMoreToolsOpen(false);
-                    if (onOpenDesktopDownloadModal) onOpenDesktopDownloadModal();
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <Apple className="w-4 h-4 text-purple-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">iOS & Mobile App Install</div>
-                      <div className="text-[10px] text-slate-400">Safari PWA & TestFlight links</div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded-full border border-purple-500/30">iOS</span>
-                </button>
+
 
                 {/* Add Image / Logo Attachment */}
                 <button

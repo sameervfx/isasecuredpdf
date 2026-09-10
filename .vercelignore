@@ -1,8 +1,15 @@
-node_modules
-dist
-release
-.git
-.vscode
-.gemini
+# Vercel Build Ignore File
+# Prevents uploading heavy non-web assets to Vercel build storage
+
+android/
+ios/
+electron/
+scripts/
+scratch/
+public/google_play_feature_graphic*
+public/3d_logo_showcase*
+public/google_play_app_icon*
+*.ps1
+*.apk
+*.aab
 *.exe
-*.zip

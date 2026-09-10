@@ -404,7 +404,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                     <span>Pro Monthly Subscription</span>
                     <span className="text-[10px] font-extrabold bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full">7-Day Free Trial</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">$2.99 / month • Cancel anytime</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">Billed monthly in local currency • Cancel anytime</div>
                 </div>
                 <Sparkles className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
               </button>

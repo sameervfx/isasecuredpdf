@@ -28,9 +28,11 @@ import {
   FileType,
   BookOpen,
   Camera,
-  Menu
+  Menu,
+  Globe
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
+import { SUPPORTED_CURRENCIES, detectUserCurrency, saveUserCurrency } from '../utils/currencyFormatter';
 
 import appLogo from '../assets/app_logo.jpg';
 
@@ -63,6 +65,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isProAnnualModalOpen, setIsProAnnualModalOpen] = useState(false);
   const [isLifetimeModalOpen, setIsLifetimeModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currencyCode, setCurrencyCode] = useState<string>('USD');
+
+  useEffect(() => {
+    setCurrencyCode(detectUserCurrency());
+  }, []);
 
   const handleGateCheckAndLaunch = () => {
     // 1-click launch straight into editor workspace with zero registration barrier
@@ -159,9 +166,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-center space-x-1.5">
             <span className={brandTextClass}>
               ISASecuredPDF
-            </span>
-            <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-500 rounded-full whitespace-nowrap">
-              100% Client-Side
             </span>
           </div>
         </div>
@@ -315,7 +319,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         <h1 className={`text-2xl sm:text-6xl font-extrabold ${headingTextClass} tracking-tight leading-tight max-w-5xl mx-auto px-2`}>
-          The 100% On-Device, Privacy-First PDF Suite for Modern Teams.
+          The 100% On-Device, <span className={`bg-gradient-to-r ${activeTheme?.accentGradient || 'from-cyan-400 via-teal-300 to-indigo-400'} bg-clip-text text-transparent`}>Privacy-First PDF Suite</span> for Modern Teams.
         </h1>
 
         <p className={`mt-6 text-base sm:text-xl ${subTextClass} max-w-3xl mx-auto leading-relaxed font-normal`}>
@@ -350,6 +354,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span>Scan Document (Camera)</span>
           </button>
         </div>
+
 
         {/* Hero Interactive Drag-and-Drop Dropzone Mockup */}
         <div className="mt-14 relative max-w-4xl mx-auto">
@@ -522,15 +527,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500 mb-3">Flexible Plans</h2>
             <p className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass}`}>Simple, Transparent Pricing</p>
-            <p className={`text-sm ${cardDescClass} mt-3`}>No hidden subscriptions. 14-Day Money-Back Guarantee.</p>
+            <p className={`text-sm ${cardDescClass} mt-3 mb-6`}>No hidden fees. 14-Day Money-Back Guarantee.</p>
+
+            {/* Currency Selector Switcher */}
+            <div className="inline-flex items-center space-x-2 bg-slate-900 border border-slate-700/80 px-4 py-2 rounded-2xl text-xs font-semibold text-cyan-300 shadow-md">
+              <Globe className="w-4 h-4 text-cyan-400" />
+              <span>Display Currency:</span>
+              <select
+                value={currencyCode}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCurrencyCode(val);
+                  saveUserCurrency(val);
+                }}
+                className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
+              >
+                {Object.values(SUPPORTED_CURRENCIES).map((curr) => (
+                  <option key={curr.code} value={curr.code} className="bg-slate-900 text-slate-100">
+                    {curr.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Free Starter */}
             <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-slate-400 transition`}>
               <div>
                 <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Free Starter</h3>
                 <p className={`text-xs ${cardDescClass} mb-4`}>For casual web viewing & editing.</p>
-                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>$0 <span className={`text-xs ${cardDescClass} font-normal`}>/ forever</span></div>
+                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
+                  {SUPPORTED_CURRENCIES[currencyCode]?.symbol || '$'}0 <span className={`text-xs ${cardDescClass} font-normal`}>/ forever</span>
+                </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
                   <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Editing Tools</span></li>
@@ -547,14 +576,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </button>
             </div>
 
+            {/* Pro Monthly */}
             <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition`}>
               <div>
                 <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Pro Monthly</h3>
                 <p className={`text-xs ${cardDescClass} mb-4`}>For active power users & creators.</p>
-                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>$2.99 <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span></div>
+                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
+                  {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited In-Browser Compressions & Password Tools</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited In-Browser Compressions & Passwords</span></li>
                   <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>High-DPI 4K Vector Supersampling</span></li>
                   <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Custom Image Seals & Unlimited Watermarks</span></li>
                 </ul>
@@ -566,10 +598,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 rel="noopener noreferrer"
                 className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
               >
-                Start 7-Day Free Trial ($2.99/mo)
+                Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}/mo)
               </a>
             </div>
 
+            {/* Pro Annual */}
             <div className={`${cardBgClass} border-2 border-cyan-500 rounded-3xl p-6 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10 transform lg:-translate-y-2`}>
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-lg whitespace-nowrap">
                 Most Popular
@@ -578,10 +611,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className={`text-base font-bold ${cardTitleClass}`}>Pro Annual</h3>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">Save 20%</span>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">Save 55%</span>
                 </div>
                 <p className={`text-xs ${cardDescClass} mb-4`}>Complete web & desktop freedom.</p>
-                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>$29.99 <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span></div>
+                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
+                  {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
                   <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Everything in Monthly Plan</span></li>
@@ -596,15 +631,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 rel="noopener noreferrer"
                 className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
               >
-                Get Annual Plan ($29.99/yr)
+                Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}/yr)
               </a>
             </div>
 
+            {/* Lifetime License */}
             <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition`}>
               <div>
                 <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Lifetime License</h3>
                 <p className={`text-xs ${cardDescClass} mb-4`}>One-time investment forever.</p>
-                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>$99.99 <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span></div>
+                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
+                  {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
                   <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
@@ -619,9 +657,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 rel="noopener noreferrer"
                 className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
               >
-                Buy Lifetime License ($99.99)
+                Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})
               </a>
             </div>
+          </div>
+
+          {/* Subscription Policy Terms Disclosure Footer */}
+          <div className="mt-10 p-4 bg-slate-900/80 border border-slate-800 rounded-2xl text-xs text-slate-400 max-w-4xl mx-auto text-center space-y-1">
+            <p className="font-bold text-slate-200">
+              📋 Subscriptions & Billing Policy Notice:
+            </p>
+            <p className="leading-relaxed">
+              Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via your Account Settings or Store Account. All displayed prices are shown in localized currency ({SUPPORTED_CURRENCIES[currencyCode]?.code} {SUPPORTED_CURRENCIES[currencyCode]?.symbol}) and match final checkout.
+            </p>
           </div>
         </div>
       </section>

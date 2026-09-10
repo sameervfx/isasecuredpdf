@@ -1,6 +1,6 @@
 {
   "appId": "com.isasecuredpdf.app",
-  "appName": "ISASecuredPDF",
+  "appName": "ISASecuredPDF Suite",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {

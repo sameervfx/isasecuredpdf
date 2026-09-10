@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, RefreshCw, Trash2, Check, Download, Image as ImageIcon, Sparkles, Sliders, ShieldCheck, ArrowRight, RotateCw, QrCode, Smartphone, Crop, Scissors, Wand2, Maximize2, RotateCcw, FileText, Eye, Sun, Contrast as ContrastIcon, SlidersHorizontal } from 'lucide-react';
+import { 
+  X, Camera, RefreshCw, Trash2, Check, Download, Image as ImageIcon, Sparkles, Sliders, 
+  ShieldCheck, ArrowRight, RotateCw, QrCode, Smartphone, Crop, Scissors, Wand2, Maximize2, 
+  RotateCcw, FileText, Eye, Sun, Contrast as ContrastIcon, SlidersHorizontal, Plus, ArrowLeft,
+  Timer, Focus, Crosshair
+} from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { downloadFile } from '../utils/mobileFileDownload';
 
@@ -18,6 +23,10 @@ interface ScannedPage {
   brightness: number;
   contrast: number;
   midTone: number;
+  cropLeft: number;
+  cropRight: number;
+  cropTop: number;
+  cropBottom: number;
 }
 
 interface Point {
@@ -25,11 +34,63 @@ interface Point {
   y: number; // percentage 0 - 100
 }
 
+const LoupeCanvas: React.FC<{
+  imageUrl: string;
+  targetPoint: { x: number; y: number };
+  label: string;
+}> = ({ imageUrl, targetPoint, label }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const naturalWidth = img.naturalWidth || img.width || 1000;
+      const naturalHeight = img.naturalHeight || img.height || 1000;
+
+      const srcX = (targetPoint.x / 100) * naturalWidth;
+      const srcY = (targetPoint.y / 100) * naturalHeight;
+
+      const srcW = naturalWidth / 3;
+      const srcH = naturalHeight / 3;
+
+      const cropX = srcX - srcW / 2;
+      const cropY = srcY - srcH / 2;
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 120, 120);
+
+      ctx.drawImage(img, cropX, cropY, srcW, srcH, 0, 0, 120, 120);
+    };
+    img.src = imageUrl;
+  }, [imageUrl, targetPoint.x, targetPoint.y]);
+
+  return (
+    <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-3 border-cyan-400 shadow-[0_0_40px_rgba(6,182,212,0.9)] overflow-hidden bg-slate-950 ring-4 ring-cyan-500/30">
+      <canvas ref={canvasRef} width={120} height={120} className="w-full h-full object-cover" />
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="w-3 h-3 rounded-full bg-amber-400 border-2 border-slate-950 shadow ring-2 ring-amber-400/90 animate-pulse" />
+        <div className="absolute w-10 h-[1.5px] bg-cyan-400/90 shadow" />
+        <div className="absolute h-10 w-[1.5px] bg-cyan-400/90 shadow" />
+      </div>
+      <span className="absolute top-1.5 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase px-2 py-0.5 bg-slate-950/90 text-cyan-300 rounded-md border border-cyan-500/40 backdrop-blur z-20">
+        {label} 3x Lens
+      </span>
+    </div>
+  );
+};
+
 export const ScanModal: React.FC<ScanModalProps> = ({
   isOpen,
   onClose,
   onScanComplete,
 }) => {
+  // Step state: 'camera' (viewfinder) | 'edit' (post-snap crop & exposure) | 'summary' (pages tray & export)
+  const [currentStep, setCurrentStep] = useState<'camera' | 'edit' | 'summary'>('camera');
   const [activeTab, setActiveTab] = useState<'camera' | 'qr'>('camera');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
@@ -38,42 +99,48 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string>('');
   const [isAssembling, setIsAssembling] = useState<boolean>(false);
+  const [exportFileName, setExportFileName] = useState<string>(
+    `Scanned_Document_${new Date().toISOString().slice(0, 10)}`
+  );
 
-  // Set default filter to 'none' (📷 Original Zero Loss)
+  // Focus & Steady Capture State
+  const [focusRingPos, setFocusRingPos] = useState<{ x: number; y: number } | null>(null);
+  const [isSteadyMode, setIsSteadyMode] = useState<boolean>(false);
+  const [steadyCountdown, setSteadyCountdown] = useState<number | null>(null);
+
+  // Post-snap Edit Controls (Crop, Exposure, Mid-Tone, Filter)
+  const [editSubTab, setEditSubTab] = useState<'crop' | 'tone' | 'filter'>('crop');
   const [selectedFilter, setSelectedFilter] = useState<'flatten' | 'bw' | 'color' | 'grayscale' | 'none'>('none');
-  const [qrScanUrl, setQrScanUrl] = useState<string>('');
-
-  // Brightness, Contrast & Mid-Tone Balance Controls & Live Viewer Modal
   const [brightness, setBrightness] = useState<number>(0);
   const [contrast, setContrast] = useState<number>(0);
   const [midTone, setMidTone] = useState<number>(0);
-  const [isToneModalOpen, setIsToneModalOpen] = useState<boolean>(false);
   const [showOriginalComparison, setShowOriginalComparison] = useState<boolean>(false);
 
-  // Interactive Crop & Freehand Polygon Corners (Percentages)
-  const [isCropModalOpen, setIsCropModalOpen] = useState<boolean>(false);
+  // Crop Margin Sliders & Polygon Corners
   const [cropLeft, setCropLeft] = useState<number>(5);
   const [cropRight, setCropRight] = useState<number>(5);
-  const [cropTop, setCropTop] = useState<number>(5);
-  const [cropBottom, setCropBottom] = useState<number>(5);
+  const [cropTop, setCropTop] = useState<number>(15);
+  const [cropBottom, setCropBottom] = useState<number>(15);
 
   const [corners, setCorners] = useState<{ tl: Point; tr: Point; br: Point; bl: Point }>({
-    tl: { x: 5, y: 5 },
-    tr: { x: 95, y: 5 },
-    br: { x: 95, y: 95 },
-    bl: { x: 5, y: 95 },
+    tl: { x: 5, y: 15 },
+    tr: { x: 95, y: 15 },
+    br: { x: 95, y: 85 },
+    bl: { x: 5, y: 85 },
   });
   const [draggingCorner, setDraggingCorner] = useState<'tl' | 'tr' | 'br' | 'bl' | null>(null);
+  const [activeSlider, setActiveSlider] = useState<'top' | 'bottom' | 'left' | 'right' | null>(null);
+
+  const [qrScanUrl, setQrScanUrl] = useState<string>('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const cropImageRef = useRef<HTMLImageElement>(null);
   const cropContainerRef = useRef<HTMLDivElement>(null);
-  const liveCropCanvasRef = useRef<HTMLCanvasElement>(null);
-  const liveToneCanvasRef = useRef<HTMLCanvasElement>(null);
+  const liveEditCanvasRef = useRef<HTMLCanvasElement>(null);
+  const viewfinderRef = useRef<HTMLDivElement>(null);
 
-  // Generate QR Code URL with Network IP fallback
+  // QR Code URL & Remote Sync Setup
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
@@ -115,7 +182,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     };
   }, []);
 
-  // Guarantee Video Stream Assignment & Autoplay on Mount
+  // Guarantee Video Stream Assignment & Autoplay
   useEffect(() => {
     if (stream && videoRef.current) {
       videoRef.current.srcObject = stream;
@@ -123,9 +190,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         console.warn('Video play error:', err);
       });
     }
-  }, [stream, isCameraActive, activeTab]);
+  }, [stream, isCameraActive, activeTab, currentStep]);
 
-  // Mouse & Touch Event Listeners for Freehand Corner Dragging
+  // Pointer Listeners for Freehand Corner Dragging
   useEffect(() => {
     const handlePointerMove = (e: MouseEvent | TouchEvent) => {
       if (!draggingCorner || !cropContainerRef.current) return;
@@ -147,9 +214,10 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
     const handlePointerUp = () => {
       setDraggingCorner(null);
+      setActiveSlider(null);
     };
 
-    if (draggingCorner) {
+    if (draggingCorner || activeSlider) {
       window.addEventListener('mousemove', handlePointerMove);
       window.addEventListener('mouseup', handlePointerUp);
       window.addEventListener('touchmove', handlePointerMove);
@@ -162,9 +230,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       window.removeEventListener('touchmove', handlePointerMove);
       window.removeEventListener('touchend', handlePointerUp);
     };
-  }, [draggingCorner]);
+  }, [draggingCorner, activeSlider]);
 
-  // Sync Margin Sliders from Freehand Corners
+  // Sync Crop Margins from Freehand Corner Dragging
   useEffect(() => {
     setCropLeft(Math.round(Math.min(corners.tl.x, corners.bl.x)));
     setCropRight(Math.round(100 - Math.max(corners.tr.x, corners.br.x)));
@@ -172,17 +240,24 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     setCropBottom(Math.round(100 - Math.max(corners.bl.y, corners.br.y)));
   }, [corners]);
 
-  // Real-Time Live Crop Canvas Render Listener
+  // Live Real-Time Canvas Renderer for Post-Snap Edit Step
   useEffect(() => {
-    if (!isCropModalOpen || pages.length === 0 || activePageIndex >= pages.length) return;
+    if (currentStep !== 'edit' || pages.length === 0 || activePageIndex >= pages.length) return;
     const page = pages[activePageIndex];
 
     const img = new Image();
     img.onload = () => {
-      const canvas = liveCropCanvasRef.current;
+      const canvas = liveEditCanvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+
+      if (showOriginalComparison) {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        return;
+      }
 
       const cropX = Math.floor((cropLeft / 100) * img.width);
       const cropY = Math.floor((cropTop / 100) * img.height);
@@ -193,67 +268,34 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       canvas.height = cropH;
 
       ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-      applyFilterAndToneToCanvas(ctx, cropW, cropH, page.filter, brightness, contrast, midTone);
+      applyFilterAndToneToCanvas(ctx, cropW, cropH, selectedFilter, brightness, contrast, midTone);
     };
     img.src = page.originalDataUrl;
-  }, [isCropModalOpen, cropLeft, cropRight, cropTop, cropBottom, activePageIndex, pages, brightness, contrast, midTone]);
-
-  // Real-Time Live Exposure & Tone Fine-Tuning Viewer Listener
-  useEffect(() => {
-    if (!isToneModalOpen || pages.length === 0 || activePageIndex >= pages.length) return;
-    const page = pages[activePageIndex];
-
-    const img = new Image();
-    img.onload = () => {
-      const canvas = liveToneCanvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      canvas.width = img.width;
-      canvas.height = img.height;
-
-      ctx.drawImage(img, 0, 0);
-
-      if (!showOriginalComparison) {
-        applyFilterAndToneToCanvas(ctx, img.width, img.height, page.filter, brightness, contrast, midTone);
-      }
-    };
-    img.src = page.originalDataUrl;
-  }, [isToneModalOpen, brightness, contrast, midTone, showOriginalComparison, activePageIndex, pages]);
+  }, [currentStep, editSubTab, cropLeft, cropRight, cropTop, cropBottom, activePageIndex, pages, brightness, contrast, midTone, selectedFilter, showOriginalComparison]);
 
   const handleReceivedRemoteScan = (rawDataUrl: string) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.drawImage(img, 0, 0);
-      applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, selectedFilter, 0, 0, 0);
-      const filteredDataUrl = canvas.toDataURL('image/png');
-
-      const newPage: ScannedPage = {
-        id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        dataUrl: filteredDataUrl,
-        originalDataUrl: rawDataUrl,
-        filter: selectedFilter,
-        rotation: 0,
-        brightness: 0,
-        contrast: 0,
-        midTone: 0,
-      };
-
-      setPages((prev) => [...prev, newPage]);
-      setActiveTab('camera');
+    const newPage: ScannedPage = {
+      id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      dataUrl: rawDataUrl,
+      originalDataUrl: rawDataUrl,
+      filter: 'none',
+      rotation: 0,
+      brightness: 0,
+      contrast: 0,
+      midTone: 0,
+      cropLeft: 5,
+      cropRight: 5,
+      cropTop: 15,
+      cropBottom: 15,
     };
-    img.src = rawDataUrl;
+
+    setPages((prev) => [...prev, newPage]);
+    setActivePageIndex(pages.length);
+    openEditStepForPage(newPage, pages.length);
   };
 
   useEffect(() => {
-    if (isOpen && activeTab === 'camera') {
+    if (isOpen && activeTab === 'camera' && currentStep === 'camera') {
       startCamera();
     } else {
       stopCamera();
@@ -261,9 +303,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     return () => {
       stopCamera();
     };
-  }, [isOpen, facingMode, activeTab]);
+  }, [isOpen, facingMode, activeTab, currentStep]);
 
-  // Request Maximum Native Camera Resolution (4K / 8K / Full Uncompressed Sensor)
   const startCamera = async () => {
     setCameraError('');
     try {
@@ -276,9 +317,25 @@ export const ScanModal: React.FC<ScanModalProps> = ({
           facingMode: { ideal: facingMode },
           width: { ideal: 3840 },
           height: { ideal: 2160 },
-        },
+          focusMode: { ideal: 'continuous' } as any,
+        } as any,
         audio: false,
       });
+
+      // Apply continuous auto-focus track constraints if supported
+      const videoTrack = mediaStream.getVideoTracks()[0];
+      if (videoTrack && typeof videoTrack.applyConstraints === 'function') {
+        try {
+          const caps = (videoTrack.getCapabilities ? videoTrack.getCapabilities() : {}) as any;
+          if (caps.focusMode && caps.focusMode.includes('continuous')) {
+            await videoTrack.applyConstraints({
+              advanced: [{ focusMode: 'continuous' } as any],
+            });
+          }
+        } catch (e) {
+          console.warn('Advanced focus constraint setting error:', e);
+        }
+      }
 
       setStream(mediaStream);
       setIsCameraActive(true);
@@ -290,16 +347,13 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     } catch (err: any) {
       console.warn('Camera access error:', err);
       setIsCameraActive(false);
-
       const isHttp = window.location.protocol === 'http:' && window.location.hostname !== 'localhost';
       if (isHttp) {
         setCameraError(
-          'Mobile browsers restrict live video streams on unencrypted HTTP IP addresses. Tap "Snap Photo with Phone Camera" below to use your phone camera app!'
+          'Mobile browsers restrict live camera on unencrypted HTTP IP. Tap "Snap Photo with Camera App" below!'
         );
       } else {
-        setCameraError(
-          'Live camera stream is blocked or unavailable. Tap "Snap Photo with Phone Camera" below to take a picture!'
-        );
+        setCameraError('Live camera stream is unavailable. Tap "Snap Photo with Camera App" below!');
       }
     }
   };
@@ -316,9 +370,52 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
   };
 
-  /**
-   * Filter & Tone Adjustments Processing Pipeline
-   */
+  // Interactive Tap to Focus Handler
+  const handleTapToFocus = async (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!viewfinderRef.current || !stream) return;
+    const rect = viewfinderRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setFocusRingPos({ x, y });
+
+    // Re-trigger hardware camera focus if track supports constraints
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack && typeof videoTrack.applyConstraints === 'function') {
+      try {
+        await videoTrack.applyConstraints({
+          advanced: [{ focusMode: 'continuous' } as any],
+        });
+      } catch (err) {}
+    }
+
+    setTimeout(() => {
+      setFocusRingPos(null);
+    }, 1500);
+  };
+
+  // Trigger Capture with optional Steady 2s Countdown
+  const triggerShutterCapture = () => {
+    if (!isCameraActive) return;
+
+    if (isSteadyMode) {
+      setSteadyCountdown(2);
+      const timer = setInterval(() => {
+        setSteadyCountdown((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(timer);
+            capturePhoto();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      capturePhoto();
+    }
+  };
+
+  // Filter & Tone Processing Engine
   const applyFilterAndToneToCanvas = (
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -331,7 +428,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
 
-    // Step 1: Base Document Filter
     if (filter === 'flatten') {
       const sampleStep = 8;
       let bgLumSum = 0;
@@ -395,7 +491,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       }
     }
 
-    // Step 2: Brightness, Contrast & Mid-Tone Balance Fine-Tuning
     if (bVal !== 0 || cVal !== 0 || mVal !== 0) {
       const contrastFactor = (259 * (cVal * 2.55 + 255)) / (255 * (259 - cVal * 2.55));
       const gamma = Math.pow(2, -mVal / 50);
@@ -423,173 +518,125 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     ctx.putImageData(imgData, 0, 0);
   };
 
+  // Open Edit Step for a Page
+  const openEditStepForPage = (page: ScannedPage, index: number) => {
+    setActivePageIndex(index);
+    setSelectedFilter(page.filter || 'none');
+    setBrightness(page.brightness || 0);
+    setContrast(page.contrast || 0);
+    setMidTone(page.midTone || 0);
+    setCropLeft(page.cropLeft !== undefined ? page.cropLeft : 5);
+    setCropRight(page.cropRight !== undefined ? page.cropRight : 5);
+    setCropTop(page.cropTop !== undefined ? page.cropTop : 15);
+    setCropBottom(page.cropBottom !== undefined ? page.cropBottom : 15);
+
+    const cL = page.cropLeft !== undefined ? page.cropLeft : 5;
+    const cR = page.cropRight !== undefined ? page.cropRight : 5;
+    const cT = page.cropTop !== undefined ? page.cropTop : 15;
+    const cB = page.cropBottom !== undefined ? page.cropBottom : 15;
+
+    setCorners({
+      tl: { x: cL, y: cT },
+      tr: { x: 100 - cR, y: cT },
+      br: { x: 100 - cR, y: 100 - cB },
+      bl: { x: cL, y: 100 - cB },
+    });
+
+    setCurrentStep('edit');
+  };
+
+  // Snap Photo Handler -> Instantly Opens Post-Snap Edit View
   const capturePhoto = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    const w = video.videoWidth || 1920;
-    const h = video.videoHeight || 1080;
+    const videoTrack = stream?.getVideoTracks()[0];
+    const settings = videoTrack?.getSettings ? videoTrack.getSettings() : {};
+    const w = (settings as any).width || video.videoWidth || 1920;
+    const h = (settings as any).height || video.videoHeight || 1080;
 
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(video, 0, 0, w, h);
-    const rawDataUrl = canvas.toDataURL('image/png');
-
-    applyFilterAndToneToCanvas(ctx, w, h, selectedFilter, brightness, contrast, midTone);
-    const filteredDataUrl = canvas.toDataURL('image/png');
+    const rawDataUrl = canvas.toDataURL('image/png', 1.0);
 
     const newPage: ScannedPage = {
       id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      dataUrl: filteredDataUrl,
+      dataUrl: rawDataUrl,
       originalDataUrl: rawDataUrl,
-      filter: selectedFilter,
+      filter: 'none',
       rotation: 0,
-      brightness,
-      contrast,
-      midTone,
+      brightness: 0,
+      contrast: 0,
+      midTone: 0,
+      cropLeft: 5,
+      cropRight: 5,
+      cropTop: 15,
+      cropBottom: 15,
     };
 
-    setPages((prev) => [...prev, newPage]);
-    setActivePageIndex(pages.length);
+    stopCamera();
+    setPages((prev) => {
+      const updated = [...prev, newPage];
+      const targetIndex = updated.length - 1;
+      setTimeout(() => {
+        openEditStepForPage(newPage, targetIndex);
+      }, 50);
+      return updated;
+    });
   };
 
+  // File Upload Handler -> Instantly Opens Post-Snap Edit View
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
+    Array.from(files).forEach((file, idx) => {
       const reader = new FileReader();
       reader.onload = (evt) => {
         const rawDataUrl = evt.target?.result as string;
         if (!rawDataUrl) return;
 
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
-
-          ctx.drawImage(img, 0, 0);
-          applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, selectedFilter, brightness, contrast, midTone);
-          const filteredDataUrl = canvas.toDataURL('image/png');
-
-          const newPage: ScannedPage = {
-            id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            dataUrl: filteredDataUrl,
-            originalDataUrl: rawDataUrl,
-            filter: selectedFilter,
-            rotation: 0,
-            brightness,
-            contrast,
-            midTone,
-          };
-
-          setPages((prev) => [...prev, newPage]);
+        const newPage: ScannedPage = {
+          id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${idx}`,
+          dataUrl: rawDataUrl,
+          originalDataUrl: rawDataUrl,
+          filter: 'none',
+          rotation: 0,
+          brightness: 0,
+          contrast: 0,
+          midTone: 0,
+          cropLeft: 5,
+          cropRight: 5,
+          cropTop: 15,
+          cropBottom: 15,
         };
-        img.src = rawDataUrl;
+
+        setPages((prev) => {
+          const updated = [...prev, newPage];
+          if (idx === 0) {
+            const targetIndex = updated.length - 1;
+            setTimeout(() => {
+              openEditStepForPage(newPage, targetIndex);
+            }, 50);
+          }
+          return updated;
+        });
       };
       reader.readAsDataURL(file);
     });
+
     e.target.value = '';
   };
 
-  // Open Tone Fine-Tuning Viewer Modal
-  const handleOpenToneModal = () => {
-    if (pages.length === 0 || activePageIndex >= pages.length) return;
-    const page = pages[activePageIndex];
-    setBrightness(page.brightness || 0);
-    setContrast(page.contrast || 0);
-    setMidTone(page.midTone || 0);
-    setIsToneModalOpen(true);
-  };
-
-  // Apply Tone Adjustments to active page
-  const handleApplyToneAdjustments = () => {
-    if (pages.length === 0 || activePageIndex >= pages.length) return;
-
-    const page = pages[activePageIndex];
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.drawImage(img, 0, 0);
-      applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, page.filter, brightness, contrast, midTone);
-      const updatedDataUrl = canvas.toDataURL('image/png');
-
-      setPages((prev) =>
-        prev.map((p, idx) =>
-          idx === activePageIndex
-            ? { ...p, brightness, contrast, midTone, dataUrl: updatedDataUrl }
-            : p
-        )
-      );
-
-      setIsToneModalOpen(false);
-    };
-    img.src = page.originalDataUrl;
-  };
-
-  const setPresetTone = (b: number, c: number, m: number) => {
-    setBrightness(b);
-    setContrast(c);
-    setMidTone(m);
-  };
-
-  const handleFilterChange = (filter: 'flatten' | 'bw' | 'color' | 'grayscale' | 'none') => {
-    setSelectedFilter(filter);
-    if (pages.length === 0 || activePageIndex >= pages.length) return;
-
-    const page = pages[activePageIndex];
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.drawImage(img, 0, 0);
-      applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, filter, brightness, contrast, midTone);
-      const updatedDataUrl = canvas.toDataURL('image/png');
-
-      setPages((prev) =>
-        prev.map((p, idx) =>
-          idx === activePageIndex ? { ...p, filter, dataUrl: updatedDataUrl } : p
-        )
-      );
-    };
-    img.src = page.originalDataUrl;
-  };
-
-  const handleDeletePage = (index: number) => {
-    setPages((prev) => prev.filter((_, idx) => idx !== index));
-    if (activePageIndex >= pages.length - 1) {
-      setActivePageIndex(Math.max(0, pages.length - 2));
-    }
-  };
-
-  const handleRotatePage = (index: number) => {
-    setPages((prev) =>
-      prev.map((p, idx) => (idx === index ? { ...p, rotation: (p.rotation + 90) % 360 } : p))
-    );
-  };
-
-  const handleOpenCropModal = () => {
-    if (pages.length === 0 || activePageIndex >= pages.length) return;
-    setIsCropModalOpen(true);
-  };
-
-  const handleApplyCrop = () => {
+  // Confirm Post-Snap Edits & Save Page Changes
+  const handleSavePageEdits = () => {
     if (pages.length === 0 || activePageIndex >= pages.length) return;
     const page = pages[activePageIndex];
 
@@ -608,30 +655,39 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       canvas.height = cropH;
 
       ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-      applyFilterAndToneToCanvas(ctx, cropW, cropH, page.filter, brightness, contrast, midTone);
-      const croppedDataUrl = canvas.toDataURL('image/png');
+      applyFilterAndToneToCanvas(ctx, cropW, cropH, selectedFilter, brightness, contrast, midTone);
+      const editedDataUrl = canvas.toDataURL('image/png');
 
       setPages((prev) =>
         prev.map((p, idx) =>
           idx === activePageIndex
-            ? { ...p, dataUrl: croppedDataUrl, originalDataUrl: croppedDataUrl }
+            ? {
+                ...p,
+                dataUrl: editedDataUrl,
+                filter: selectedFilter,
+                brightness,
+                contrast,
+                midTone,
+                cropLeft,
+                cropRight,
+                cropTop,
+                cropBottom,
+              }
             : p
         )
       );
 
-      setCorners({
-        tl: { x: 0, y: 0 },
-        tr: { x: 100, y: 0 },
-        br: { x: 100, y: 100 },
-        bl: { x: 0, y: 100 },
-      });
-      setIsCropModalOpen(false);
+      setCurrentStep('summary');
     };
     img.src = page.originalDataUrl;
   };
 
   const setPresetCrop = (margin: number) => {
+    setCropLeft(margin);
+    setCropRight(margin);
+    setCropTop(margin);
+    setCropBottom(margin);
+
     setCorners({
       tl: { x: margin, y: margin },
       tr: { x: 100 - margin, y: margin },
@@ -640,9 +696,66 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     });
   };
 
+  const handleSliderMarginChange = (side: 'left' | 'right' | 'top' | 'bottom', val: number) => {
+    if (side === 'left') {
+      setCropLeft(val);
+      setCorners((prev) => ({
+        ...prev,
+        tl: { x: val, y: prev.tl.y },
+        bl: { x: val, y: prev.bl.y },
+      }));
+    } else if (side === 'right') {
+      setCropRight(val);
+      setCorners((prev) => ({
+        ...prev,
+        tr: { x: 100 - val, y: prev.tr.y },
+        br: { x: 100 - val, y: prev.br.y },
+      }));
+    } else if (side === 'top') {
+      setCropTop(val);
+      setCorners((prev) => ({
+        ...prev,
+        tl: { x: prev.tl.x, y: val },
+        tr: { x: prev.tr.x, y: val },
+      }));
+    } else if (side === 'bottom') {
+      setCropBottom(val);
+      setCorners((prev) => ({
+        ...prev,
+        bl: { x: prev.bl.x, y: 100 - val },
+        br: { x: prev.br.x, y: 100 - val },
+      }));
+    }
+  };
+
+  const setPresetTone = (b: number, c: number, m: number) => {
+    setBrightness(b);
+    setContrast(c);
+    setMidTone(m);
+  };
+
+  const handleDeletePage = (index: number) => {
+    const updated = pages.filter((_, idx) => idx !== index);
+    setPages(updated);
+    if (updated.length === 0) {
+      setCurrentStep('camera');
+    } else {
+      setActivePageIndex(Math.max(0, index - 1));
+    }
+  };
+
+  const handleRotatePage = (index: number) => {
+    setPages((prev) =>
+      prev.map((p, idx) => (idx === index ? { ...p, rotation: (p.rotation + 90) % 360 } : p))
+    );
+  };
+
+  // Export Images as JPG or PNG
   const handleDownloadImages = async (format: 'jpg' | 'png') => {
     if (pages.length === 0) return;
     const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
+    const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'Scanned_Document';
+
     for (let idx = 0; idx < pages.length; idx++) {
       const p = pages[idx];
       const img = new Image();
@@ -661,7 +774,10 @@ export const ScanModal: React.FC<ScanModalProps> = ({
           }
           canvas.toBlob(async (blob) => {
             if (blob) {
-              const fileName = `Scanned_Page_${idx + 1}.${format}`;
+              const fileName =
+                pages.length === 1
+                  ? `${cleanBaseName}.${format}`
+                  : `${cleanBaseName}_Page_${idx + 1}.${format}`;
               await downloadFile({ fileName, blob, mimeType });
             }
             resolve();
@@ -672,6 +788,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     }
   };
 
+  // Assemble PDF & Launch in PDF Editor Workspace
   const handleAssemblePDF = async () => {
     if (pages.length === 0) return;
     setIsAssembling(true);
@@ -704,8 +821,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       }
 
       const pdfBytes = await pdfDoc.save();
-      const timeStamp = new Date().toISOString().slice(0, 10);
-      const fileName = `Scanned_Document_${timeStamp}.pdf`;
+      const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'Scanned_Document';
+      const fileName = `${cleanBaseName}.pdf`;
 
       onScanComplete(pdfBytes, fileName);
       onClose();
@@ -717,578 +834,285 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     }
   };
 
+  const getLoupeStyle = (point: { x: number; y: number }) => {
+    const isNearTop = point.y < 35;
+    const isNearLeft = point.x < 20;
+    const isNearRight = point.x > 80;
+
+    let leftClamped = point.x;
+    if (isNearLeft) leftClamped = Math.max(15, point.x);
+    if (isNearRight) leftClamped = Math.min(85, point.x);
+
+    return {
+      left: `${leftClamped}%`,
+      top: `${point.y}%`,
+      transform: `translate(-50%, ${isNearTop ? '25%' : '-125%'})`,
+    };
+  };
+
+  const activeLoupe = draggingCorner
+    ? { point: corners[draggingCorner], label: draggingCorner.toUpperCase() }
+    : activeSlider === 'top'
+    ? { point: { x: 50, y: cropTop }, label: 'TOP TRIM' }
+    : activeSlider === 'bottom'
+    ? { point: { x: 50, y: 100 - cropBottom }, label: 'BOTTOM TRIM' }
+    : activeSlider === 'left'
+    ? { point: { x: cropLeft, y: 50 }, label: 'LEFT TRIM' }
+    : activeSlider === 'right'
+    ? { point: { x: 100 - cropRight, y: 50 }, label: 'RIGHT TRIM' }
+    : null;
+
   if (!isOpen) return null;
 
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
     qrScanUrl
   )}&color=06b6d4&bgbw=0f172a`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-2 sm:p-4 animate-fadeIn">
-      {/* Outer Glowing Gradient Frame Wrapper */}
-      <div className="relative p-[2px] rounded-[24px] bg-gradient-to-r from-cyan-500 via-purple-500 to-blue-500 shadow-2xl shadow-cyan-500/20 w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col">
-        <div className="bg-slate-900 rounded-[22px] w-full overflow-hidden text-slate-100 flex flex-col h-full">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:px-5 sm:py-3 border-b border-slate-800 bg-slate-950/90 gap-2">
-            <div className="flex items-center justify-between w-full sm:w-auto">
-              <div className="flex items-center space-x-2.5">
-                <div className="p-1.5 sm:p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400">
-                  <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-                <h2 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
-                  Document Camera Scanner
-                </h2>
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-slate-100 w-screen h-screen overflow-hidden animate-fadeIn select-none">
+      {/* ================= STEP 1: CAMERA VIEWFINDER (INSET & PUSHED DOWN FOR SAFE AREAS) ================= */}
+      {currentStep === 'camera' && (
+        <div className="relative flex flex-col w-full h-full bg-slate-950 overflow-hidden">
+          {/* Top Header Toolbar - Pushed Down Inside Phone Safety Area */}
+          <div className="pt-[max(2.5rem,env(safe-area-inset-top)+1.5rem)] px-5 pb-3 bg-slate-950/90 border-b border-slate-800/80 backdrop-blur-md flex items-center justify-between z-40">
+            <div className="flex items-center space-x-2.5">
+              <div className="p-2 bg-cyan-500/15 border border-cyan-500/30 rounded-xl text-cyan-400">
+                <Camera className="w-5 h-5" />
               </div>
-
-              <button
-                onClick={onClose}
-                className="sm:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div>
+                <h2 className="text-sm font-extrabold text-white tracking-wide">Document Camera Scanner</h2>
+                <span className="text-[10px] text-cyan-400 font-bold flex items-center space-x-1">
+                  <Focus className="w-3 h-3 text-cyan-400" />
+                  <span>Tap screen to focus | Continuous Auto-Focus</span>
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between sm:justify-end space-x-2 w-full sm:w-auto">
-              <div className="flex items-center space-x-1 bg-slate-900 p-1 rounded-xl border border-slate-800 w-full sm:w-auto justify-center">
-                <button
-                  onClick={() => setActiveTab('camera')}
-                  className={`flex-1 sm:flex-none px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1.5 ${
-                    activeTab === 'camera'
-                      ? 'bg-cyan-500 text-white shadow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Camera Stream</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('qr')}
-                  className={`flex-1 sm:flex-none px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition flex items-center justify-center space-x-1.5 ${
-                    activeTab === 'qr'
-                      ? 'bg-cyan-500 text-white shadow'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>Scan with Phone QR</span>
-                </button>
-              </div>
-
-              <button
-                onClick={onClose}
-                className="hidden sm:block p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition transform active:scale-90 flex items-center justify-center"
+              title="Close Camera"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Viewfinder / Capture Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Center Viewfinder Container (Full Native FOV for Laptops & Mobile) */}
+          <div className="flex-1 relative w-full my-auto flex items-center justify-center p-3 sm:p-6 overflow-hidden bg-slate-950">
             {activeTab === 'camera' ? (
-              <>
-                {/* Live Native Camera Viewfinder Box */}
-                <div className="relative bg-black rounded-2xl overflow-hidden border border-slate-800 aspect-[4/3] sm:aspect-[16/9] flex items-center justify-center group shadow-inner">
-                  {isCameraActive ? (
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-contain bg-black"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center p-6 space-y-3">
-                      <Camera className="w-12 h-12 text-cyan-400/60 animate-pulse" />
-                      <p className="text-xs text-slate-300 max-w-md font-medium leading-relaxed">
-                        {cameraError || 'Initializing camera stream...'}
-                      </p>
-                      <button
-                        onClick={() => cameraInputRef.current?.click()}
-                        className="px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-2xl shadow-xl shadow-cyan-500/30 transition transform active:scale-95 flex items-center space-x-2.5 border border-cyan-400/40"
-                      >
-                        <Camera className="w-4 h-4 text-white" />
-                        <span>📷 Snap Photo with Phone Camera</span>
-                      </button>
+              isCameraActive ? (
+                /* Wide Spacious Viewfinder Container */
+                <div
+                  ref={viewfinderRef}
+                  onClick={handleTapToFocus}
+                  className="relative w-full max-w-md sm:max-w-xl md:max-w-4xl lg:max-w-6xl aspect-[3/4] sm:aspect-[4/3] md:aspect-[16/9] max-h-[65vh] sm:max-h-[75vh] md:max-h-[82vh] lg:max-h-[85vh] rounded-3xl border-2 border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.25)] overflow-hidden bg-black flex items-center justify-center cursor-crosshair select-none transition-all duration-300"
+                >
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-contain md:object-cover bg-black"
+                  />
+
+                  {/* Document Target Corner Bracket Guides */}
+                  <div className="absolute inset-6 sm:inset-8 border-2 border-dashed border-cyan-400/60 rounded-2xl pointer-events-none flex items-center justify-center">
+                    <div className="absolute top-2 left-2 w-8 h-8 border-t-4 border-l-4 border-cyan-400 rounded-tl-lg" />
+                    <div className="absolute top-2 right-2 w-8 h-8 border-t-4 border-r-4 border-cyan-400 rounded-tr-lg" />
+                    <div className="absolute bottom-2 left-2 w-8 h-8 border-b-4 border-l-4 border-cyan-400 rounded-bl-lg" />
+                    <div className="absolute bottom-2 right-2 w-8 h-8 border-b-4 border-r-4 border-cyan-400 rounded-br-lg" />
+                  </div>
+
+                  {/* Animated Tap-to-Focus Target Ring */}
+                  {focusRingPos && (
+                    <div
+                      style={{ left: `${focusRingPos.x}px`, top: `${focusRingPos.y}px` }}
+                      className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30"
+                    >
+                      <div className="w-14 h-14 rounded-full border-2 border-cyan-400 animate-ping opacity-75" />
+                      <div className="absolute inset-0 w-14 h-14 rounded-full border-2 border-amber-400 flex items-center justify-center">
+                        <Crosshair className="w-6 h-6 text-amber-400 animate-spin" />
+                      </div>
                     </div>
                   )}
 
-                  {isCameraActive && (
-                    <div className="absolute inset-4 border-2 border-dashed border-cyan-400/60 rounded-xl pointer-events-none flex items-center justify-center">
-                      <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-cyan-400" />
-                      <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-cyan-400" />
-                      <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-cyan-400" />
-                      <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-cyan-400" />
-                    </div>
-                  )}
-
-                  {/* Compact Status Badge in Top-Left Corner Out of Document's Way */}
-                  {isCameraActive && (
-                    <div className="absolute top-3 left-3 flex items-center space-x-1.5 bg-slate-950/80 px-2.5 py-1 rounded-full border border-cyan-500/40 backdrop-blur-md z-10 pointer-events-none">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span className="text-[9px] sm:text-[10px] font-extrabold text-cyan-300">
-                        Live Stream Ready
+                  {/* Steady Focus Snap Countdown Overlay */}
+                  {steadyCountdown !== null && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40 flex flex-col items-center justify-center space-y-3">
+                      <div className="w-20 h-20 rounded-full border-4 border-cyan-400 bg-cyan-500/20 flex items-center justify-center text-3xl font-black text-white animate-pulse shadow-2xl">
+                        {steadyCountdown}
+                      </div>
+                      <span className="text-xs font-extrabold text-cyan-300 tracking-wider uppercase">
+                        Hold Phone Steady... Focusing...
                       </span>
                     </div>
                   )}
 
-                  {isCameraActive && (
-                    <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center space-x-4 px-4 z-20">
-                      <button
-                        onClick={toggleCameraFacing}
-                        className="p-3 bg-slate-900/80 hover:bg-slate-800 text-slate-200 rounded-full border border-slate-700 shadow-lg backdrop-blur-md transition active:scale-95"
-                        title="Switch Camera"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </button>
-
-                      <button
-                        onClick={capturePhoto}
-                        className="p-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-full shadow-2xl shadow-cyan-500/50 border-2 border-white transition transform active:scale-90 flex items-center justify-center"
-                        title="Snap Page"
-                      >
-                        <div className="w-5 h-5 rounded-full border-2 border-white" />
-                      </button>
-
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-3 bg-slate-900/80 hover:bg-slate-800 text-slate-200 rounded-full border border-slate-700 shadow-lg backdrop-blur-md transition active:scale-95"
-                        title="Upload Photo Files from Device Gallery"
-                      >
-                        <ImageIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Photo Library / File Picker Input (NO capture attribute) */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept="image/*,.jpg,.jpeg,.png,.webp"
-                  multiple
-                  className="hidden"
-                />
-
-                {/* Camera Direct Fallback Input (WITH capture attribute) */}
-                <input
-                  type="file"
-                  ref={cameraInputRef}
-                  onChange={handleFileUpload}
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                />
-
-                {/* Filter Selection Bar with Zero Text Overlap & Generous Left Breathing Space */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs gap-2">
-                  <span className="text-slate-400 font-bold flex items-center space-x-1.5 shrink-0 sm:pr-2">
-                    <Wand2 className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Filter:</span>
+                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] font-bold px-3 py-1 bg-slate-950/80 text-slate-300 rounded-full border border-slate-700/80 backdrop-blur-md pointer-events-none">
+                    🎯 Tap screen to trigger focus
                   </span>
-
-                  <div className="flex items-center space-x-2.5 overflow-x-auto pl-3 pr-3 py-1 scrollbar-thin w-full sm:w-auto">
-                    {[
-                      { id: 'none', label: '📷 Original (Zero Loss)' },
-                      { id: 'flatten', label: '✨ Flatten & Remove Wrinkles' },
-                      { id: 'bw', label: '📄 Soft B&W' },
-                      { id: 'color', label: '🎨 High Contrast' },
-                      { id: 'grayscale', label: '🌙 Grayscale' },
-                    ].map((f) => (
-                      <button
-                        key={f.id}
-                        onClick={() => handleFilterChange(f.id as any)}
-                        className={`px-3.5 py-1.5 rounded-xl font-extrabold text-[11px] transition whitespace-nowrap shrink-0 ${
-                          selectedFilter === f.id
-                            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/50 scale-105'
-                            : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
-
-                {/* Snapped Pages Tray & Exposure/Crop Buttons with Animated Glowing Moving Outlines */}
-                {pages.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-bold text-slate-300 gap-2">
-                      <span>Captured Pages ({pages.length})</span>
-                      <div className="flex items-center space-x-2">
-                        {/* Animated Glowing Moving Outline for Exposure Button */}
-                        <div className="relative group p-[1.5px] rounded-xl bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 shadow-md hover:shadow-cyan-500/50 transition-all duration-300">
-                          <button
-                            onClick={handleOpenToneModal}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-[10px] transition flex items-center space-x-1.5 ${
-                              brightness !== 0 || contrast !== 0 || midTone !== 0
-                                ? 'bg-blue-600 text-white shadow'
-                                : 'bg-slate-900 text-slate-200 hover:bg-slate-800'
-                            }`}
-                          >
-                            <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-300" />
-                            <span>🎛️ Exposure & Mid-Tone</span>
-                          </button>
-                        </div>
-
-                        {/* Animated Glowing Moving Outline for Freehand Crop Button */}
-                        <div className="relative group p-[1.5px] rounded-xl bg-gradient-to-r from-cyan-400 via-purple-500 to-emerald-400 shadow-md hover:shadow-cyan-500/50 transition-all duration-300">
-                          <button
-                            onClick={handleOpenCropModal}
-                            className="px-3 py-1.5 bg-slate-950 hover:bg-slate-900 text-white font-extrabold text-xs rounded-[10px] shadow-md transition flex items-center space-x-1.5"
-                          >
-                            <Crop className="w-3.5 h-3.5 text-cyan-400" />
-                            <span>Freehand Crop & Trim ✂️</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3 overflow-x-auto p-2 bg-slate-950 rounded-xl border border-slate-800 scrollbar-thin">
-                      {pages.map((p, idx) => (
-                        <div
-                          key={p.id}
-                          onClick={() => setActivePageIndex(idx)}
-                          className={`relative flex-shrink-0 w-20 h-28 rounded-lg overflow-hidden border-2 cursor-pointer transition ${
-                            activePageIndex === idx
-                              ? 'border-cyan-400 ring-2 ring-cyan-400/40 scale-105'
-                              : 'border-slate-700 hover:border-slate-500'
-                          }`}
-                        >
-                          <img
-                            src={p.dataUrl}
-                            alt={`Page ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                            style={{ transform: `rotate(${p.rotation}deg)` }}
-                          />
-                          <span className="absolute bottom-1 left-1 text-[9px] font-extrabold px-1.5 py-0.5 bg-slate-950/80 text-white rounded">
-                            P{idx + 1}
-                          </span>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRotatePage(idx);
-                            }}
-                            className="absolute top-1 left-1 p-1 bg-slate-900/80 text-cyan-300 hover:text-white rounded transition"
-                            title="Rotate Page"
-                          >
-                            <RotateCw className="w-3 h-3" />
-                          </button>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePage(idx);
-                            }}
-                            className="absolute top-1 right-1 p-1 bg-rose-950/90 text-rose-300 hover:text-white rounded transition"
-                            title="Delete Page"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center p-6 space-y-4 max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl backdrop-blur-md shadow-2xl">
+                  <div className="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-3xl text-cyan-400">
+                    <Camera className="w-12 h-12 animate-pulse" />
                   </div>
-                )}
-              </>
+                  <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
+                    {cameraError || 'Initializing document camera...'}
+                  </p>
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="px-6 py-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-2xl shadow-emerald-500/40 transition transform active:scale-95 flex items-center space-x-3 border border-emerald-400/40"
+                  >
+                    <Camera className="w-5 h-5 text-white" />
+                    <span>📷 Snap Photo with Phone Camera</span>
+                  </button>
+                </div>
+              )
             ) : (
-              /* QR Code Scan with Mobile Phone Tab */
-              <div className="flex flex-col items-center justify-center p-6 space-y-6 text-center bg-slate-950 rounded-2xl border border-slate-800">
-                <div className="space-y-2">
-                  <div className="inline-flex items-center space-x-2 px-3 py-1 bg-cyan-500/10 text-cyan-300 rounded-full border border-cyan-500/30 text-xs font-bold">
-                    <Smartphone className="w-4 h-4 text-cyan-400" />
-                    <span>Scan Document Lying Flat on Desk</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-white">Scan with Your Mobile Phone Camera</h3>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    Point your iPhone or Android camera at the QR code below. It will open the mobile document scanner on your phone, and the scanned PDF will automatically appear here on your laptop screen!
+              /* QR Code Sync Tab */
+              <div className="flex flex-col items-center justify-center p-6 space-y-5 text-center bg-slate-900/90 border border-slate-800 rounded-3xl backdrop-blur-md max-w-md mx-auto shadow-2xl">
+                <div className="space-y-1.5">
+                  <span className="px-3 py-1 bg-cyan-500/10 text-cyan-300 rounded-full border border-cyan-500/30 text-xs font-bold">
+                    📱 Wireless Mobile Scanner Sync
+                  </span>
+                  <h3 className="text-base font-bold text-white">Scan with Your Phone Camera</h3>
+                  <p className="text-xs text-slate-400">
+                    Scan this QR code with your phone. Documents snapped on your phone will stream directly into this workspace!
                   </p>
                 </div>
 
-                {/* QR Code Container */}
-                <div className="p-4 bg-slate-900 border-2 border-cyan-500/40 rounded-2xl shadow-2xl inline-block ring-4 ring-cyan-500/10">
-                  <img
-                    src={qrImageUrl}
-                    alt="Scan with Phone QR Code"
-                    className="w-48 h-48 sm:w-56 sm:h-56 rounded-xl object-contain mx-auto"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono bg-slate-900 px-4 py-2 rounded-xl border border-slate-800">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Listening for phone scan connection...</span>
+                <div className="p-4 bg-slate-950 border-2 border-cyan-500/40 rounded-2xl shadow-2xl inline-block ring-4 ring-cyan-500/10">
+                  <img src={qrImageUrl} alt="Scan QR" className="w-48 h-48 sm:w-56 sm:h-56 object-contain" />
                 </div>
               </div>
             )}
           </div>
 
-          {/* Footer */}
-          <div className="p-3 sm:px-5 sm:py-3.5 border-t border-slate-800 bg-slate-950/90 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-            <div className="flex items-center justify-between w-full sm:w-auto space-x-2">
+          {/* Bottom Floating Control Toolbar - Pushed Down Inside Phone Safety Area */}
+          {activeTab === 'camera' && (
+            <div className="relative z-40 pt-4 px-4 sm:px-8 pb-[max(2.5rem,env(safe-area-inset-bottom)+1.5rem)] bg-slate-950/90 border-t border-slate-800/80 backdrop-blur-md flex items-center justify-around">
+              {/* Flip Camera */}
               <button
-                onClick={onClose}
-                className="px-3.5 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition"
+                onClick={toggleCameraFacing}
+                className="p-3.5 sm:p-4 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-full border border-slate-700 shadow-xl backdrop-blur-md transition transform active:scale-90 flex flex-col items-center justify-center"
+                title="Switch Camera"
               >
-                Cancel
+                <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-300" />
               </button>
 
-              <div className="flex items-center space-x-1.5 sm:hidden">
-                <button
-                  onClick={() => handleDownloadImages('jpg')}
-                  disabled={pages.length === 0}
-                  className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition disabled:opacity-50 flex items-center space-x-1"
-                  title="Save as JPG"
-                >
-                  <Download className="w-3.5 h-3.5 text-yellow-400" />
-                  <span>JPG</span>
-                </button>
-
-                <button
-                  onClick={() => handleDownloadImages('png')}
-                  disabled={pages.length === 0}
-                  className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition disabled:opacity-50 flex items-center space-x-1"
-                  title="Save as PNG"
-                >
-                  <Download className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>PNG</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+              {/* Native Phone Camera 4K Launcher Button */}
               <button
-                onClick={() => handleDownloadImages('jpg')}
-                disabled={pages.length === 0}
-                className="hidden sm:flex px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition disabled:opacity-50 items-center space-x-1.5"
-                title="Save all pages as JPG images"
+                onClick={() => cameraInputRef.current?.click()}
+                className="p-3.5 sm:p-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-full border border-emerald-300/50 shadow-xl shadow-emerald-500/30 backdrop-blur-md transition transform active:scale-90 flex flex-col items-center justify-center group"
+                title="Snap Photo with Phone's Native 4K Camera App"
               >
-                <Download className="w-3.5 h-3.5 text-yellow-400" />
-                <span>Export JPG</span>
+                <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </button>
 
+              {/* Main Glowing Web Shutter Snap Button */}
               <button
-                onClick={() => handleDownloadImages('png')}
-                disabled={pages.length === 0}
-                className="hidden sm:flex px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition disabled:opacity-50 items-center space-x-1.5"
-                title="Save all pages as PNG images"
+                onClick={triggerShutterCapture}
+                disabled={!isCameraActive || steadyCountdown !== null}
+                className="p-5 sm:p-6 bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white rounded-full shadow-2xl shadow-cyan-500/60 border-4 border-white transition transform active:scale-85 disabled:opacity-50 flex items-center justify-center relative"
+                title={isSteadyMode ? "Snap Steady 2s Focused Photo" : "Snap Document Page"}
               >
-                <Download className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Export PNG</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-3 border-white bg-white/30" />
               </button>
 
-              {/* Open PDF Button with Glowing Moving Gradient Outline */}
-              <div className="relative group p-[1.5px] rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 shadow-xl hover:shadow-cyan-500/50 transition-all duration-300 w-full sm:w-auto">
-                <button
-                  onClick={handleAssemblePDF}
-                  disabled={pages.length === 0 || isAssembling}
-                  className="w-full sm:w-auto px-4 sm:px-5 py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-extrabold rounded-[10px] transition transform active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-2"
-                >
-                  {isAssembling ? (
-                    <span>Generating PDF...</span>
-                  ) : (
-                    <>
-                      <FileText className="w-4 h-4 text-cyan-400" />
-                      <span>Open PDF in Editor ({pages.length} {pages.length === 1 ? 'Page' : 'Pages'})</span>
-                      <ArrowRight className="w-4 h-4 text-cyan-400" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Exposure, Brightness & Mid-Tone Live Fine-Tuning Modal */}
-      {isToneModalOpen && pages[activePageIndex] && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-3 sm:p-6 animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-950">
-              <div className="flex items-center space-x-2">
-                <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-extrabold text-white">Exposure, Brightness & Mid-Tone Live Fine-Tuning</h3>
-              </div>
+              {/* Steady Focus Mode Toggle Button */}
               <button
-                onClick={() => setIsToneModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                onClick={() => setIsSteadyMode((prev) => !prev)}
+                className={`p-3.5 sm:p-4 rounded-full border shadow-xl backdrop-blur-md transition transform active:scale-90 flex flex-col items-center justify-center ${
+                  isSteadyMode
+                    ? 'bg-amber-500 text-slate-950 border-amber-300 ring-2 ring-amber-400/50'
+                    : 'bg-slate-900/90 text-slate-400 hover:text-white border-slate-700'
+                }`}
+                title="Toggle Steady 2s Focus Delay Mode"
               >
-                <X className="w-4 h-4" />
+                <Timer className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
-            </div>
 
-            <div className="p-4 flex-1 overflow-auto flex flex-col items-center justify-center bg-black space-y-2">
-              <div className="relative flex items-center justify-center max-w-full max-h-[48vh] overflow-hidden rounded-xl border border-cyan-500/40 bg-slate-950 p-2 shadow-2xl">
-                <canvas
-                  ref={liveToneCanvasRef}
-                  className="max-w-full max-h-[45vh] object-contain rounded shadow-lg"
-                />
-
-                {showOriginalComparison && (
-                  <span className="absolute top-3 left-3 text-[10px] font-extrabold uppercase px-2.5 py-1 bg-amber-500 text-black rounded-lg shadow backdrop-blur">
-                    Showing Unadjusted Original
+              {/* Upload Gallery Button */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3.5 sm:p-4 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-full border border-slate-700 shadow-xl backdrop-blur-md transition transform active:scale-90 relative"
+                title="Upload Photo Files"
+              >
+                <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-300" />
+                {pages.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-full flex items-center justify-center shadow">
+                    {pages.length}
                   </span>
                 )}
-              </div>
-
-              <button
-                onMouseDown={() => setShowOriginalComparison(true)}
-                onMouseUp={() => setShowOriginalComparison(false)}
-                onTouchStart={() => setShowOriginalComparison(true)}
-                onTouchEnd={() => setShowOriginalComparison(false)}
-                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-bold rounded-xl border border-slate-700 transition flex items-center space-x-1.5 active:scale-95"
-              >
-                <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Hold to Compare with Original</span>
               </button>
             </div>
+          )}
 
-            <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-3">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-300">
-                <span>Fine-Tuning Presets:</span>
-                <div className="flex items-center space-x-1.5">
-                  <button
-                    onClick={() => setPresetTone(10, 25, 15)}
-                    className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-cyan-300 rounded border border-slate-700 text-[11px]"
-                  >
-                    Boost Text
-                  </button>
-                  <button
-                    onClick={() => setPresetTone(20, 15, 10)}
-                    className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-yellow-300 rounded border border-slate-700 text-[11px]"
-                  >
-                    Whiten Paper
-                  </button>
-                  <button
-                    onClick={() => setPresetTone(0, 35, 0)}
-                    className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-emerald-300 rounded border border-slate-700 text-[11px]"
-                  >
-                    High Contrast Ink
-                  </button>
-                  <button
-                    onClick={() => setPresetTone(0, 0, 0)}
-                    className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded border border-slate-700 text-[11px]"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                    <span className="flex items-center space-x-1">
-                      <Sun className="w-3 h-3 text-yellow-400" />
-                      <span>Brightness</span>
-                    </span>
-                    <span className="text-yellow-400">{brightness > 0 ? `+${brightness}` : brightness}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-50"
-                    max="50"
-                    value={brightness}
-                    onChange={(e) => setBrightness(Number(e.target.value))}
-                    className="w-full accent-yellow-400 cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                    <span className="flex items-center space-x-1">
-                      <ContrastIcon className="w-3 h-3 text-cyan-400" />
-                      <span>Contrast</span>
-                    </span>
-                    <span className="text-cyan-400">{contrast > 0 ? `+${contrast}` : contrast}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-50"
-                    max="50"
-                    value={contrast}
-                    onChange={(e) => setContrast(Number(e.target.value))}
-                    className="w-full accent-cyan-400 cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                    <span className="flex items-center space-x-1">
-                      <Sliders className="w-3 h-3 text-emerald-400" />
-                      <span>Mid-Tone Balance</span>
-                    </span>
-                    <span className="text-emerald-400">{midTone > 0 ? `+${midTone}` : midTone}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="-50"
-                    max="50"
-                    value={midTone}
-                    onChange={(e) => setMidTone(Number(e.target.value))}
-                    className="w-full accent-emerald-400 cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between">
-              <span className="text-xs text-slate-400">Live preview updates in real-time</span>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setIsToneModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-bold rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleApplyToneAdjustments}
-                  className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-cyan-500/25 flex items-center space-x-1.5"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Apply Exposure & Tone</span>
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Hidden File Inputs */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept="image/*,.jpg,.jpeg,.png,.webp"
+            multiple
+            className="hidden"
+          />
+          <input
+            type="file"
+            ref={cameraInputRef}
+            onChange={handleFileUpload}
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+          />
         </div>
       )}
 
-      {/* Freehand Polygon & 4-Side Crop Modal with Fluid Mouse & Touch Dragging */}
-      {isCropModalOpen && pages[activePageIndex] && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-md p-3 sm:p-6 animate-fadeIn select-none">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950">
-              <div className="flex items-center space-x-2">
-                <Crop className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-bold text-white">Freehand Document Crop & Corner Selector</h3>
-              </div>
-              <button
-                onClick={() => setIsCropModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      {/* ================= STEP 2: POST-SNAP CROP, EXPOSURE & TONE FINE-TUNING ================= */}
+      {currentStep === 'edit' && pages[activePageIndex] && (
+        <div className="flex flex-col w-full h-full bg-slate-950 text-slate-100 overflow-hidden">
+          {/* Sleek Modernized Top Header Pushed Down Below Status Bar */}
+          <div className="pt-[max(2rem,env(safe-area-inset-top)+1rem)] px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+            <button
+              onClick={() => setCurrentStep('camera')}
+              className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition flex items-center space-x-1"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-xs font-bold hidden sm:inline">Back</span>
+            </button>
+
+            <div className="text-center">
+              <h3 className="text-sm font-extrabold text-white tracking-wide">
+                Edit Page {activePageIndex + 1} of {pages.length}
+              </h3>
             </div>
 
-            <div className="p-4 flex-1 overflow-auto grid grid-cols-1 md:grid-cols-2 gap-4 bg-black items-center justify-center">
-              <div className="flex flex-col items-center justify-center space-y-1.5">
-                <span className="text-[11px] font-bold text-slate-400 flex items-center space-x-1">
-                  <span>1. Drag Corners or Sliders</span>
-                </span>
+            <button
+              onClick={handleSavePageEdits}
+              className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/25 flex items-center space-x-1.5 transition transform active:scale-95"
+            >
+              <Check className="w-4 h-4" />
+              <span>Confirm</span>
+            </button>
+          </div>
+
+          {/* Main Edit Canvas Viewer Container */}
+          <div className="flex-1 relative bg-black flex items-center justify-center p-3 overflow-hidden">
+            {editSubTab === 'crop' ? (
+              /* Interactive Crop Corner Selector Overlay with Precision Canvas Magnifying Lens */
+              <div className="relative inline-block max-w-full max-h-[58vh] select-none cursor-crosshair shadow-2xl bg-slate-950 touch-none">
                 <div
                   ref={cropContainerRef}
-                  className="relative inline-block max-w-full max-h-[40vh] overflow-hidden rounded-xl border border-slate-800 select-none cursor-crosshair"
+                  className="relative max-w-full max-h-[58vh] overflow-hidden rounded-2xl border-2 border-cyan-500/40 touch-none"
                 >
                   <img
-                    ref={cropImageRef}
                     src={pages[activePageIndex].originalDataUrl}
-                    alt="Crop Preview"
-                    className="max-w-full max-h-[40vh] object-contain select-none pointer-events-none"
+                    alt="Crop Source"
+                    className="max-w-full max-h-[58vh] object-contain pointer-events-none select-none touch-none"
                   />
 
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none touch-none">
                     <polygon
                       points={`
                         ${corners.tl.x}%,${corners.tl.y}% 
@@ -1296,7 +1120,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                         ${corners.br.x}%,${corners.br.y}% 
                         ${corners.bl.x}%,${corners.bl.y}%
                       `}
-                      className="fill-cyan-500/15 stroke-cyan-400 stroke-2"
+                      className="fill-cyan-500/20 stroke-cyan-400 stroke-2"
                       strokeDasharray="4 2"
                     />
                   </svg>
@@ -1310,7 +1134,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                     <div
                       key={c.key}
                       style={{ left: `${c.pos.x}%`, top: `${c.pos.y}%` }}
-                      className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full shadow-2xl border-2 border-white flex items-center justify-center text-[10px] font-black z-30 transition-transform ${
+                      className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full shadow-2xl border-2 border-white flex items-center justify-center text-[10px] font-black z-30 transition-transform touch-none ${
                         draggingCorner === c.key
                           ? 'bg-amber-400 text-black scale-125 ring-4 ring-amber-400/50'
                           : 'bg-cyan-400 text-slate-950 hover:scale-125'
@@ -1328,157 +1152,511 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                     </div>
                   ))}
                 </div>
-              </div>
 
-              <div className="flex flex-col items-center justify-center space-y-1.5">
-                <span className="text-[11px] font-bold text-cyan-400 flex items-center space-x-1">
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>2. Live Real-Time Crop Result</span>
-                </span>
-                <div className="relative flex items-center justify-center max-w-full max-h-[40vh] overflow-hidden rounded-xl border border-cyan-500/40 bg-slate-950 p-2 shadow-inner">
-                  <canvas
-                    ref={liveCropCanvasRef}
-                    className="max-w-full max-h-[38vh] object-contain rounded shadow-lg"
-                  />
-                </div>
+                {/* Floating Precision Canvas Loupe Lens Glass */}
+                {activeLoupe && (
+                  <div
+                    style={getLoupeStyle(activeLoupe.point)}
+                    className="absolute z-50 pointer-events-none flex flex-col items-center shadow-2xl transition-all duration-75"
+                  >
+                    <LoupeCanvas
+                      imageUrl={pages[activePageIndex].originalDataUrl}
+                      targetPoint={activeLoupe.point}
+                      label={activeLoupe.label}
+                    />
+                    <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-cyan-400 -mt-0.5 drop-shadow" />
+                  </div>
+                )}
               </div>
+            ) : (
+              /* Real-Time Exposure & Tone Canvas Preview */
+              <div className="relative flex items-center justify-center max-w-full max-h-[58vh] overflow-hidden rounded-2xl border-2 border-cyan-500/40 bg-slate-950 p-2 shadow-2xl">
+                <canvas
+                  ref={liveEditCanvasRef}
+                  className="max-w-full max-h-[55vh] object-contain rounded-xl shadow-lg"
+                />
+
+                {showOriginalComparison && (
+                  <span className="absolute top-3 left-3 text-[10px] font-extrabold uppercase px-3 py-1 bg-amber-500 text-black rounded-lg shadow backdrop-blur">
+                    Showing Unadjusted Original
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Edit Controls Toolbar & Sub-tabs */}
+          <div className="p-4 pb-[max(2rem,env(safe-area-inset-bottom)+1.5rem)] bg-slate-900 border-t border-slate-800 space-y-3">
+            {/* Mobile-Optimized Equal 3-Column Tab Grid */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-2xl border border-slate-800/80 w-full shadow-inner">
+              <button
+                onClick={() => setEditSubTab('crop')}
+                className={`py-2.5 px-2 text-[11px] sm:text-xs font-black rounded-xl transition flex items-center justify-center space-x-1.5 ${
+                  editSubTab === 'crop'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
+                <span className="truncate">Crop & Trim</span>
+              </button>
+
+              <button
+                onClick={() => setEditSubTab('tone')}
+                className={`py-2.5 px-2 text-[11px] sm:text-xs font-black rounded-xl transition flex items-center justify-center space-x-1.5 ${
+                  editSubTab === 'tone'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
+                <span className="truncate">Tone & Light</span>
+              </button>
+
+              <button
+                onClick={() => setEditSubTab('filter')}
+                className={`py-2.5 px-2 text-[11px] sm:text-xs font-black rounded-xl transition flex items-center justify-center space-x-1.5 ${
+                  editSubTab === 'filter'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
+                <span className="truncate">Filters</span>
+              </button>
             </div>
 
-            <div className="p-4 bg-slate-950 border-t border-slate-800 space-y-3">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-300">
-                <span>Trim Margins (% of Page)</span>
-                <div className="flex items-center space-x-1.5">
-                  <button
-                    onClick={() => setPresetCrop(5)}
-                    className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-cyan-300 rounded border border-slate-700 text-[11px]"
-                  >
-                    Trim 5%
-                  </button>
-                  <button
-                    onClick={() => setPresetCrop(10)}
-                    className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-cyan-300 rounded border border-slate-700 text-[11px]"
-                  >
-                    Trim 10%
-                  </button>
-                  <button
-                    onClick={() => setPresetCrop(0)}
-                    className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-slate-400 rounded border border-slate-700 text-[11px]"
-                  >
-                    Reset Corners
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                    <span>Left Side Trim</span>
-                    <span className="text-cyan-400">{cropLeft}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="40"
-                    value={cropLeft}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setCropLeft(val);
-                      setCorners((prev) => ({
-                        ...prev,
-                        tl: { ...prev.tl, x: val },
-                        bl: { ...prev.bl, x: val },
-                      }));
-                    }}
-                    className="w-full accent-cyan-400 cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                    <span>Right Side Trim</span>
-                    <span className="text-cyan-400">{cropRight}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="40"
-                    value={cropRight}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setCropRight(val);
-                      setCorners((prev) => ({
-                        ...prev,
-                        tr: { ...prev.tr, x: 100 - val },
-                        br: { ...prev.br, x: 100 - val },
-                      }));
-                    }}
-                    className="w-full accent-cyan-400 cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                    <span>Top Side Trim</span>
-                    <span className="text-cyan-400">{cropTop}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="40"
-                    value={cropTop}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setCropTop(val);
-                      setCorners((prev) => ({
-                        ...prev,
-                        tl: { ...prev.tl, y: val },
-                        tr: { ...prev.tr, y: val },
-                      }));
-                    }}
-                    className="w-full accent-cyan-400 cursor-pointer"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                    <span>Bottom Side Trim</span>
-                    <span className="text-cyan-400">{cropBottom}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="40"
-                    value={cropBottom}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setCropBottom(val);
-                      setCorners((prev) => ({
-                        ...prev,
-                        bl: { ...prev.bl, y: 100 - val },
-                        br: { ...prev.br, y: 100 - val },
-                      }));
-                    }}
-                    className="w-full accent-cyan-400 cursor-pointer"
-                  />
-                </div>
-              </div>
+            {/* Hold to Compare Strip */}
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-bold text-slate-400">
+                {editSubTab === 'crop' && 'Drag corner handles or margin sliders:'}
+                {editSubTab === 'tone' && 'Adjust Brightness, Contrast & Mid-Tone:'}
+                {editSubTab === 'filter' && 'Select document enhancement filter:'}
+              </span>
+              <button
+                onMouseDown={() => setShowOriginalComparison(true)}
+                onMouseUp={() => setShowOriginalComparison(false)}
+                onTouchStart={() => setShowOriginalComparison(true)}
+                onTouchEnd={() => setShowOriginalComparison(false)}
+                className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-cyan-300 text-[11px] font-extrabold rounded-xl border border-slate-800 transition flex items-center space-x-1 active:scale-95 shrink-0"
+              >
+                <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Hold to Compare</span>
+              </button>
             </div>
 
-            <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between">
-              <span className="text-xs text-slate-400">Trims out table background & desk edges</span>
-              <div className="flex items-center space-x-3">
+            {/* Sub-tab 1: Perspective Crop & Margin Sliders Controls */}
+            {editSubTab === 'crop' && (
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-cyan-300 flex items-center space-x-1">
+                    <Crop className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Quick Margin Presets:</span>
+                  </span>
+                  <div className="flex items-center space-x-1.5">
+                    <button
+                      onClick={() => setPresetCrop(15)}
+                      className="px-2 py-0.5 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 text-[11px] font-extrabold rounded-lg border border-cyan-700/60 shadow"
+                    >
+                      Default 15%
+                    </button>
+                    <button
+                      onClick={() => setPresetCrop(5)}
+                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-cyan-300 text-[11px] font-extrabold rounded-lg border border-slate-800"
+                    >
+                      Trim 5%
+                    </button>
+                    <button
+                      onClick={() => setPresetCrop(10)}
+                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-cyan-300 text-[11px] font-extrabold rounded-lg border border-slate-800"
+                    >
+                      Trim 10%
+                    </button>
+                    <button
+                      onClick={() => setPresetCrop(0)}
+                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-slate-400 text-[11px] font-bold rounded-lg border border-slate-800"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4 Fine-Tuning Crop Margin Sliders (Top, Bottom, Left, Right) */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                      <span>Top Trim</span>
+                      <span className="text-cyan-400">{cropTop}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="40"
+                      value={cropTop}
+                      onMouseDown={() => setActiveSlider('top')}
+                      onTouchStart={() => setActiveSlider('top')}
+                      onMouseUp={() => setActiveSlider(null)}
+                      onTouchEnd={() => setActiveSlider(null)}
+                      onChange={(e) => {
+                        setActiveSlider('top');
+                        handleSliderMarginChange('top', Number(e.target.value));
+                      }}
+                      className="w-full accent-cyan-400 cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                      <span>Bottom Trim</span>
+                      <span className="text-cyan-400">{cropBottom}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="40"
+                      value={cropBottom}
+                      onMouseDown={() => setActiveSlider('bottom')}
+                      onTouchStart={() => setActiveSlider('bottom')}
+                      onMouseUp={() => setActiveSlider(null)}
+                      onTouchEnd={() => setActiveSlider(null)}
+                      onChange={(e) => {
+                        setActiveSlider('bottom');
+                        handleSliderMarginChange('bottom', Number(e.target.value));
+                      }}
+                      className="w-full accent-cyan-400 cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                      <span>Left Trim</span>
+                      <span className="text-cyan-400">{cropLeft}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="40"
+                      value={cropLeft}
+                      onMouseDown={() => setActiveSlider('left')}
+                      onTouchStart={() => setActiveSlider('left')}
+                      onMouseUp={() => setActiveSlider(null)}
+                      onTouchEnd={() => setActiveSlider(null)}
+                      onChange={(e) => {
+                        setActiveSlider('left');
+                        handleSliderMarginChange('left', Number(e.target.value));
+                      }}
+                      className="w-full accent-cyan-400 cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                      <span>Right Trim</span>
+                      <span className="text-cyan-400">{cropRight}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="40"
+                      value={cropRight}
+                      onMouseDown={() => setActiveSlider('right')}
+                      onTouchStart={() => setActiveSlider('right')}
+                      onMouseUp={() => setActiveSlider(null)}
+                      onTouchEnd={() => setActiveSlider(null)}
+                      onChange={(e) => {
+                        setActiveSlider('right');
+                        handleSliderMarginChange('right', Number(e.target.value));
+                      }}
+                      className="w-full accent-cyan-400 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Confirm Crop & Move directly to Tone & Light */}
                 <button
-                  onClick={() => setIsCropModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-bold rounded-xl"
+                  onClick={() => setEditSubTab('tone')}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/25 flex items-center justify-center space-x-2 transition transform active:scale-98 border border-cyan-400/30 mt-2"
                 >
-                  Cancel
+                  <Check className="w-4 h-4 text-cyan-200" />
+                  <span>Confirm Crop & Move to Tone & Light ➔</span>
                 </button>
-                <button
-                  onClick={handleApplyCrop}
-                  className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-extrabold rounded-xl shadow-lg shadow-cyan-500/25 flex items-center space-x-1.5"
+              </div>
+            )}
+
+            {/* Sub-tab 2: Exposure & Mid-Tone Controls */}
+            {editSubTab === 'tone' && (
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-end space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  <button
+                    onClick={() => setPresetTone(10, 25, 15)}
+                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-cyan-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
+                  >
+                    Boost Text
+                  </button>
+                  <button
+                    onClick={() => setPresetTone(20, 15, 10)}
+                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-yellow-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
+                  >
+                    Whiten Paper
+                  </button>
+                  <button
+                    onClick={() => setPresetTone(0, 35, 0)}
+                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-emerald-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
+                  >
+                    High Contrast Ink
+                  </button>
+                  <button
+                    onClick={() => setPresetTone(0, 0, 0)}
+                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-slate-400 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                      <span className="flex items-center space-x-1">
+                        <Sun className="w-3 h-3 text-yellow-400" />
+                        <span>Brightness</span>
+                      </span>
+                      <span className="text-yellow-400 font-black">{brightness > 0 ? `+${brightness}` : brightness}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="-50"
+                      max="50"
+                      value={brightness}
+                      onChange={(e) => setBrightness(Number(e.target.value))}
+                      className="w-full accent-yellow-400 cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                      <span className="flex items-center space-x-1">
+                        <ContrastIcon className="w-3 h-3 text-cyan-400" />
+                        <span>Contrast</span>
+                      </span>
+                      <span className="text-cyan-400 font-black">{contrast > 0 ? `+${contrast}` : contrast}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="-50"
+                      max="50"
+                      value={contrast}
+                      onChange={(e) => setContrast(Number(e.target.value))}
+                      className="w-full accent-cyan-400 cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                      <span className="flex items-center space-x-1">
+                        <Sliders className="w-3 h-3 text-emerald-400" />
+                        <span>Mid-Tone Balance</span>
+                      </span>
+                      <span className="text-emerald-400 font-black">{midTone > 0 ? `+${midTone}` : midTone}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="-50"
+                      max="50"
+                      value={midTone}
+                      onChange={(e) => setMidTone(Number(e.target.value))}
+                      className="w-full accent-emerald-400 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-tab 3: Document Filters */}
+            {editSubTab === 'filter' && (
+              <div className="flex items-center space-x-2.5 overflow-x-auto py-1 scrollbar-thin">
+                {[
+                  { id: 'none', label: '📷 Original (Zero Loss)' },
+                  { id: 'flatten', label: '✨ Flatten & Remove Wrinkles' },
+                  { id: 'bw', label: '📄 Soft B&W' },
+                  { id: 'color', label: '🎨 High Contrast' },
+                  { id: 'grayscale', label: '🌙 Grayscale' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setSelectedFilter(f.id as any)}
+                    className={`px-3.5 py-2 rounded-xl font-extrabold text-xs transition whitespace-nowrap shrink-0 ${
+                      selectedFilter === f.id
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/50'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ================= STEP 3: SCAN SUMMARY & EXPORT OPTIONS ================= */}
+      {currentStep === 'summary' && (
+        <div className="flex flex-col w-full h-full bg-slate-950 text-slate-100 overflow-hidden">
+          {/* Top Bar Pushed Down Below Status Bar */}
+          <div className="pt-[max(2rem,env(safe-area-inset-top)+1rem)] px-5 py-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">Scanned Document Package</h3>
+                <p className="text-xs text-slate-400">{pages.length} {pages.length === 1 ? 'Page' : 'Pages'} Scanned & Processed</p>
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Main Pages Tray Body */}
+          <div className="flex-1 p-6 overflow-y-auto space-y-6 max-w-4xl mx-auto w-full">
+            {/* Custom File Name Input Box */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+              <div className="flex items-center space-x-2.5 w-full sm:w-auto">
+                <div className="p-2 bg-cyan-500/10 rounded-xl text-cyan-400">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-white block">Document File Name</span>
+                  <span className="text-[10px] text-slate-400">Specify name before saving to phone or PDF editor</span>
+                </div>
+              </div>
+              <input
+                type="text"
+                value={exportFileName}
+                onChange={(e) => setExportFileName(e.target.value)}
+                placeholder="e.g. My_Scanned_Invoice"
+                className="w-full sm:w-80 bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-xl px-3.5 py-2 text-xs font-extrabold text-cyan-300 outline-none transition shadow-inner"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-cyan-400">Document Pages Overview</h4>
+              <button
+                onClick={() => setCurrentStep('camera')}
+                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-extrabold rounded-xl shadow-lg flex items-center space-x-1.5 transition transform active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Another Page</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {pages.map((p, idx) => (
+                <div
+                  key={p.id}
+                  onClick={() => openEditStepForPage(p, idx)}
+                  className={`group relative bg-slate-900 border-2 rounded-2xl overflow-hidden cursor-pointer transition transform hover:scale-105 ${
+                    activePageIndex === idx ? 'border-cyan-400 shadow-xl ring-2 ring-cyan-400/40' : 'border-slate-800 hover:border-slate-700'
+                  }`}
                 >
-                  <Check className="w-4 h-4" />
-                  <span>Apply Freehand Crop</span>
+                  <div className="aspect-[3/4] w-full overflow-hidden bg-black relative">
+                    <img
+                      src={p.dataUrl}
+                      alt={`Page ${idx + 1}`}
+                      className="w-full h-full object-contain"
+                      style={{ transform: `rotate(${p.rotation}deg)` }}
+                    />
+                    <span className="absolute bottom-2 left-2 text-[10px] font-black px-2 py-0.5 bg-slate-950/90 text-cyan-300 rounded-lg border border-cyan-500/30">
+                      Page {idx + 1}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-950 flex items-center justify-between border-t border-slate-800">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditStepForPage(p, idx);
+                      }}
+                      className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-cyan-300 text-[11px] font-bold rounded-lg border border-slate-700 flex items-center space-x-1"
+                    >
+                      <Crop className="w-3 h-3" />
+                      <span>Edit</span>
+                    </button>
+
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRotatePage(idx);
+                        }}
+                        className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-700"
+                        title="Rotate Page"
+                      >
+                        <RotateCw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePage(idx);
+                        }}
+                        className="p-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 rounded-lg border border-rose-800/60"
+                        title="Delete Page"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Export Action Bar Footer - Compact Sleek Proportional Buttons */}
+          <div className="p-3.5 pb-[max(1.5rem,env(safe-area-inset-bottom)+1rem)] bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 max-w-4xl mx-auto w-full">
+            <button
+              onClick={() => setCurrentStep('camera')}
+              className="w-full sm:w-auto px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-extrabold rounded-xl border border-slate-700 transition flex items-center justify-center space-x-1.5"
+            >
+              <Plus className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Snap More Pages</span>
+            </button>
+
+            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+              <button
+                onClick={() => handleDownloadImages('jpg')}
+                disabled={pages.length === 0}
+                className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold rounded-xl border border-slate-700 transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+              >
+                <Download className="w-3.5 h-3.5 text-yellow-400" />
+                <span>Download JPG</span>
+              </button>
+
+              <button
+                onClick={() => handleDownloadImages('png')}
+                disabled={pages.length === 0}
+                className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold rounded-xl border border-slate-700 transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+              >
+                <Download className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Download PNG</span>
+              </button>
+
+              <div className="relative group p-[1.5px] rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 shadow-lg hover:shadow-cyan-500/40 transition-all duration-300 flex-1 sm:flex-none">
+                <button
+                  onClick={handleAssemblePDF}
+                  disabled={pages.length === 0 || isAssembling}
+                  className="w-full px-4 py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-extrabold rounded-[10px] transition transform active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                >
+                  {isAssembling ? (
+                    <span>Exporting PDF...</span>
+                  ) : (
+                    <>
+                      <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Export as PDF</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

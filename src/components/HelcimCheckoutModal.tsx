@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Globe } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
+import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing, saveUserCurrency } from '../utils/currencyFormatter';
 
 interface HelcimCheckoutModalProps {
   isOpen: boolean;
@@ -18,19 +19,32 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   const [isVerifyingKey, setIsVerifyingKey] = useState<boolean>(false);
   const [keyError, setKeyError] = useState<string | null>(null);
   const [showKeyTab, setShowKeyTab] = useState<boolean>(false);
+  const [currencyCode, setCurrencyCode] = useState<string>('USD');
+
+  useEffect(() => {
+    setCurrencyCode(detectUserCurrency());
+  }, []);
 
   if (!isOpen) return null;
 
-  // Helcim Hosted Payment Links (Default links or user custom Helcim pay URLs)
-  const HELCIM_PAY_URLS = {
-    monthly: 'https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=2.99&amountHash=50954d4d775e1b695075d6cd0d1294c8cb703bee5b3b641c3ab061bf52f41803',
-    annual: 'https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=29.99&amountHash=a3d5f6510e8f99715faa83f4534261aa00ae5e18a916916a043e4b8fe2e303f4',
-    lifetime: 'https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=99.99&amountHash=593108da3e6c466ca37c3e0c5928e9e8b068c04b3c02ba4d050060bf2dc7da69',
+  const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
+  const selectedPriceObj = getLocalizedPricing(selectedPlan, currencyCode);
+
+  // Dynamic Helcim URL Builder passing exact localized amount
+  const getDynamicPayUrl = (plan: 'monthly' | 'annual' | 'lifetime', currency: string) => {
+    const priceInfo = getLocalizedPricing(plan, currency);
+    const baseTokens = {
+      monthly: '8cab3b693d79e2929b76f9',
+      annual: '7c45c83a1f97e5346967ea',
+      lifetime: '6deee5a8794d0282a8c3b2',
+    };
+    const token = baseTokens[plan];
+    return `https://isasecuredpdf.myhelcim.com/hosted/?token=${token}&amount=${priceInfo.amountNum}`;
   };
 
   const handleHelcimCheckout = () => {
-    trackEvent('pricing_checkout_clicked', selectedPlan);
-    const payUrl = HELCIM_PAY_URLS[selectedPlan];
+    trackEvent('pricing_checkout_clicked', `${selectedPlan}_${currencyCode}`);
+    const payUrl = getDynamicPayUrl(selectedPlan, currencyCode);
     window.open(payUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -48,7 +62,6 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
       setIsVerifyingKey(false);
       const cleanKey = licenseKeyInput.trim().toUpperCase();
       
-      // Accept FAMILY2026, FAMILY, VIP, PRO, ISA, or valid 6+ char license keys
       if (
         cleanKey === 'FAMILY2026' ||
         cleanKey.includes('FAMILY') ||
@@ -89,15 +102,37 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* Localized Currency Selector */}
+            <div className="relative flex items-center bg-slate-950/80 border border-slate-700 rounded-xl px-2.5 py-1 text-xs font-semibold text-cyan-300 space-x-1">
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <select
+                value={currencyCode}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCurrencyCode(val);
+                  saveUserCurrency(val);
+                }}
+                className="bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer pr-1"
+              >
+                {Object.values(SUPPORTED_CURRENCIES).map((curr) => (
+                  <option key={curr.code} value={curr.code} className="bg-slate-900 text-slate-100">
+                    {curr.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Desktop Beta Subscription Benefit Badge */}
+        {/* Desktop Subscription Benefit Badge */}
         <div className="mt-3 px-3.5 py-2 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl flex items-center space-x-2 text-xs font-semibold text-cyan-300">
           <Sparkles className="w-4 h-4 text-yellow-300 flex-shrink-0" />
           <span>Includes Standalone Offline Desktop Apps (.exe & .dmg)</span>
@@ -148,7 +183,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   <div>
                     <h4 className="font-bold text-white text-sm">Monthly Pro</h4>
                     <div className="my-2">
-                      <span className="text-xl font-extrabold text-white">$2.99</span>
+                      <span className="text-xl font-extrabold text-white">{currentPricing.monthly}</span>
                       <span className="text-slate-400 text-[11px]"> / month</span>
                     </div>
                     <p className="text-[11px] text-slate-400">Flexibility to cancel anytime.</p>
@@ -174,7 +209,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   <div>
                     <h4 className="font-bold text-white text-sm">Annual Pass</h4>
                     <div className="my-2">
-                      <span className="text-xl font-extrabold text-white">$29.99</span>
+                      <span className="text-xl font-extrabold text-white">{currentPricing.annual}</span>
                       <span className="text-slate-400 text-[11px]"> / year</span>
                     </div>
                     <p className="text-[11px] text-emerald-400 font-semibold">Save 55% per year</p>
@@ -197,7 +232,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   <div>
                     <h4 className="font-bold text-white text-sm">Lifetime VIP</h4>
                     <div className="my-2">
-                      <span className="text-xl font-extrabold text-white">$99.99</span>
+                      <span className="text-xl font-extrabold text-white">{currentPricing.lifetime}</span>
                       <span className="text-slate-400 text-[11px]"> one-time</span>
                     </div>
                     <p className="text-[11px] text-purple-300">Pay once, use forever.</p>
@@ -232,13 +267,26 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 </div>
               </div>
 
+              {/* Google Play Subscriptions Policy Compliance Notice */}
+              <div className="p-3 bg-slate-950/90 border border-slate-800 rounded-xl text-[10px] text-slate-400 space-y-1">
+                <p className="font-semibold text-slate-300">
+                  📋 Subscription & Billing Policy Notice:
+                </p>
+                <p>
+                  Subscriptions automatically renew at the end of each billing cycle ({selectedPlan === 'monthly' ? `${currentPricing.monthly}/month` : selectedPlan === 'annual' ? `${currentPricing.annual}/year` : `${currentPricing.lifetime} one-time`}) until canceled. You can manage or cancel your subscription anytime in your Account or Store Settings. Charges process via Helcim Merchant Gateway. International cards are automatically converted by your issuing bank.
+                </p>
+              </div>
+
               {/* Helcim Pay Action Button */}
               <button
                 onClick={handleHelcimCheckout}
                 className="w-full py-3.5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold text-sm rounded-2xl shadow-xl border border-cyan-400/30 transition transform active:scale-95 flex items-center justify-center space-x-2"
               >
                 <Lock className="w-4 h-4 text-cyan-200" />
-                <span>Proceed to Helcim Secure Checkout (${selectedPlan === 'monthly' ? '2.99/mo' : selectedPlan === 'annual' ? '29.99/yr' : '99.99'})</span>
+                <span>
+                  Proceed to Checkout ({selectedPriceObj.formatted}
+                  {selectedPlan === 'monthly' ? '/mo' : selectedPlan === 'annual' ? '/yr' : ''})
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </>
