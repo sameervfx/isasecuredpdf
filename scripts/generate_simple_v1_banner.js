@@ -173,96 +173,13 @@ async function generateSmoothV1Banner() {
       height: 340px;
     }
 
-    /* Ultra-Smooth Seamless 3D Emblem (Zero Sharp/Jagged Corner Walls) */
-    .smooth-3d-shield {
-      width: 175px;
-      height: 195px;
+    /* Ultra-Attractive 3D Security Shield Emblem */
+    .attractive-shield-wrap {
+      width: 210px;
+      height: 250px;
       position: relative;
-      transform-style: preserve-3d;
-      transform: rotateY(-16deg) rotateX(8deg);
       z-index: 5;
-    }
-
-    /* Seamless Back Extrusion Layer with Soft Rounded Edges */
-    .shield-back-layer {
-      position: absolute;
-      inset: -4px;
-      transform: translateZ(-14px);
-      background: linear-gradient(135deg, #0284c7 0%, #0f172a 60%, #10b981 100%);
-      border-radius: 32px;
-      border: 2px solid rgba(56, 189, 248, 0.75);
-      box-shadow: 
-        0 25px 50px rgba(0, 0, 0, 0.85),
-        0 0 35px rgba(6, 182, 212, 0.5);
-    }
-
-    /* Seamless Mid Layer */
-    .shield-mid-layer {
-      position: absolute;
-      inset: -2px;
-      transform: translateZ(0px);
-      background: linear-gradient(145deg, rgba(2, 132, 199, 0.85), rgba(15, 23, 42, 0.95));
-      border-radius: 30px;
-      border: 2px solid rgba(56, 189, 248, 0.6);
-      box-shadow: inset 0 0 15px rgba(6, 182, 212, 0.6);
-    }
-
-    /* Front Face Layer */
-    .face-front {
-      position: absolute;
-      inset: 0;
-      transform: translateZ(16px);
-      background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(6, 182, 212, 0.3));
-      border: 2.5px solid #38bdf8;
-      border-radius: 28px;
-      box-shadow: 
-        0 0 35px rgba(6, 182, 212, 0.5),
-        inset 0 2px 4px rgba(255, 255, 255, 0.6),
-        inset 0 -2px 6px rgba(15, 23, 42, 0.8);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-
-    .lock-icon-wrap {
-      width: 64px;
-      height: 64px;
-      background: radial-gradient(circle, rgba(6, 182, 212, 0.35) 0%, rgba(15, 23, 42, 0) 70%);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 8px;
-      border: 1.5px solid rgba(56, 189, 248, 0.7);
-      box-shadow: 0 0 22px rgba(6, 182, 212, 0.45);
-    }
-
-    .lock-svg {
-      width: 36px;
-      height: 36px;
-      fill: none;
-      stroke: #38bdf8;
-      stroke-width: 2;
-      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.85));
-    }
-
-    .shield-title {
-      font-size: 14px;
-      font-weight: 900;
-      color: #f8fafc;
-      letter-spacing: 0.02em;
-    }
-    .shield-sub {
-      font-size: 9px;
-      font-weight: 800;
-      color: #34d399;
-      margin-top: 3px;
-      background: rgba(6, 78, 59, 0.85);
-      padding: 2.5px 8px;
-      border-radius: 9999px;
-      border: 1px solid rgba(16, 185, 129, 0.45);
+      filter: drop-shadow(0 20px 35px rgba(0,0,0,0.8)) drop-shadow(0 0 35px rgba(6,182,212,0.55));
     }
 
     /* Floating Orbit Feature Cards */
@@ -376,7 +293,7 @@ async function generateSmoothV1Banner() {
       </div>
     </div>
 
-    <!-- Right Column (Orbital Features with Ultra-Smooth 3D Emblem) -->
+    <!-- Right Column (Orbital Features with Ultra-Attractive 3D Shield) -->
     <div class="right-col">
       <!-- Orbital Arc Graphic Rings -->
       <svg class="orbit-ring-svg" viewBox="0 0 340 340">
@@ -390,22 +307,52 @@ async function generateSmoothV1Banner() {
         </defs>
       </svg>
 
-      <!-- Ultra-Smooth 3D Emblem (Zero Jagged Box Walls) -->
-      <div class="smooth-3d-shield">
-        <div class="shield-back-layer"></div>
-        <div class="shield-mid-layer"></div>
+      <!-- Ultra-Attractive 3D Security Shield Emblem -->
+      <div class="attractive-shield-wrap">
+        <svg width="210" height="250" viewBox="0 0 270 310" fill="none">
+          <defs>
+            <linearGradient id="frameGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#38bdf8"/>
+              <stop offset="30%" stop-color="#0284c7"/>
+              <stop offset="70%" stop-color="#0f172a"/>
+              <stop offset="100%" stop-color="#10b981"/>
+            </linearGradient>
+            <linearGradient id="innerGradLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#06b6d4"/>
+              <stop offset="50%" stop-color="#0284c7"/>
+              <stop offset="100%" stop-color="#0f172a"/>
+            </linearGradient>
+            <linearGradient id="innerGradRight" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0284c7"/>
+              <stop offset="50%" stop-color="#0f172a"/>
+              <stop offset="100%" stop-color="#064e3b"/>
+            </linearGradient>
+            <filter id="iconGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="5" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
 
-        <div class="face-front">
-          <div class="lock-icon-wrap">
-            <svg class="lock-svg" viewBox="0 0 24 24">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              <circle cx="12" cy="16" r="1.5" fill="#34d399"/>
-            </svg>
-          </div>
-          <div class="shield-title">ISA SECURED</div>
-          <div class="shield-sub">100% Client Protection</div>
-        </div>
+          <!-- Outer 3D Shield Frame -->
+          <path d="M 135 15 C 195 15 245 40 245 95 C 245 175 175 240 135 275 C 95 240 25 175 25 95 C 25 40 75 15 135 15 Z" fill="#020617" stroke="url(#frameGrad)" stroke-width="12" stroke-linejoin="round"/>
+          <path d="M 135 27 C 185 27 230 48 230 95 C 230 165 168 223 135 255 C 102 223 40 165 40 95 C 40 48 85 27 135 27 Z" fill="none" stroke="#38bdf8" stroke-width="4" opacity="0.9"/>
+
+          <!-- Inner Shield Body Split -->
+          <path d="M 135 34 C 180 34 220 54 220 95 C 220 158 162 212 135 242 L 135 34 Z" fill="url(#innerGradLeft)"/>
+          <path d="M 135 34 C 90 34 50 54 50 95 C 50 158 108 212 135 242 L 135 34 Z" fill="url(#innerGradRight)"/>
+          <line x1="135" y1="34" x2="135" y2="242" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+
+          <!-- Center PDF Document Emblem -->
+          <g filter="url(#iconGlow)" transform="translate(90, 75)">
+            <rect x="0" y="0" width="90" height="110" rx="16" fill="rgba(15, 23, 42, 0.6)" stroke="#38bdf8" stroke-width="3"/>
+            <path d="M 22 20 H 56 L 68 32 V 90 H 22 Z" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 56 20 V 32 H 68" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="32" y1="44" x2="58" y2="44" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="32" y1="54" x2="58" y2="54" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="32" y1="64" x2="50" y2="64" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round"/>
+            <text x="45" y="82" font-size="14" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1">PDF</text>
+          </g>
+        </svg>
       </div>
 
       <!-- Orbital Feature 1: Password Protection (AES Encryption) -->
@@ -459,7 +406,6 @@ async function generateSmoothV1Banner() {
   `;
 
   const browser = await chromium.launch();
-  // Render at 2x scale (2048 x 1000) for sub-pixel anti-aliasing
   const page = await browser.newPage({
     viewport: { width: 1024, height: 500 },
     deviceScaleFactor: 2
@@ -468,7 +414,7 @@ async function generateSmoothV1Banner() {
   await page.setContent(htmlContent);
   await page.waitForTimeout(600);
 
-  const tempPath = path.resolve('public/temp_v1_2048x1000.png');
+  const tempPath = path.resolve('public/temp_banner_2048.png');
   const outputPathPublic = path.resolve('public/google_play_feature_graphic_1024x500.png');
   const outputPathBrain = path.resolve('C:\\Users\\samee\\.gemini\\antigravity\\brain\\3e407dab-5038-42b5-8e5e-91e7710b8279\\google_play_feature_graphic_1024x500.png');
 
@@ -505,7 +451,7 @@ async function generateSmoothV1Banner() {
 
   try { fs.unlinkSync(tempPath); } catch(e) {}
 
-  console.log('Successfully generated Ultra-Smooth Anti-Aliased Version 1 Graphic (1024 x 500 px)!');
+  console.log('Successfully generated Ultra-Attractive 3D Security Shield Feature Graphic (1024 x 500 px)!');
 }
 
 generateSmoothV1Banner().catch(console.error);

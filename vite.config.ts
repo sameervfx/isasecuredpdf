@@ -5,7 +5,7 @@ export default defineConfig(({ command }) => ({
   plugins: [react()],
   base: '/',
   server: {
-    port: 3000,
+    port: 3005,
     host: '0.0.0.0',
     allowedHosts: true,
     open: false,

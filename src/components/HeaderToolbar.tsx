@@ -344,17 +344,19 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
         {/* Brand & File Menu */}
         <div className="flex items-center space-x-2 sm:space-x-3">
         <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
-          <img src={appLogo} alt="PDF Engine Studio Logo" className="w-full h-full object-cover" />
+          <img src={appLogo} alt="ISASecuredPDF Suite Logo" className="w-full h-full object-cover" />
         </div>
         <div>
           <div className="flex items-center space-x-3 gap-3">
-            <h1
-              onClick={onGoToLandingPage}
-              className={`font-bold text-xs sm:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[100px] sm:max-w-none`}
-              title="Return to Landing Page"
-            >
-              PDF Engine
-            </h1>
+            <div className="flex flex-col justify-center">
+              <h1
+                onClick={onGoToLandingPage}
+                className={`font-extrabold text-xs sm:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[160px] sm:max-w-none`}
+                title="Return to Landing Page"
+              >
+                ISASecuredPDF Suite
+              </h1>
+            </div>
 
             {/* File Menu Dropdown */}
             <div className="relative ml-3" ref={fileMenuRef}>
