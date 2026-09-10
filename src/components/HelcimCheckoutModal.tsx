@@ -182,8 +182,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 >
                   <div>
                     <h4 className="font-bold text-white text-sm">Monthly Pro</h4>
-                    <div className="my-2">
+                    <div className="my-2 flex items-baseline space-x-1">
                       <span className="text-xl font-extrabold text-white">{currentPricing.monthly}</span>
+                      <span className="text-cyan-400 text-xs font-bold">{currentPricing.code}</span>
                       <span className="text-slate-400 text-[11px]"> / month</span>
                     </div>
                     <p className="text-[11px] text-slate-400">Flexibility to cancel anytime.</p>
@@ -208,8 +209,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   </div>
                   <div>
                     <h4 className="font-bold text-white text-sm">Annual Pass</h4>
-                    <div className="my-2">
+                    <div className="my-2 flex items-baseline space-x-1">
                       <span className="text-xl font-extrabold text-white">{currentPricing.annual}</span>
+                      <span className="text-cyan-400 text-xs font-bold">{currentPricing.code}</span>
                       <span className="text-slate-400 text-[11px]"> / year</span>
                     </div>
                     <p className="text-[11px] text-emerald-400 font-semibold">Save 55% per year</p>
@@ -231,8 +233,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 >
                   <div>
                     <h4 className="font-bold text-white text-sm">Lifetime VIP</h4>
-                    <div className="my-2">
+                    <div className="my-2 flex items-baseline space-x-1">
                       <span className="text-xl font-extrabold text-white">{currentPricing.lifetime}</span>
+                      <span className="text-purple-300 text-xs font-bold">{currentPricing.code}</span>
                       <span className="text-slate-400 text-[11px]"> one-time</span>
                     </div>
                     <p className="text-[11px] text-purple-300">Pay once, use forever.</p>
@@ -273,7 +276,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   📋 Subscription & Billing Policy Notice:
                 </p>
                 <p>
-                  Subscriptions automatically renew at the end of each billing cycle ({selectedPlan === 'monthly' ? `${currentPricing.monthly}/month` : selectedPlan === 'annual' ? `${currentPricing.annual}/year` : `${currentPricing.lifetime} one-time`}) until canceled. You can manage or cancel your subscription anytime in your Account or Store Settings. Charges process via Helcim Merchant Gateway. International cards are automatically converted by your issuing bank.
+                  Subscriptions automatically renew at the end of each billing cycle ({selectedPlan === 'monthly' ? `${currentPricing.monthly} ${currentPricing.code}/month` : selectedPlan === 'annual' ? `${currentPricing.annual} ${currentPricing.code}/year` : `${currentPricing.lifetime} ${currentPricing.code} one-time`}) until canceled. All prices are explicitly displayed in {currentPricing.code} and match the final checkout charge. You can manage or cancel your subscription anytime in your Account Settings.
                 </p>
               </div>
 
@@ -284,7 +287,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               >
                 <Lock className="w-4 h-4 text-cyan-200" />
                 <span>
-                  Proceed to Checkout ({selectedPriceObj.formatted}
+                  Proceed to Checkout ({selectedPriceObj.formatted} {currentPricing.code}
                   {selectedPlan === 'monthly' ? '/mo' : selectedPlan === 'annual' ? '/yr' : ''})
                 </span>
                 <ArrowRight className="w-4 h-4" />
