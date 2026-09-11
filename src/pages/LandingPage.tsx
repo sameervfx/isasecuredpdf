@@ -838,21 +838,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="space-y-4 text-xs text-slate-300">
                   <div>
                     <h4 className="font-bold text-white mb-1">1. How to Cancel Your Subscription</h4>
-                    <p className="mb-2">You can cancel your recurring subscription at any time without fees or penalties:</p>
-                    <ul className="space-y-2 pl-2">
-                      <li className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-                        <strong className="text-cyan-400 block mb-0.5">🤖 Android (Google Play Subscriptions):</strong>
-                        Open the <strong>Google Play Store app</strong> → Tap your Profile Icon (top right) → <strong>Payments & subscriptions</strong> → <strong>Subscriptions</strong> → Select <strong>ISA Secure PDF Pro</strong> → Tap <strong>Cancel subscription</strong>.
-                      </li>
-                      <li className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-                        <strong className="text-cyan-400 block mb-0.5">🍏 iOS (Apple App Store):</strong>
-                        Open iOS <strong>Settings app</strong> → Tap your Apple ID / Name → <strong>Subscriptions</strong> → Select <strong>ISA Secure PDF Pro</strong> → Tap <strong>Cancel Subscription</strong>.
-                      </li>
-                      <li className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
-                        <strong className="text-cyan-400 block mb-0.5">💳 Web & Credit Card Checkout (Helcim Gateway):</strong>
-                        Log into the Helcim Customer Portal link in your email receipt, or email our support team at <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a> with your email or invoice number to cancel recurring billing instantly.
-                      </li>
-                    </ul>
+                    <p className="mb-2">You can cancel your recurring subscription at any time with a single click:</p>
+                    <div className="space-y-2.5">
+                      <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                        <strong className="text-cyan-400 block">🤖 Android (Google Play Subscriptions):</strong>
+                        <p className="text-[11px] text-slate-400">Manage or cancel your Google Play subscription directly in your Google Account:</p>
+                        <a
+                          href="https://play.google.com/store/account/subscriptions"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 font-bold rounded-lg transition inline-flex items-center space-x-1.5 text-xs block text-center"
+                        >
+                          <span>🔗 Manage Google Play Subscriptions ↗</span>
+                        </a>
+                      </div>
+
+                      <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1">
+                        <strong className="text-cyan-400 block">🍏 iOS (Apple App Store):</strong>
+                        <p className="text-[11px] text-slate-400">Open iOS <strong>Settings app</strong> → Tap Apple ID Name → <strong>Subscriptions</strong> → <strong>Cancel Subscription</strong>.</p>
+                      </div>
+
+                      <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                        <strong className="text-cyan-400 block">💳 Web & Credit Card Checkout (Helcim Gateway):</strong>
+                        <p className="text-[11px] text-slate-400">Cancel web billing instantly by emailing our 24/7 support team with your receipt or email address:</p>
+                        <a
+                          href="mailto:support@isasecuredpdf.com?subject=Cancel%20My%20Subscription"
+                          className="mt-1 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 font-bold rounded-lg transition inline-flex items-center space-x-1.5 text-xs block text-center"
+                        >
+                          <span>✉️ Email Support to Cancel (support@isasecuredpdf.com)</span>
+                        </a>
+                      </div>
+                    </div>
                   </div>
 
                   <div>
