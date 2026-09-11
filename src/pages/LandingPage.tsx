@@ -583,7 +583,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Pro Monthly</h3>
                 <p className={`text-xs ${cardDescClass} mb-4`}>For active power users & creators.</p>
                 <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
-                  {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                  {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
                 </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
@@ -598,7 +598,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={() => setIsProMonthlyModalOpen(true)}
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
                 >
-                  Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}/mo)
+                  Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/mo)
                 </button>
               ) : (
                 <a
@@ -607,7 +607,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   rel="noopener noreferrer"
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
                 >
-                  Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}/mo)
+                  Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/mo)
                 </a>
               )}
             </div>
@@ -625,7 +625,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <p className={`text-xs ${cardDescClass} mb-4`}>Complete web & desktop freedom.</p>
                 <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
-                  {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                  {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
                 </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
@@ -640,7 +640,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={() => setIsProAnnualModalOpen(true)}
                   className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
                 >
-                  Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}/yr)
+                  Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)
                 </button>
               ) : (
                 <a
@@ -649,7 +649,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   rel="noopener noreferrer"
                   className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
                 >
-                  Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}/yr)
+                  Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)
                 </a>
               )}
             </div>
@@ -660,7 +660,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Lifetime License</h3>
                 <p className={`text-xs ${cardDescClass} mb-4`}>One-time investment forever.</p>
                 <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
-                  {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                  {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
                 </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
@@ -675,7 +675,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={() => setIsLifetimeModalOpen(true)}
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
                 >
-                  Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})
+                  Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'})
                 </button>
               ) : (
                 <a
@@ -684,7 +684,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   rel="noopener noreferrer"
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
                 >
-                  Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})
+                  Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'})
                 </a>
               )}
             </div>
@@ -938,7 +938,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white">Pro Monthly Subscription</h3>
-                <p className="text-xs text-cyan-400 font-semibold">$2.99 / month • Cancel Anytime</p>
+                <p className="text-xs text-cyan-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'} / month • Cancel Anytime</p>
               </div>
             </div>
 
@@ -974,7 +974,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     onClick={handleGateCheckAndLaunch}
                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
                   >
-                    💳 Unlock Pro Access ($2.99/month)
+                    💳 Unlock Pro Access ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/month)
                   </button>
                 ) : (
                   <a
@@ -983,7 +983,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     rel="noopener noreferrer"
                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
                   >
-                    💳 Subscribe Now ($2.99/month)
+                    💳 Subscribe Now ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/month)
                   </a>
                 )}
               </div>
@@ -1006,7 +1006,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <ShieldCheck className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-white">Pro Annual Plan ($29.99/yr)</h3>
+                <h3 className="text-base font-extrabold text-white">Pro Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)</h3>
                 <p className="text-xs text-emerald-400 font-bold">Save 20% • Web & Desktop Access</p>
               </div>
             </div>
@@ -1028,7 +1028,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={handleGateCheckAndLaunch}
                   className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
                 >
-                  💳 Unlock Annual Pro ($29.99/yr) →
+                  💳 Unlock Annual Pro ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr) →
                 </button>
               ) : (
                 <a
@@ -1037,7 +1037,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   rel="noopener noreferrer"
                   className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
                 >
-                  💳 Complete Annual Checkout ($29.99/yr) →
+                  💳 Complete Annual Checkout ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr) →
                 </a>
               )}
             </div>
@@ -1060,7 +1060,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white">Lifetime VIP License</h3>
-                <p className="text-xs text-purple-400 font-bold">$99.99 One-Time • Own Forever</p>
+                <p className="text-xs text-purple-400 font-bold">{SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'} One-Time • Own Forever</p>
               </div>
             </div>
 
@@ -1076,7 +1076,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={handleGateCheckAndLaunch}
                   className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
                 >
-                  💎 Unlock Lifetime VIP Access →
+                  💎 Unlock Lifetime VIP Access ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}) →
                 </button>
               ) : (
                 <a
@@ -1085,7 +1085,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   rel="noopener noreferrer"
                   className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
                 >
-                  💎 Pay Once $99.99 - Unlock Lifetime VIP →
+                  💎 Pay Once {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'} - Unlock Lifetime VIP →
                 </a>
               )}
             </div>

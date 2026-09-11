@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, FilePlus, Check, BookOpen, FileText, Receipt, Shield, Building, Home, Car, FileCheck, Crown, Lock, Sparkles, ShieldCheck } from 'lucide-react';
 import { CreatePDFOptions, TemplateType } from '../utils/blankPdf';
+import { SUPPORTED_CURRENCIES, detectUserCurrency } from '../utils/currencyFormatter';
 
 interface CreatePDFModalProps {
   isOpen: boolean;
@@ -20,8 +21,15 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
   const [jurisdiction, setJurisdiction] = useState<'US' | 'CA'>('US');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [pendingProTemplate, setPendingProTemplate] = useState<TemplateType | null>(null);
+  const [currencyCode, setCurrencyCode] = useState<string>('USD');
+
+  useEffect(() => {
+    setCurrencyCode(detectUserCurrency());
+  }, []);
 
   if (!isOpen) return null;
+
+  const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
 
   const isProActive =
     localStorage.getItem('isasecuredpdf_pro_active') === 'true' ||
@@ -418,7 +426,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                     <span>Pro Annual Plan</span>
                     <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Save 20%</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">$29.99 / year • Web & Desktop binaries</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.annual} {currentPricing.code} / year • Web & Desktop binaries</div>
                 </div>
                 <ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
               </button>
@@ -432,7 +440,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                     <span>Lifetime VIP License</span>
                     <span className="text-[10px] font-extrabold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">Best Value</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">$99.00 one-time • Permanent VIP status</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.lifetime} {currentPricing.code} one-time • Permanent VIP status</div>
                 </div>
                 <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition" />
               </button>
