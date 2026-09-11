@@ -835,9 +835,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               )}
 
               {activeModal === 'refund' && (
-                <p>
-                  <b>Refund Policy:</b> We offer a 14-day no-questions-asked money-back guarantee for all individual Pro licenses. If the software does not meet your workflow requirements or fails to render your specific PDF files properly, contact <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a> within 14 days of purchase for a 100% refund.
-                </p>
+                <div className="space-y-4 text-xs text-slate-300">
+                  <div>
+                    <h4 className="font-bold text-white mb-1">1. How to Cancel Your Subscription</h4>
+                    <p className="mb-2">You can cancel your recurring subscription at any time without fees or penalties:</p>
+                    <ul className="space-y-2 pl-2">
+                      <li className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
+                        <strong className="text-cyan-400 block mb-0.5">🤖 Android (Google Play Subscriptions):</strong>
+                        Open the <strong>Google Play Store app</strong> → Tap your Profile Icon (top right) → <strong>Payments & subscriptions</strong> → <strong>Subscriptions</strong> → Select <strong>ISA Secure PDF Pro</strong> → Tap <strong>Cancel subscription</strong>.
+                      </li>
+                      <li className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
+                        <strong className="text-cyan-400 block mb-0.5">🍏 iOS (Apple App Store):</strong>
+                        Open iOS <strong>Settings app</strong> → Tap your Apple ID / Name → <strong>Subscriptions</strong> → Select <strong>ISA Secure PDF Pro</strong> → Tap <strong>Cancel Subscription</strong>.
+                      </li>
+                      <li className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800">
+                        <strong className="text-cyan-400 block mb-0.5">💳 Web & Credit Card Checkout (Helcim Gateway):</strong>
+                        Log into the Helcim Customer Portal link in your email receipt, or email our support team at <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a> with your email or invoice number to cancel recurring billing instantly.
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-white mb-1">2. 14-Day Money-Back Guarantee</h4>
+                    <p>
+                      We offer a 14-day no-questions-asked money-back guarantee for all Pro licenses. If the software does not meet your workflow requirements, email <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a> within 14 days of purchase for a 100% refund.
+                    </p>
+                  </div>
+                </div>
               )}
 
               {activeModal === 'contact' && (
