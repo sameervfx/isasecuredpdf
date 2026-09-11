@@ -528,7 +528,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500 mb-3">Flexible Plans</h2>
             <p className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass}`}>Simple, Transparent Pricing</p>
-            <p className={`text-sm ${cardDescClass} mt-3 mb-6`}>No hidden fees. 14-Day Money-Back Guarantee.</p>
+            <p className={`text-sm ${cardDescClass} mt-3 mb-6`}>No hidden fees. 14-Day Money-Back Guarantee (less processing fees).</p>
 
             {/* Currency Selector Switcher */}
             <div className="inline-flex items-center space-x-2 bg-slate-900 border border-slate-700/80 px-4 py-2 rounded-2xl text-xs font-semibold text-cyan-300 shadow-md">
@@ -729,7 +729,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             },
             {
               q: 'What is your refund policy?',
-              a: 'We offer a 14-day no-questions-asked money-back guarantee for all Pro license purchases.'
+              a: 'We offer a 14-day money-back guarantee for all Pro license purchases (less third-party transaction processing fees).'
             }
           ].map((item, idx) => (
             <div key={idx} className={`${cardBgClass} rounded-2xl overflow-hidden`}>
@@ -874,7 +874,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div>
                     <h4 className="font-bold text-white mb-1">2. 14-Day Money-Back Guarantee</h4>
                     <p>
-                      We offer a 14-day no-questions-asked money-back guarantee for all Pro licenses. If the software does not meet your workflow requirements, email <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a> within 14 days of purchase for a 100% refund.
+                      We offer a 14-day money-back guarantee for all Pro licenses (minus non-refundable third-party transaction processing fees). If the software does not meet your workflow requirements, email <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a> within 14 days of purchase to request your refund.
                     </p>
                   </div>
                 </div>
