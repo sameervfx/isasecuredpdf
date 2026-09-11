@@ -531,14 +531,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <p className={`text-sm ${cardDescClass} mt-3 mb-6`}>No hidden fees. 14-Day Money-Back Guarantee (less processing fees).</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
             {/* Free Starter */}
             <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-slate-400 transition`}>
               <div>
-                <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Free Starter</h3>
-                <p className={`text-xs ${cardDescClass} mb-4`}>For casual web viewing & editing.</p>
-                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
-                  {SUPPORTED_CURRENCIES[currencyCode]?.symbol || '$'}0 <span className={`text-xs ${cardDescClass} font-normal`}>/ forever</span>
+                <div className="flex items-center justify-between min-h-[28px] mb-1">
+                  <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Free Starter</h3>
+                </div>
+                <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>For casual web viewing & editing.</p>
+                
+                <div className="min-h-[64px] flex flex-col justify-end mb-6">
+                  <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
+                    {SUPPORTED_CURRENCIES[currencyCode]?.symbol || '$'}0 <span className={`text-xs ${cardDescClass} font-normal`}>/ forever</span>
+                  </div>
                 </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
@@ -559,15 +564,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Pro Monthly */}
             <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition`}>
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className={`text-base font-bold ${cardTitleClass}`}>Pro Monthly</h3>
+                <div className="flex items-center justify-between min-h-[28px] mb-1">
+                  <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Pro Monthly</h3>
                   {currencyCode === 'INR' && (
-                    <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full">Introductory Offer</span>
+                    <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full shrink-0">Introductory Offer</span>
                   )}
                 </div>
-                <p className={`text-xs ${cardDescClass} mb-4`}>For active power users & creators.</p>
-                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
-                  {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>For active power users & creators.</p>
+                
+                <div className="min-h-[64px] flex flex-col justify-end mb-6">
+                  {SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly && (
+                    <div className="flex items-center space-x-2 mb-0.5 text-xs">
+                      <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly}</span>
+                      <span className="text-[10px] font-extrabold text-cyan-300 bg-cyan-500/20 border border-cyan-500/40 px-1.5 py-0.5 rounded">
+                        {SUPPORTED_CURRENCIES[currencyCode]?.monthlyDiscountPercent || '33% OFF'}
+                      </span>
+                    </div>
+                  )}
+                  <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
+                    {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                  </div>
                 </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
@@ -603,15 +619,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className={`text-base font-bold ${cardTitleClass}`}>Pro Annual</h3>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                    {currencyCode === 'INR' ? 'Introductory Offer • Save 55%' : 'Save 55%'}
+                <div className="flex items-center justify-between min-h-[28px] mb-1">
+                  <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Pro Annual</h3>
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
+                    {currencyCode === 'INR' ? 'Intro Offer • Save 55%' : 'Save 55%'}
                   </span>
                 </div>
-                <p className={`text-xs ${cardDescClass} mb-4`}>Complete web & desktop freedom.</p>
-                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
-                  {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>Complete web & desktop freedom.</p>
+                
+                <div className="min-h-[64px] flex flex-col justify-end mb-6">
+                  {SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual && (
+                    <div className="flex items-center space-x-2 mb-0.5 text-xs">
+                      <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual}</span>
+                      <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 rounded">
+                        {SUPPORTED_CURRENCIES[currencyCode]?.annualDiscountPercent || '33% OFF'}
+                      </span>
+                    </div>
+                  )}
+                  <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
+                    {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                  </div>
                 </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
@@ -643,15 +670,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Lifetime License */}
             <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition`}>
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className={`text-base font-bold ${cardTitleClass}`}>Lifetime License</h3>
+                <div className="flex items-center justify-between min-h-[28px] mb-1">
+                  <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap shrink-0`}>Lifetime License</h3>
                   {currencyCode === 'INR' && (
-                    <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-2 py-0.5 rounded-full">Special Introductory Offer</span>
+                    <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-2 py-0.5 rounded-full shrink-0 ml-1">Special Intro Offer</span>
                   )}
                 </div>
-                <p className={`text-xs ${cardDescClass} mb-4`}>One-time investment forever.</p>
-                <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
-                  {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>One-time investment forever.</p>
+                
+                <div className="min-h-[64px] flex flex-col justify-end mb-6">
+                  {SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime && (
+                    <div className="flex items-center space-x-2 mb-0.5 text-xs">
+                      <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime}</span>
+                      <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 rounded">
+                        {SUPPORTED_CURRENCIES[currencyCode]?.lifetimeDiscountPercent || '38% OFF'}
+                      </span>
+                    </div>
+                  )}
+                  <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
+                    {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                  </div>
                 </div>
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>

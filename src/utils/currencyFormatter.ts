@@ -18,6 +18,13 @@ export interface CurrencyConfig {
   usdMonthlyFormatted: string;
   usdAnnualFormatted: string;
   usdLifetimeFormatted: string;
+  // Optional original (crossed-out) prices & discount badges
+  originalMonthly?: string;
+  originalAnnual?: string;
+  originalLifetime?: string;
+  monthlyDiscountPercent?: string;
+  annualDiscountPercent?: string;
+  lifetimeDiscountPercent?: string;
 }
 
 export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
@@ -128,6 +135,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     usdMonthlyFormatted: '$2.38 USD',
     usdAnnualFormatted: '$23.90 USD',
     usdLifetimeFormatted: '$59.90 USD',
+    originalMonthly: '₹299',
+    originalAnnual: '₹2,999',
+    originalLifetime: '₹7,999',
+    monthlyDiscountPercent: '33% OFF',
+    annualDiscountPercent: '33% OFF',
+    lifetimeDiscountPercent: '38% OFF',
   },
   JPY: {
     code: 'JPY',
@@ -322,5 +335,7 @@ export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', cur
     amountNum: currency[`${plan}Num` as keyof CurrencyConfig] as number,
     usdAmountNum: currency[`usd${planKey}Num` as keyof CurrencyConfig] as number,
     usdFormatted: currency[`usd${planKey}Formatted` as keyof CurrencyConfig] as string,
+    originalFormatted: currency[`original${planKey}` as keyof CurrencyConfig] as string | undefined,
+    discountPercent: currency[`${plan}DiscountPercent` as keyof CurrencyConfig] as string | undefined,
   };
 }

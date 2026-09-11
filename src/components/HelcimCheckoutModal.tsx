@@ -175,6 +175,12 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 >
                   <div>
                     <h4 className="font-bold text-white text-sm">Monthly Pro</h4>
+                    {currentPricing.originalMonthly && (
+                      <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
+                        <span className="line-through text-slate-400">{currentPricing.originalMonthly}</span>
+                        <span className="text-[9px] font-extrabold text-cyan-300 bg-cyan-500/20 px-1 rounded">{currentPricing.monthlyDiscountPercent || '33% OFF'}</span>
+                      </div>
+                    )}
                     <div className="my-2 flex items-baseline space-x-1">
                       <span className="text-xl font-extrabold text-white">{currentPricing.monthly}</span>
                       <span className="text-cyan-400 text-xs font-bold">{currentPricing.code}</span>
@@ -202,6 +208,12 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   </div>
                   <div>
                     <h4 className="font-bold text-white text-sm">Annual Pass</h4>
+                    {currentPricing.originalAnnual && (
+                      <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
+                        <span className="line-through text-slate-400">{currentPricing.originalAnnual}</span>
+                        <span className="text-[9px] font-extrabold text-emerald-300 bg-emerald-500/20 px-1 rounded">{currentPricing.annualDiscountPercent || '33% OFF'}</span>
+                      </div>
+                    )}
                     <div className="my-2 flex items-baseline space-x-1">
                       <span className="text-xl font-extrabold text-white">{currentPricing.annual}</span>
                       <span className="text-cyan-400 text-xs font-bold">{currentPricing.code}</span>
@@ -226,6 +238,12 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 >
                   <div>
                     <h4 className="font-bold text-white text-sm">Lifetime VIP</h4>
+                    {currentPricing.originalLifetime && (
+                      <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
+                        <span className="line-through text-slate-400">{currentPricing.originalLifetime}</span>
+                        <span className="text-[9px] font-extrabold text-purple-300 bg-purple-500/20 px-1 rounded">{currentPricing.lifetimeDiscountPercent || '38% OFF'}</span>
+                      </div>
+                    )}
                     <div className="my-2 flex items-baseline space-x-1">
                       <span className="text-xl font-extrabold text-white">{currentPricing.lifetime}</span>
                       <span className="text-purple-300 text-xs font-bold">{currentPricing.code}</span>
