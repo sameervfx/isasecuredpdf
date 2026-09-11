@@ -11,6 +11,13 @@ export interface CurrencyConfig {
   monthlyNum: number;
   annualNum: number;
   lifetimeNum: number;
+  // Exact USD Equivalent amounts for Helcim USD Merchant Gateway
+  usdMonthlyNum: number;
+  usdAnnualNum: number;
+  usdLifetimeNum: number;
+  usdMonthlyFormatted: string;
+  usdAnnualFormatted: string;
+  usdLifetimeFormatted: string;
 }
 
 export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
@@ -25,6 +32,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 2.99,
     annualNum: 29.99,
     lifetimeNum: 99.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
   },
   CAD: {
     code: 'CAD',
@@ -37,6 +50,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 3.99,
     annualNum: 39.99,
     lifetimeNum: 129.99,
+    usdMonthlyNum: 2.95,
+    usdAnnualNum: 29.50,
+    usdLifetimeNum: 96.00,
+    usdMonthlyFormatted: '$2.95 USD',
+    usdAnnualFormatted: '$29.50 USD',
+    usdLifetimeFormatted: '$96.00 USD',
   },
   EUR: {
     code: 'EUR',
@@ -49,6 +68,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 2.99,
     annualNum: 29.99,
     lifetimeNum: 89.99,
+    usdMonthlyNum: 3.47,
+    usdAnnualNum: 34.70,
+    usdLifetimeNum: 104.40,
+    usdMonthlyFormatted: '$3.47 USD',
+    usdAnnualFormatted: '$34.70 USD',
+    usdLifetimeFormatted: '$104.40 USD',
   },
   GBP: {
     code: 'GBP',
@@ -61,6 +86,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 2.49,
     annualNum: 24.99,
     lifetimeNum: 79.99,
+    usdMonthlyNum: 3.26,
+    usdAnnualNum: 32.70,
+    usdLifetimeNum: 104.75,
+    usdMonthlyFormatted: '$3.26 USD',
+    usdAnnualFormatted: '$32.70 USD',
+    usdLifetimeFormatted: '$104.75 USD',
   },
   AUD: {
     code: 'AUD',
@@ -73,6 +104,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 3.99,
     annualNum: 39.99,
     lifetimeNum: 129.99,
+    usdMonthlyNum: 2.67,
+    usdAnnualNum: 26.70,
+    usdLifetimeNum: 87.00,
+    usdMonthlyFormatted: '$2.67 USD',
+    usdAnnualFormatted: '$26.70 USD',
+    usdLifetimeFormatted: '$87.00 USD',
   },
   INR: {
     code: 'INR',
@@ -85,6 +122,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 199,
     annualNum: 1999,
     lifetimeNum: 7999,
+    usdMonthlyNum: 2.38,
+    usdAnnualNum: 23.90,
+    usdLifetimeNum: 95.80,
+    usdMonthlyFormatted: '$2.38 USD',
+    usdAnnualFormatted: '$23.90 USD',
+    usdLifetimeFormatted: '$95.80 USD',
   },
   JPY: {
     code: 'JPY',
@@ -97,6 +140,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 450,
     annualNum: 4500,
     lifetimeNum: 14800,
+    usdMonthlyNum: 3.10,
+    usdAnnualNum: 31.00,
+    usdLifetimeNum: 102.00,
+    usdMonthlyFormatted: '$3.10 USD',
+    usdAnnualFormatted: '$31.00 USD',
+    usdLifetimeFormatted: '$102.00 USD',
   },
   BRL: {
     code: 'BRL',
@@ -109,6 +158,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 14.90,
     annualNum: 149.90,
     lifetimeNum: 499.90,
+    usdMonthlyNum: 2.71,
+    usdAnnualNum: 27.20,
+    usdLifetimeNum: 90.90,
+    usdMonthlyFormatted: '$2.71 USD',
+    usdAnnualFormatted: '$27.20 USD',
+    usdLifetimeFormatted: '$90.90 USD',
   },
   MXN: {
     code: 'MXN',
@@ -121,6 +176,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 59,
     annualNum: 599,
     lifetimeNum: 1999,
+    usdMonthlyNum: 3.03,
+    usdAnnualNum: 30.70,
+    usdLifetimeNum: 102.50,
+    usdMonthlyFormatted: '$3.03 USD',
+    usdAnnualFormatted: '$30.70 USD',
+    usdLifetimeFormatted: '$102.50 USD',
   },
   AED: {
     code: 'AED',
@@ -133,6 +194,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 11,
     annualNum: 110,
     lifetimeNum: 399.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.90,
+    usdLifetimeNum: 108.90,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.90 USD',
+    usdLifetimeFormatted: '$108.90 USD',
   },
 };
 
@@ -247,10 +314,13 @@ export function saveUserCurrency(currencyCode: string): void {
  */
 export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', currencyCode: string = 'USD') {
   const currency = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
+  const planKey = plan.charAt(0).toUpperCase() + plan.slice(1);
   return {
     formatted: currency[plan],
     symbol: currency.symbol,
     code: currency.code,
     amountNum: currency[`${plan}Num` as keyof CurrencyConfig] as number,
+    usdAmountNum: currency[`usd${planKey}Num` as keyof CurrencyConfig] as number,
+    usdFormatted: currency[`usd${planKey}Formatted` as keyof CurrencyConfig] as string,
   };
 }

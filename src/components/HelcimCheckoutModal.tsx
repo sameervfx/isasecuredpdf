@@ -33,7 +33,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
   const selectedPriceObj = getLocalizedPricing(selectedPlan, currencyCode);
 
-  // Dynamic Helcim URL Builder passing exact localized amount
+  // Dynamic Helcim URL Builder passing exact localized USD equivalent amount
   const getDynamicPayUrl = (plan: 'monthly' | 'annual' | 'lifetime', currency: string) => {
     if (isIOS) return '';
     const priceInfo = getLocalizedPricing(plan, currency);
@@ -43,7 +43,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
       lifetime: '6deee5a8794d0282a8c3b2',
     };
     const token = baseTokens[plan];
-    return `https://isasecuredpdf.myhelcim.com/hosted/?token=${token}&amount=${priceInfo.amountNum}`;
+    return `https://isasecuredpdf.myhelcim.com/hosted/?token=${token}&amount=${priceInfo.usdAmountNum}`;
   };
 
   const handleHelcimCheckout = () => {
@@ -289,7 +289,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   📋 Subscription & Billing Policy Notice:
                 </p>
                 <p>
-                  Subscriptions automatically renew at the end of each billing cycle ({selectedPlan === 'monthly' ? `${currentPricing.monthly} ${currentPricing.code}/month` : selectedPlan === 'annual' ? `${currentPricing.annual} ${currentPricing.code}/year` : `${currentPricing.lifetime} ${currentPricing.code} one-time`}) until canceled. All prices are explicitly displayed in {currentPricing.code} and match the final checkout charge. You can manage or cancel your subscription anytime in your Account Settings.
+                  Subscriptions automatically renew at the end of each billing cycle ({selectedPlan === 'monthly' ? `${currentPricing.monthly} ${currentPricing.code}/month` : selectedPlan === 'annual' ? `${currentPricing.annual} ${currentPricing.code}/year` : `${currentPricing.lifetime} ${currentPricing.code} one-time`}) until canceled. Checkout charges on Helcim are processed as {selectedPriceObj.usdFormatted} (equivalent to {selectedPriceObj.formatted} {currentPricing.code}). You can manage or cancel your subscription anytime in your Account Settings.
                 </p>
               </div>
 
@@ -300,7 +300,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               >
                 <Lock className="w-4 h-4 text-cyan-200" />
                 <span>
-                  Proceed to Checkout ({selectedPriceObj.formatted} {currentPricing.code}
+                  Proceed to Checkout ({currentPricing.code === 'USD' ? selectedPriceObj.formatted : `${selectedPriceObj.usdFormatted} USD (${selectedPriceObj.formatted} ${currentPricing.code})`}
                   {selectedPlan === 'monthly' ? '/mo' : selectedPlan === 'annual' ? '/yr' : ''})
                 </span>
                 <ArrowRight className="w-4 h-4" />
