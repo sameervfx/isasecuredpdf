@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, saveUserCurrency } from '../utils/currencyFormatter';
+import { isIOSPlatform } from '../utils/platform';
 
 import appLogo from '../assets/app_logo.jpg';
 
@@ -592,14 +593,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </ul>
               </div>
 
-              <a
-                href="https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=2.99&amountHash=50954d4d775e1b695075d6cd0d1294c8cb703bee5b3b641c3ab061bf52f41803"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
-              >
-                Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}/mo)
-              </a>
+              {isIOSPlatform() ? (
+                <button
+                  onClick={() => setIsProMonthlyModalOpen(true)}
+                  className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
+                >
+                  Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}/mo)
+                </button>
+              ) : (
+                <a
+                  href="https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=2.99&amountHash=50954d4d775e1b695075d6cd0d1294c8cb703bee5b3b641c3ab061bf52f41803"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
+                >
+                  Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}/mo)
+                </a>
+              )}
             </div>
 
             {/* Pro Annual */}
@@ -625,14 +635,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </ul>
               </div>
 
-              <a
-                href="https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=29.99&amountHash=a3d5f6510e8f99715faa83f4534261aa00ae5e18a916916a043e4b8fe2e303f4"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
-              >
-                Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}/yr)
-              </a>
+              {isIOSPlatform() ? (
+                <button
+                  onClick={() => setIsProAnnualModalOpen(true)}
+                  className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
+                >
+                  Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}/yr)
+                </button>
+              ) : (
+                <a
+                  href="https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=29.99&amountHash=a3d5f6510e8f99715faa83f4534261aa00ae5e18a916916a043e4b8fe2e303f4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
+                >
+                  Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}/yr)
+                </a>
+              )}
             </div>
 
             {/* Lifetime License */}
@@ -651,14 +670,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </ul>
               </div>
 
-              <a
-                href="https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=99.99&amountHash=593108da3e6c466ca37c3e0c5928e9e8b068c04b3c02ba4d050060bf2dc7da69"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
-              >
-                Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})
-              </a>
+              {isIOSPlatform() ? (
+                <button
+                  onClick={() => setIsLifetimeModalOpen(true)}
+                  className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
+                >
+                  Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})
+                </button>
+              ) : (
+                <a
+                  href="https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=99.99&amountHash=593108da3e6c466ca37c3e0c5928e9e8b068c04b3c02ba4d050060bf2dc7da69"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
+                >
+                  Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})
+                </a>
+              )}
             </div>
           </div>
 
@@ -941,14 +969,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   🚀 Activate 7-Day Free Trial & Start
                 </button>
 
-                <a
-                  href="https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=2.99&amountHash=50954d4d775e1b695075d6cd0d1294c8cb703bee5b3b641c3ab061bf52f41803"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
-                >
-                  💳 Subscribe Now ($2.99/month)
-                </a>
+                {isIOSPlatform() ? (
+                  <button
+                    onClick={handleGateCheckAndLaunch}
+                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
+                  >
+                    💳 Unlock Pro Access ($2.99/month)
+                  </button>
+                ) : (
+                  <a
+                    href="https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=2.99&amountHash=50954d4d775e1b695075d6cd0d1294c8cb703bee5b3b641c3ab061bf52f41803"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
+                  >
+                    💳 Subscribe Now ($2.99/month)
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -986,14 +1023,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /><span>14-Day Money-Back Guarantee</span></div>
               </div>
 
-              <a
-                href="https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=29.99&amountHash=a3d5f6510e8f99715faa83f4534261aa00ae5e18a916916a043e4b8fe2e303f4"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
-              >
-                💳 Complete Annual Checkout ($29.99/yr) →
-              </a>
+              {isIOSPlatform() ? (
+                <button
+                  onClick={handleGateCheckAndLaunch}
+                  className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
+                >
+                  💳 Unlock Annual Pro ($29.99/yr) →
+                </button>
+              ) : (
+                <a
+                  href="https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=29.99&amountHash=a3d5f6510e8f99715faa83f4534261aa00ae5e18a916916a043e4b8fe2e303f4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
+                >
+                  💳 Complete Annual Checkout ($29.99/yr) →
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -1025,14 +1071,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Priority IT Support & Enterprise Specs</span></div>
               </div>
 
-              <a
-                href="https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=99.99&amountHash=593108da3e6c466ca37c3e0c5928e9e8b068c04b3c02ba4d050060bf2dc7da69"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
-              >
-                💎 Pay Once $99.99 - Unlock Lifetime VIP →
-              </a>
+              {isIOSPlatform() ? (
+                <button
+                  onClick={handleGateCheckAndLaunch}
+                  className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
+                >
+                  💎 Unlock Lifetime VIP Access →
+                </button>
+              ) : (
+                <a
+                  href="https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=99.99&amountHash=593108da3e6c466ca37c3e0c5928e9e8b068c04b3c02ba4d050060bf2dc7da69"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
+                >
+                  💎 Pay Once $99.99 - Unlock Lifetime VIP →
+                </a>
+              )}
             </div>
           </div>
         </div>
