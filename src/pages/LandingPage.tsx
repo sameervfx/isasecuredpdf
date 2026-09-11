@@ -138,8 +138,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     : 'text-sm sm:text-lg font-extrabold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent tracking-tight whitespace-nowrap';
 
   const cardBgClass = isLight
-    ? 'bg-white border border-slate-200/90 shadow-lg text-slate-900'
-    : 'bg-slate-900/90 border border-slate-800 text-slate-100';
+    ? 'bg-white border-2 border-slate-200/90 shadow-lg text-slate-900'
+    : 'bg-slate-900/90 border-2 border-slate-800 text-slate-100';
 
   const cardTitleClass = isLight ? 'text-slate-900 font-extrabold' : 'text-white font-bold';
   const cardDescClass = isLight ? 'text-slate-700 font-medium' : 'text-slate-400';
@@ -533,24 +533,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
             {/* Free Starter */}
-            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-slate-400 transition`}>
-              <div>
-                <div className="flex items-center justify-between min-h-[28px] mb-1">
-                  <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Free Starter</h3>
-                </div>
-                <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>For casual web viewing & editing.</p>
-                
-                <div className="min-h-[64px] flex flex-col justify-end mb-6">
-                  <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                    {SUPPORTED_CURRENCIES[currencyCode]?.symbol || '$'}0 <span className={`text-xs ${cardDescClass} font-normal`}>/ forever</span>
+            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-slate-400 transition h-full`}>
+              <div className="flex flex-col flex-1 justify-between">
+                <div>
+                  <div className="flex items-center justify-between min-h-[32px] mb-1">
+                    <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Free Starter</h3>
                   </div>
-                </div>
+                  <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>For casual web viewing & editing.</p>
+                  
+                  <div className="min-h-[64px] flex flex-col justify-end mb-6">
+                    <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
+                      {SUPPORTED_CURRENCIES[currencyCode]?.symbol || '$'}0 <span className={`text-xs ${cardDescClass} font-normal`}>/ forever</span>
+                    </div>
+                  </div>
 
-                <ul className={`space-y-3 text-xs ${cardDescClass}`}>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Editing Tools</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Annotation</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Zero Registration Barrier</span></li>
-                </ul>
+                  <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Editing Tools</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Annotation</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Zero Registration Barrier</span></li>
+                  </ul>
+                </div>
               </div>
 
               <button
@@ -562,35 +564,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Pro Monthly */}
-            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition`}>
-              <div>
-                <div className="flex items-center justify-between min-h-[28px] mb-1">
-                  <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Pro Monthly</h3>
-                  {currencyCode === 'INR' && (
-                    <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full shrink-0">Introductory Offer</span>
-                  )}
-                </div>
-                <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>For active power users & creators.</p>
-                
-                <div className="min-h-[64px] flex flex-col justify-end mb-6">
-                  {SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly && (
-                    <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                      <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly}</span>
-                      <span className="text-[10px] font-extrabold text-cyan-300 bg-cyan-500/20 border border-cyan-500/40 px-1.5 py-0.5 rounded">
-                        {SUPPORTED_CURRENCIES[currencyCode]?.monthlyDiscountPercent || '33% OFF'}
-                      </span>
-                    </div>
-                  )}
-                  <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                    {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition h-full`}>
+              <div className="flex flex-col flex-1 justify-between">
+                <div>
+                  <div className="flex items-center justify-between min-h-[32px] mb-1">
+                    <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Pro Monthly</h3>
+                    {currencyCode === 'INR' && (
+                      <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full shrink-0">Introductory Offer</span>
+                    )}
                   </div>
-                </div>
+                  <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>For active power users & creators.</p>
+                  
+                  <div className="min-h-[64px] flex flex-col justify-end mb-6">
+                    {SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly && (
+                      <div className="flex items-center space-x-2 mb-0.5 text-xs">
+                        <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly}</span>
+                        <span className="text-[10px] font-extrabold text-cyan-300 bg-cyan-500/20 border border-cyan-500/40 px-1.5 py-0.5 rounded">
+                          {SUPPORTED_CURRENCIES[currencyCode]?.monthlyDiscountPercent || '33% OFF'}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
+                      {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                    </div>
+                  </div>
 
-                <ul className={`space-y-3 text-xs ${cardDescClass}`}>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited In-Browser Compressions & Passwords</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>High-DPI 4K Vector Supersampling</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Custom Image Seals & Unlimited Watermarks</span></li>
-                </ul>
+                  <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited In-Browser Compressions & Passwords</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>High-DPI 4K Vector Supersampling</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Custom Image Seals & Unlimited Watermarks</span></li>
+                  </ul>
+                </div>
               </div>
 
               {isIOSPlatform() ? (
@@ -613,39 +617,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Pro Annual */}
-            <div className={`${cardBgClass} border-2 border-cyan-500 rounded-3xl p-6 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10 transform lg:-translate-y-2`}>
+            <div className={`${cardBgClass} border-2 border-cyan-500 rounded-3xl p-6 flex flex-col justify-between relative shadow-xl shadow-cyan-500/10 h-full`}>
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-lg whitespace-nowrap">
                 Most Popular
               </div>
 
-              <div>
-                <div className="flex items-center justify-between min-h-[28px] mb-1">
-                  <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Pro Annual</h3>
-                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
-                    {currencyCode === 'INR' ? 'Intro Offer • Save 55%' : 'Save 55%'}
-                  </span>
-                </div>
-                <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>Complete web & desktop freedom.</p>
-                
-                <div className="min-h-[64px] flex flex-col justify-end mb-6">
-                  {SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual && (
-                    <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                      <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual}</span>
-                      <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 rounded">
-                        {SUPPORTED_CURRENCIES[currencyCode]?.annualDiscountPercent || '33% OFF'}
-                      </span>
-                    </div>
-                  )}
-                  <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                    {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+              <div className="flex flex-col flex-1 justify-between">
+                <div>
+                  <div className="flex items-center justify-between min-h-[32px] mb-1">
+                    <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Pro Annual</h3>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
+                      {currencyCode === 'INR' ? 'Intro Offer • Save 55%' : 'Save 55%'}
+                    </span>
                   </div>
-                </div>
+                  <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>Complete web & desktop freedom.</p>
+                  
+                  <div className="min-h-[64px] flex flex-col justify-end mb-6">
+                    {SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual && (
+                      <div className="flex items-center space-x-2 mb-0.5 text-xs">
+                        <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual}</span>
+                        <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 rounded">
+                          {SUPPORTED_CURRENCIES[currencyCode]?.annualDiscountPercent || '33% OFF'}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
+                      {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                    </div>
+                  </div>
 
-                <ul className={`space-y-3 text-xs ${cardDescClass}`}>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Everything in Monthly Plan</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Full Offline Standalone / PWA Execution</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Air-Gapped Offline Execution</span></li>
-                </ul>
+                  <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Everything in Monthly Plan</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Full Offline Standalone / PWA Execution</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Air-Gapped Offline Execution</span></li>
+                  </ul>
+                </div>
               </div>
 
               {isIOSPlatform() ? (
@@ -668,38 +674,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Lifetime License */}
-            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition`}>
-              <div>
-                <div className="flex items-center justify-between min-h-[28px] mb-1">
-                  <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap shrink-0`}>Lifetime License</h3>
-                  {currencyCode === 'INR' && (
-                    <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-2 py-0.5 rounded-full shrink-0 ml-1">Special Intro Offer</span>
-                  )}
-                </div>
-                <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>One-time investment forever.</p>
-                
-                <div className="min-h-[64px] flex flex-col justify-end mb-6">
-                  {SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime && (
-                    <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                      <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime}</span>
-                      <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 rounded">
-                        {SUPPORTED_CURRENCIES[currencyCode]?.lifetimeDiscountPercent || '38% OFF'}
-                      </span>
-                    </div>
-                  )}
-                  <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                    {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+            <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition h-full`}>
+              <div className="flex flex-col flex-1 justify-between">
+                <div>
+                  <div className="flex items-center justify-between min-h-[32px] mb-1">
+                    <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap shrink-0`}>Lifetime License</h3>
+                    {currencyCode === 'INR' && (
+                      <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-2 py-0.5 rounded-full shrink-0 ml-1">Special Intro Offer</span>
+                    )}
                   </div>
-                </div>
+                  <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>One-time investment forever.</p>
+                  
+                  <div className="min-h-[64px] flex flex-col justify-end mb-6">
+                    {SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime && (
+                      <div className="flex items-center space-x-2 mb-0.5 text-xs">
+                        <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime}</span>
+                        <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 rounded">
+                          {SUPPORTED_CURRENCIES[currencyCode]?.lifetimeDiscountPercent || '38% OFF'}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
+                      {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                    </div>
+                  </div>
 
-                <ul className={`space-y-3 text-xs ${cardDescClass}`}>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>All future Pro Web & Desktop App updates included**</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>Priority IT & Compliance Support</span></li>
-                </ul>
-                <p className="text-[10px] text-slate-500 mt-3 font-normal leading-tight">
-                  **Subject to core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
-                </p>
+                  <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>All future Pro Web & Desktop App updates included**</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>Priority IT & Compliance Support</span></li>
+                  </ul>
+                </div>
               </div>
 
               {isIOSPlatform() ? (
@@ -722,8 +727,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
+          {/* Footnote for Lifetime License updates notice */}
+          <p className="text-[11px] text-slate-400 text-center mt-5 font-normal max-w-3xl mx-auto">
+            ** Lifetime License includes all future core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
+          </p>
+
           {/* Subscription Policy Terms Disclosure Footer */}
-          <div className="mt-10 p-4 bg-slate-900/80 border border-slate-800 rounded-2xl text-xs text-slate-400 max-w-4xl mx-auto text-center space-y-1">
+          <div className="mt-8 p-4 bg-slate-900/80 border border-slate-800 rounded-2xl text-xs text-slate-400 max-w-4xl mx-auto text-center space-y-1">
             <p className="font-bold text-slate-200">
               📋 Subscriptions & Billing Policy Notice:
             </p>

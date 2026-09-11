@@ -222,7 +222,16 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
  */
 export function detectUserCurrency(): string {
   try {
-    // 1. Check saved currency preference in localStorage first
+    // 0. Check URL query param override first (e.g. ?currency=USD or ?curr=USD)
+    if (typeof window !== 'undefined' && window.location) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCurr = (urlParams.get('currency') || urlParams.get('curr') || '').toUpperCase();
+      if (urlCurr && SUPPORTED_CURRENCIES[urlCurr]) {
+        return urlCurr;
+      }
+    }
+
+    // 1. Check saved currency preference in localStorage
     const saved = localStorage.getItem('isa_user_currency');
     if (saved && SUPPORTED_CURRENCIES[saved]) {
       return saved;
@@ -233,7 +242,8 @@ export function detectUserCurrency(): string {
 
     // 2. Comprehensive Canadian detection
     if (
-      lang.includes('ca') ||
+      lang.includes('-ca') ||
+      lang.startsWith('ca-') ||
       timeZone.includes('canada') ||
       timeZone.includes('toronto') ||
       timeZone.includes('vancouver') ||
