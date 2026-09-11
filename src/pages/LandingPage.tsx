@@ -529,27 +529,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500 mb-3">Flexible Plans</h2>
             <p className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass}`}>Simple, Transparent Pricing</p>
             <p className={`text-sm ${cardDescClass} mt-3 mb-6`}>No hidden fees. 14-Day Money-Back Guarantee (less processing fees).</p>
-
-            {/* Currency Selector Switcher */}
-            <div className="inline-flex items-center space-x-2 bg-slate-900 border border-slate-700/80 px-4 py-2 rounded-2xl text-xs font-semibold text-cyan-300 shadow-md">
-              <Globe className="w-4 h-4 text-cyan-400" />
-              <span>Display Currency:</span>
-              <select
-                value={currencyCode}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCurrencyCode(val);
-                  saveUserCurrency(val);
-                }}
-                className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
-              >
-                {Object.values(SUPPORTED_CURRENCIES).map((curr) => (
-                  <option key={curr.code} value={curr.code} className="bg-slate-900 text-slate-100">
-                    {curr.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -580,7 +559,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Pro Monthly */}
             <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-cyan-500/50 transition`}>
               <div>
-                <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Pro Monthly</h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className={`text-base font-bold ${cardTitleClass}`}>Pro Monthly</h3>
+                  {currencyCode === 'INR' && (
+                    <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/15 border border-cyan-500/30 px-2 py-0.5 rounded-full">Introductory Offer</span>
+                  )}
+                </div>
                 <p className={`text-xs ${cardDescClass} mb-4`}>For active power users & creators.</p>
                 <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
                   {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
@@ -621,7 +605,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className={`text-base font-bold ${cardTitleClass}`}>Pro Annual</h3>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">Save 55%</span>
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                    {currencyCode === 'INR' ? 'Introductory Offer • Save 55%' : 'Save 55%'}
+                  </span>
                 </div>
                 <p className={`text-xs ${cardDescClass} mb-4`}>Complete web & desktop freedom.</p>
                 <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
@@ -657,7 +643,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Lifetime License */}
             <div className={`${cardBgClass} rounded-3xl p-6 flex flex-col justify-between hover:border-purple-500/50 transition`}>
               <div>
-                <h3 className={`text-base font-bold ${cardTitleClass} mb-1`}>Lifetime License</h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className={`text-base font-bold ${cardTitleClass}`}>Lifetime License</h3>
+                  {currencyCode === 'INR' && (
+                    <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-2 py-0.5 rounded-full">Special Introductory Offer</span>
+                  )}
+                </div>
                 <p className={`text-xs ${cardDescClass} mb-4`}>One-time investment forever.</p>
                 <div className={`text-3xl font-extrabold ${cardTitleClass} mb-6`}>
                   {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
@@ -665,9 +656,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <ul className={`space-y-3 text-xs ${cardDescClass}`}>
                   <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
-                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>All future Pro Web & Desktop App updates included</span></li>
+                  <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>All future Pro Web & Desktop App updates included**</span></li>
                   <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>Priority IT & Compliance Support</span></li>
                 </ul>
+                <p className="text-[10px] text-slate-500 mt-3 font-normal leading-tight">
+                  **Subject to core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
+                </p>
               </div>
 
               {isIOSPlatform() ? (
@@ -1107,8 +1101,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="space-y-4 my-6">
               <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl space-y-2 text-xs text-slate-300">
                 <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Zero recurring fees forever</span></div>
-                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Lifetime access to Web & Desktop App updates</span></div>
+                <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Lifetime access to Web & Desktop App updates**</span></div>
                 <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" /><span>Priority IT Support & Enterprise Specs</span></div>
+                <p className="text-[10px] text-slate-500 mt-2 font-normal leading-tight">
+                  **Subject to core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
+                </p>
               </div>
 
               {isIOSPlatform() ? (

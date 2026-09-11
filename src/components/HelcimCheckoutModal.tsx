@@ -116,26 +116,6 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* Localized Currency Selector */}
-            <div className="relative flex items-center bg-slate-950/80 border border-slate-700 rounded-xl px-2.5 py-1 text-xs font-semibold text-cyan-300 space-x-1">
-              <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <select
-                value={currencyCode}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCurrencyCode(val);
-                  saveUserCurrency(val);
-                }}
-                className="bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer pr-1"
-              >
-                {Object.values(SUPPORTED_CURRENCIES).map((curr) => (
-                  <option key={curr.code} value={curr.code} className="bg-slate-900 text-slate-100">
-                    {curr.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <button
               onClick={onClose}
               className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
