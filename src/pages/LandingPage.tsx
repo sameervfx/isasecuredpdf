@@ -162,11 +162,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Left: Brand Logo & Title */}
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
-            <img src={appLogo} alt="ISASecuredPDF Suite Logo" className="w-full h-full object-cover" />
+            <img src={appLogo} alt="ISASecuredPDF Logo" className="w-full h-full object-cover" />
           </div>
           <div className="flex items-center space-x-1.5">
             <span className={brandTextClass}>
-              ISASecuredPDF Suite
+              ISASecuredPDF
             </span>
           </div>
         </div>
