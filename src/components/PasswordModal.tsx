@@ -9,6 +9,8 @@ interface PasswordModalProps {
   fileName: string;
   onApplyDecryptedPDF: (decryptedBytes: Uint8Array) => void;
   initialMode?: 'protect' | 'unlock';
+  isProActive?: boolean;
+  onOpenCheckout?: () => void;
 }
 
 export const PasswordModal: React.FC<PasswordModalProps> = ({
@@ -18,6 +20,8 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
   fileName,
   onApplyDecryptedPDF,
   initialMode = 'protect',
+  isProActive = false,
+  onOpenCheckout,
 }) => {
   const [activeTab, setActiveTab] = useState<'protect' | 'unlock'>(initialMode);
   
@@ -40,6 +44,16 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
   const handleProtect = async (shouldDownload: boolean) => {
     setErrorMessage('');
     setSuccessMessage('');
+
+    if (!isProActive) {
+      if (onOpenCheckout) {
+        onClose();
+        onOpenCheckout();
+      } else {
+        setErrorMessage('AES-256 PDF Password Encryption is a Pro feature ($2.99 USD).');
+      }
+      return;
+    }
 
     if (!pdfBytes) {
       setErrorMessage('No PDF document loaded.');
@@ -203,6 +217,27 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
 
           {activeTab === 'protect' ? (
             <div className="space-y-4">
+              {!isProActive && (
+                <div className="p-3.5 bg-purple-950/40 border border-purple-500/40 rounded-xl text-xs text-purple-200 flex items-center justify-between gap-3 shadow-lg">
+                  <div>
+                    <div className="font-bold flex items-center space-x-1.5 text-purple-300">
+                      <Lock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                      <span>Pro Feature: AES-256 PDF Encryption</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">Password protection requires Pro Access ($2.99 USD)</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      if (onOpenCheckout) onOpenCheckout();
+                    }}
+                    className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-md transition shrink-0 hover:scale-105 active:scale-95"
+                  >
+                    Unlock Pro
+                  </button>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300 flex items-center space-x-1.5">
                   <KeyRound className="w-3.5 h-3.5 text-cyan-400" />

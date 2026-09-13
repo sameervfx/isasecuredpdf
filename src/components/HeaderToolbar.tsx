@@ -53,6 +53,7 @@ import {
   Minus,
   Lock,
   Unlock,
+  Crown,
   Camera,
   Smartphone,
   Apple
@@ -283,8 +284,19 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
     }
   }, [isFileMenuOpen]);
 
-  // Click/Touch outside to close dropdowns
+  // Click/Touch/Resize outside to close dropdowns cleanly
   useEffect(() => {
+    const handleCloseAll = () => {
+      setPopoverPos({ name: '', left: 0, top: 0 });
+      setIsTextDropdownOpen(false);
+      setIsAnnotateDropdownOpen(false);
+      setIsSignDropdownOpen(false);
+      setIsSecurityDropdownOpen(false);
+      setIsMoreToolsOpen(false);
+      setIsFileMenuOpen(false);
+      setIsRecentSubmenuOpen(false);
+    };
+
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const rawTarget = e.target as Node | null;
       const target = (rawTarget instanceof Element ? rawTarget : rawTarget?.parentElement) as HTMLElement | null;
@@ -298,21 +310,17 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
         (fileMenuRef.current && fileMenuRef.current.contains(rawTarget));
 
       if (!isClickOnPopover && !isClickInsideTrigger) {
-        setPopoverPos({ name: '', left: 0, top: 0 });
-        setIsTextDropdownOpen(false);
-        setIsAnnotateDropdownOpen(false);
-        setIsSignDropdownOpen(false);
-        setIsSecurityDropdownOpen(false);
-        setIsMoreToolsOpen(false);
-        setIsFileMenuOpen(false);
-        setIsRecentSubmenuOpen(false);
+        handleCloseAll();
       }
     };
+
     window.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('touchstart', handleClickOutside);
+    window.addEventListener('touchstart', handleClickOutside, { passive: true });
+    window.addEventListener('resize', handleCloseAll);
     return () => {
       window.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('touchstart', handleClickOutside);
+      window.removeEventListener('resize', handleCloseAll);
     };
   }, []);
 
@@ -377,7 +385,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     top: `${popoverPos.top}px`,
                     zIndex: 999999,
                   }}
-                  className="w-48 sm:w-52 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-1.5 flex flex-col space-y-1 text-xs opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+                  className="w-48 sm:w-52 max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-1.5 flex flex-col space-y-1 text-xs opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
                 >
                   {/* File Operations */}
                   <button
@@ -729,7 +737,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     top: `${popoverPos.top}px`,
                     zIndex: 999999,
                   }}
-                  className="w-52 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-2 animate-fadeIn opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+                  className="w-52 max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-2 animate-fadeIn opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
                 >
                   <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 border-b border-slate-800 pb-1 flex items-center justify-between">
                     <span>Text Formatting & Style</span>
@@ -852,7 +860,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           {/* Annotate & Markups Dropdown */}
           <div className="relative shrink-0" ref={annotateDropdownRef}>
             <button
-              onClick={() => toggleDropdown('annotate', annotateDropdownRef, 208)}
+              onClick={() => toggleDropdown('annotate', annotateDropdownRef, 256)}
               title="Annotations, Markups, Vector Shapes, Stamps & Forms"
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isAnnotateActive || (isAnnotateDropdownOpen && popoverPos.name === 'annotate')
@@ -907,7 +915,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   top: `${popoverPos.top}px`,
                   zIndex: 999999,
                 }}
-                className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 animate-fadeIn"
+                className="w-64 max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 animate-fadeIn touch-manipulation"
               >
                 <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
                   Markups & Freehand
@@ -1057,24 +1065,24 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   </div>
 
                   {/* Shape Controls: Stroke & Fill */}
-                  <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-800">
-                    <div className="flex items-center space-x-1">
-                      <span className="text-slate-400">Stroke:</span>
+                  <div className="flex items-center justify-between text-[10px] pt-1.5 border-t border-slate-800 gap-1.5 px-0.5">
+                    <div className="flex items-center space-x-1 shrink-0">
+                      <span className="text-slate-400 font-medium">Stroke:</span>
                       <input
                         type="color"
                         value={shapeStrokeColor || '#3b82f6'}
                         onChange={(e) => setShapeStrokeColor && setShapeStrokeColor(e.target.value)}
-                        className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent shrink-0"
                         title="Stroke Color"
                       />
                     </div>
 
-                    <div className="flex items-center space-x-1">
-                      <span className="text-slate-400">Fill:</span>
+                    <div className="flex items-center space-x-1 shrink-0">
+                      <span className="text-slate-400 font-medium">Fill:</span>
                       <select
                         value={shapeFillColor || 'transparent'}
                         onChange={(e) => setShapeFillColor && setShapeFillColor(e.target.value)}
-                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold"
+                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold cursor-pointer hover:border-slate-500 transition"
                       >
                         <option value="transparent">None</option>
                         <option value="#3b82f6">Blue</option>
@@ -1086,12 +1094,12 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                       </select>
                     </div>
 
-                    <div className="flex items-center space-x-1">
-                      <span className="text-slate-400">Width:</span>
+                    <div className="flex items-center space-x-1 shrink-0">
+                      <span className="text-slate-400 font-medium">Width:</span>
                       <select
                         value={shapeStrokeWidth || 2}
                         onChange={(e) => setShapeStrokeWidth && setShapeStrokeWidth(Number(e.target.value))}
-                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold"
+                        className="bg-slate-950 text-slate-200 text-[9px] border border-slate-700 rounded px-1 py-0.5 font-bold cursor-pointer hover:border-slate-500 transition"
                       >
                         <option value={1}>1px</option>
                         <option value={2}>2px</option>
@@ -1131,7 +1139,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   top: `${popoverPos.top}px`,
                   zIndex: 999999,
                 }}
-                className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-2 opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+                className="w-56 max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-2 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
               >
                 <button
                   onClick={() => {
@@ -1147,12 +1155,21 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 <button
                   onClick={() => {
                     setIsSignDropdownOpen(false);
+                    if (!isProActive) {
+                      if (onOpenCheckout) onOpenCheckout();
+                      return;
+                    }
                     onOpenSignatureModal('upload');
                   }}
-                  className="w-full flex items-center space-x-2.5 px-3 py-2 text-left text-xs font-semibold text-white hover:bg-slate-800 rounded-lg transition"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold text-white hover:bg-slate-800 rounded-lg transition group"
                 >
-                  <Upload className="w-4 h-4 text-cyan-400" />
-                  <span>Upload Image (JPG/PNG)...</span>
+                  <div className="flex items-center space-x-2.5">
+                    <Upload className="w-4 h-4 text-cyan-400" />
+                    <span>Upload Image (JPG/PNG)...</span>
+                  </div>
+                  {!isProActive && (
+                    <span className="text-[9px] font-extrabold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">PRO</span>
+                  )}
                 </button>
 
                 {/* Saved Signatures Section */}
@@ -1194,7 +1211,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           {/* Security Dropdown Button */}
           <div className="relative shrink-0" ref={securityDropdownRef}>
             <button
-              onClick={() => toggleDropdown('security', securityDropdownRef, 224)}
+              onClick={() => toggleDropdown('security', securityDropdownRef, 288)}
               title="Protect PDF (AES-256 Password) & Unlock PDF (Remove Password)"
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isSecurityDropdownOpen && popoverPos.name === 'security'
@@ -1204,6 +1221,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             >
               <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
               <span>Security</span>
+              {!isProActive && <Crown className="w-3 h-3 text-amber-400 shrink-0 ml-0.5" />}
               <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
             </button>
 
@@ -1217,28 +1235,41 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   top: `${popoverPos.top}px`,
                   zIndex: 999999,
                 }}
-                className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-1.5 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 animate-fadeIn"
+                className="w-72 max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-2 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 animate-fadeIn touch-manipulation"
               >
-                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
-                  PDF Encryption & Password Control
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1 flex items-center justify-between">
+                  <span>PDF Security & Encryption</span>
                 </div>
 
-                {/* Protect PDF (Add Password) */}
+                {/* Protect PDF (Add Password) - Pro Gated */}
                 <button
                   onClick={() => {
                     setIsSecurityDropdownOpen(false);
-                    if (onOpenPasswordModal) onOpenPasswordModal('protect');
+                    if (!isProActive) {
+                      if (onOpenCheckout) onOpenCheckout();
+                    } else {
+                      if (onOpenPasswordModal) onOpenPasswordModal('protect');
+                    }
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group gap-3"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <Lock className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Protect PDF</div>
-                      <div className="text-[10px] text-slate-400">Add AES-256 password & permissions</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <Lock className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-white truncate">Protect PDF</div>
+                      <div className="text-[10px] text-slate-400 truncate">AES-256 password & permissions</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Protect</span>
+                  {!isProActive ? (
+                    <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full shadow shrink-0 flex items-center space-x-1">
+                      <Crown className="w-2.5 h-2.5 text-amber-300" />
+                      <span>PRO</span>
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30 shrink-0">
+                      AES-256
+                    </span>
+                  )}
                 </button>
 
                 {/* Unlock PDF (Remove Password) */}
@@ -1247,16 +1278,16 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     setIsSecurityDropdownOpen(false);
                     if (onOpenPasswordModal) onOpenPasswordModal('unlock');
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group gap-3"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <Unlock className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Unlock PDF</div>
-                      <div className="text-[10px] text-slate-400">Remove password & decrypt PDF</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <Unlock className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-white truncate">Unlock PDF</div>
+                      <div className="text-[10px] text-slate-400 truncate">Remove password & decrypt PDF</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Unlock</span>
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30 shrink-0">Free</span>
                 </button>
               </div>,
               document.body
@@ -1266,7 +1297,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           {/* Expanded Feature Modules Dropdown */}
           <div className="relative shrink-0" ref={moreToolsRef}>
             <button
-              onClick={() => toggleDropdown('tools', moreToolsRef, 224)}
+              onClick={() => toggleDropdown('tools', moreToolsRef, 280)}
               title="More Feature Modules (Compress, Watermark, Split, Templates)"
               className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isMoreToolsOpen && popoverPos.name === 'tools'
@@ -1289,10 +1320,11 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   top: `${popoverPos.top}px`,
                   zIndex: 999999,
                 }}
-                className="w-56 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100"
+                className="w-72 max-w-[calc(100vw-24px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-1 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 animate-fadeIn touch-manipulation"
               >
-                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 pb-1 mb-1">
-                  Feature Modules
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 pb-1.5 mb-1 flex items-center justify-between">
+                  <span>Feature Modules</span>
+                  <span className="text-[9px] font-bold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">PDF Suite Tools</span>
                 </div>
 
                 {/* Scan Document via Camera */}
@@ -1301,19 +1333,17 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     setIsMoreToolsOpen(false);
                     if (onOpenScanModal) onOpenScanModal();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <Camera className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Scan Document (Camera)</div>
-                      <div className="text-[10px] text-slate-400">Snap & convert paper to PDF</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <Camera className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition shrink-0 self-center" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">Scan Document (Camera)</div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">Snap & convert paper to PDF</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Scanner</span>
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30 shrink-0 self-center">Scanner</span>
                 </button>
-
-
 
                 {/* Add Image / Logo Attachment */}
                 <button
@@ -1321,16 +1351,16 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     setIsMoreToolsOpen(false);
                     imageFileInputRef.current?.click();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <ImageIcon className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Add Image / Logo</div>
-                      <div className="text-[10px] text-slate-400">Attach PNG/JPG stamp on page</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <ImageIcon className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0 self-center" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">Add Image / Logo</div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">Attach PNG/JPG stamp on page</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Stamp</span>
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30 shrink-0 self-center">Stamp</span>
                 </button>
 
                 {/* Compress PDF */}
@@ -1339,16 +1369,16 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     setIsMoreToolsOpen(false);
                     if (onOpenCompressModal) onOpenCompressModal();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <Zap className="w-4 h-4 text-amber-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Compress PDF</div>
-                      <div className="text-[10px] text-slate-400">Reduce file size (Medium, High, Lossless)</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <Zap className="w-4 h-4 text-amber-400 group-hover:scale-110 transition shrink-0 self-center" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">Compress PDF</div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">Reduce file size (Medium, High, Lossless)</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/30">Size</span>
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/30 shrink-0 self-center">Size</span>
                 </button>
 
                 {/* 1. Request E-Signature */}
@@ -1357,16 +1387,16 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     setIsMoreToolsOpen(false);
                     onOpenSignatureModal('draw');
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <FileCheck className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Request E-Signature</div>
-                      <div className="text-[10px] text-slate-400">Send contract for digital sign-off</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <FileCheck className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition shrink-0 self-center" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">Request E-Signature</div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">Send contract for digital sign-off</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30">Upcoming</span>
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30 shrink-0 self-center">Upcoming</span>
                 </button>
 
                 {/* 2. Split & Extract Pages */}
@@ -1375,34 +1405,34 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     setIsMoreToolsOpen(false);
                     onOpenPageManager();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <Scissors className="w-4 h-4 text-purple-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Split & Extract Pages</div>
-                      <div className="text-[10px] text-slate-400">Extract ranges into new PDFs</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <Scissors className="w-4 h-4 text-purple-400 group-hover:scale-110 transition shrink-0 self-center" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">Split & Extract Pages</div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">Extract ranges into new PDFs</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded-full border border-purple-500/30">Active</span>
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-purple-500/10 text-purple-400 rounded-full border border-purple-500/30 shrink-0 self-center">Active</span>
                 </button>
 
-                {/* 3. Template Library (NDAs, Invoices, Letters) */}
+                {/* 3. Template Library */}
                 <button
                   onClick={() => {
                     setIsMoreToolsOpen(false);
                     onOpenCreateModal();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <BookOpen className="w-4 h-4 text-amber-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white">Template Library</div>
-                      <div className="text-[10px] text-slate-400">NDAs, Invoices, Contracts</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <BookOpen className="w-4 h-4 text-amber-400 group-hover:scale-110 transition shrink-0 self-center" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">Template Library</div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">NDAs, Invoices, Contracts</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/30">Templates</span>
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/30 shrink-0 self-center">Templates</span>
                 </button>
 
                 {/* 4. Apply Watermark / Dynamic Stamps */}
@@ -1415,19 +1445,24 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     }
                     if (onOpenWatermarkModal) onOpenWatermarkModal();
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold rounded-xl text-slate-200 hover:bg-slate-800 transition group"
+                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <Award className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
-                    <div>
-                      <div className="font-bold text-white flex items-center space-x-1">
-                        <span>Apply Watermark & Stamps</span>
-                        {!isProActive && <span className="text-[9px] font-extrabold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">PRO</span>}
-                      </div>
-                      <div className="text-[10px] text-slate-400">CONFIDENTIAL, APPROVED stamps</div>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <Award className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0 self-center" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">Apply Watermark & Stamps</div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">CONFIDENTIAL, APPROVED stamps</div>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Watermark</span>
+                  <div className="flex items-center space-x-1 shrink-0 self-center">
+                    {!isProActive && (
+                      <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/40 flex items-center space-x-0.5">
+                        <Crown className="w-2.5 h-2.5 text-amber-300" />
+                        <span>PRO</span>
+                      </span>
+                    )}
+                    <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30">Watermark</span>
+                  </div>
                 </button>
               </div>,
               document.body

@@ -174,7 +174,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   }`}
                 >
                   <div>
-                    <h4 className="font-bold text-white text-sm">Monthly Pro</h4>
+                    <div className="flex items-center justify-between min-h-[24px]">
+                      <h4 className="font-bold text-white text-sm">Monthly Pro</h4>
+                    </div>
                     {currentPricing.originalMonthly && (
                       <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
                         <span className="line-through text-slate-400">{currentPricing.originalMonthly}</span>
@@ -197,17 +199,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 {/* Annual Plan (Best Value) */}
                 <div
                   onClick={() => setSelectedPlan('annual')}
-                  className={`relative cursor-pointer p-4 rounded-2xl border transition flex flex-col justify-between ${
+                  className={`cursor-pointer p-4 rounded-2xl border transition flex flex-col justify-between ${
                     selectedPlan === 'annual'
-                      ? 'bg-gradient-to-b from-cyan-950/60 to-blue-950/60 border-cyan-400 ring-2 ring-cyan-500/40'
+                      ? 'bg-gradient-to-b from-cyan-950/60 to-blue-950/60 border-cyan-400 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/10'
                       : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                   }`}
                 >
-                  <div className="absolute -top-2.5 right-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow">
-                    Best Value
-                  </div>
                   <div>
-                    <h4 className="font-bold text-white text-sm">Annual Pass</h4>
+                    <div className="flex items-center justify-between min-h-[24px]">
+                      <h4 className="font-bold text-white text-sm">Annual Pass</h4>
+                      <span className="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow shrink-0">
+                        Best Value
+                      </span>
+                    </div>
                     {currentPricing.originalAnnual && (
                       <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
                         <span className="line-through text-slate-400">{currentPricing.originalAnnual}</span>
@@ -237,7 +241,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   }`}
                 >
                   <div>
-                    <h4 className="font-bold text-white text-sm">Lifetime VIP</h4>
+                    <div className="flex items-center justify-between min-h-[24px]">
+                      <h4 className="font-bold text-white text-sm">Lifetime VIP</h4>
+                    </div>
                     {currentPricing.originalLifetime && (
                       <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
                         <span className="line-through text-slate-400">{currentPricing.originalLifetime}</span>

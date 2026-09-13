@@ -50,7 +50,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
     {
       id: 'pro_commercial_lease',
       title: 'Commercial Lease Agreement',
-      desc: 'Legally binding agreement defining the rights, responsibilities, and obligations of both landlord and tenant. Review all terms carefully before signing — once executed, both parties are bound.',
+      desc: 'Legally binding agreement defining the rights, responsibilities, and obligations of landlord and tenant.',
       icon: Building,
       badge: 'PRO',
       tags: 'Legal | Real Estate | Pro Only',
@@ -58,15 +58,31 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
     {
       id: 'pro_nda',
       title: 'Non-Disclosure Agreement (NDA)',
-      desc: 'Comprehensive NDA to protect confidential information between Disclosing and Receiving Parties. Specifies confidentiality obligations, authorized disclosures, and breach remedies for business negotiations.',
+      desc: 'Comprehensive NDA specifying confidentiality obligations, authorized disclosures, and breach remedies.',
       icon: Shield,
       badge: 'PREMIUM',
       tags: 'Business | Legal | Pro Only',
     },
     {
+      id: 'invoice',
+      title: 'Commercial Tax Invoice',
+      desc: 'Professional service billing invoice with itemized table, tax breakdown, and automated total calculation.',
+      icon: Receipt,
+      badge: 'PRO',
+      tags: 'Billing | Commercial | Pro Only',
+    },
+    {
+      id: 'contractor',
+      title: 'Independent Contractor Agreement',
+      desc: 'Service agreement outlining contractor scope of work, deliverables, payment terms, and confidentiality.',
+      icon: FileCheck,
+      badge: 'PRO',
+      tags: 'Services | Contracts | Pro Only',
+    },
+    {
       id: 'pro_roommate_agreement',
-      title: 'Roommate Agreement',
-      desc: 'Adaptable co-living contract for school roommates or housemates sharing living expenses, rent allocations, house rules, and utility payments.',
+      title: 'Roommate Co-Living Contract',
+      desc: 'Adaptable co-living contract for roommates sharing living expenses, rent allocations, and house rules.',
       icon: Home,
       badge: 'PRO',
       tags: 'Personal | Housing | Pro Only',
@@ -74,7 +90,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
     {
       id: 'pro_real_estate_purchase',
       title: 'Real Estate Purchase Agreement',
-      desc: 'Residential Purchase Agreement (RPA) outlining real property terms including purchase price, earnest money deposit, closing dates, contingencies, and disclosures.',
+      desc: 'Residential Purchase Agreement (RPA) outlining property purchase price, earnest deposit, and closing terms.',
       icon: FileText,
       badge: 'PREMIUM',
       tags: 'Real Estate | Contracts | Pro Only',
@@ -153,36 +169,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
           </button>
         </div>
 
-        {/* Jurisdiction Toggle Banner */}
-        <div className="bg-slate-950/90 px-5 py-2.5 border-b border-slate-800 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
-            <span>Governing Legal Framework & Currency:</span>
-          </span>
-          <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl space-x-1">
-            <button
-              type="button"
-              onClick={() => setJurisdiction('US')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 ${
-                jurisdiction === 'US'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <span>🇺🇸 United States</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setJurisdiction('CA')}
-              className={`px-3 py-1 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 ${
-                jurisdiction === 'CA'
-                  ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <span>🇨🇦 Canada</span>
-            </button>
-          </div>
-        </div>
+
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-6 bg-slate-950 overflow-y-auto flex-1">
@@ -260,8 +247,8 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
           {/* SECTION 2: STANDARD TEMPLATES CATEGORY */}
           <div>
             <label className="block text-xs font-bold text-slate-200 mb-2 flex items-center justify-between">
-              <span>Standard Form Templates</span>
-              <span className="text-[10px] font-normal text-cyan-400">9 Ready-to-Use Presets</span>
+              <span>Standard Form Template</span>
+              <span className="text-[10px] font-normal text-cyan-400">Free Blank Canvas</span>
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {standardTemplates.map((tpl) => {

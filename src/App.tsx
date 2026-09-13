@@ -1258,6 +1258,8 @@ export const App: React.FC = () => {
         pdfBytes={docState.fileBytes}
         fileName={docState.fileName}
         initialMode={passwordModalMode}
+        isProActive={isProActive}
+        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
         onApplyDecryptedPDF={(decryptedBytes) => {
           const unlockedName = docState.fileName
             ? docState.fileName.replace(/\.pdf$/i, '_unlocked.pdf')
