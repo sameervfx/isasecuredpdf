@@ -1,4 +1,6 @@
 // Currency and Pricing Localization Utility for Google Play & Global App Stores Compliance
+// Note: All currencies strictly map to USD to comply with Google Play Subscriptions Policy
+// requiring 100% price consistency between offer screens and payment cart checkout amounts.
 
 export interface CurrencyConfig {
   code: string;
@@ -11,14 +13,12 @@ export interface CurrencyConfig {
   monthlyNum: number;
   annualNum: number;
   lifetimeNum: number;
-  // Exact USD Equivalent amounts for Helcim USD Merchant Gateway
   usdMonthlyNum: number;
   usdAnnualNum: number;
   usdLifetimeNum: number;
   usdMonthlyFormatted: string;
   usdAnnualFormatted: string;
   usdLifetimeFormatted: string;
-  // Optional original (crossed-out) prices & discount badges
   originalMonthly?: string;
   originalAnnual?: string;
   originalLifetime?: string;
@@ -27,192 +27,73 @@ export interface CurrencyConfig {
   lifetimeDiscountPercent?: string;
 }
 
+const STANDARD_USD_CONFIG: Omit<CurrencyConfig, 'name' | 'country'> = {
+  code: 'USD',
+  symbol: '$',
+  monthly: '$2.99',
+  annual: '$29.99',
+  lifetime: '$99.99',
+  monthlyNum: 2.99,
+  annualNum: 29.99,
+  lifetimeNum: 99.99,
+  usdMonthlyNum: 2.99,
+  usdAnnualNum: 29.99,
+  usdLifetimeNum: 99.99,
+  usdMonthlyFormatted: '$2.99 USD',
+  usdAnnualFormatted: '$29.99 USD',
+  usdLifetimeFormatted: '$99.99 USD',
+};
+
 export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
   USD: {
-    code: 'USD',
-    symbol: '$',
+    ...STANDARD_USD_CONFIG,
     name: 'USD ($) - United States',
     country: 'United States & Global',
-    monthly: '$2.99',
-    annual: '$29.99',
-    lifetime: '$99.99',
-    monthlyNum: 2.99,
-    annualNum: 29.99,
-    lifetimeNum: 99.99,
-    usdMonthlyNum: 2.99,
-    usdAnnualNum: 29.99,
-    usdLifetimeNum: 99.99,
-    usdMonthlyFormatted: '$2.99 USD',
-    usdAnnualFormatted: '$29.99 USD',
-    usdLifetimeFormatted: '$99.99 USD',
   },
   CAD: {
-    code: 'CAD',
-    symbol: '$',
-    name: 'CAD ($) - Canada',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - Canada',
     country: 'Canada',
-    monthly: '$3.99',
-    annual: '$39.99',
-    lifetime: '$129.99',
-    monthlyNum: 3.99,
-    annualNum: 39.99,
-    lifetimeNum: 129.99,
-    usdMonthlyNum: 2.95,
-    usdAnnualNum: 29.50,
-    usdLifetimeNum: 96.00,
-    usdMonthlyFormatted: '$2.95 USD',
-    usdAnnualFormatted: '$29.50 USD',
-    usdLifetimeFormatted: '$96.00 USD',
   },
   EUR: {
-    code: 'EUR',
-    symbol: '€',
-    name: 'EUR (€) - European Union',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - European Union',
     country: 'European Union',
-    monthly: '€2.99',
-    annual: '€29.99',
-    lifetime: '€89.99',
-    monthlyNum: 2.99,
-    annualNum: 29.99,
-    lifetimeNum: 89.99,
-    usdMonthlyNum: 3.47,
-    usdAnnualNum: 34.70,
-    usdLifetimeNum: 104.40,
-    usdMonthlyFormatted: '$3.47 USD',
-    usdAnnualFormatted: '$34.70 USD',
-    usdLifetimeFormatted: '$104.40 USD',
   },
   GBP: {
-    code: 'GBP',
-    symbol: '£',
-    name: 'GBP (£) - United Kingdom',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - United Kingdom',
     country: 'United Kingdom',
-    monthly: '£2.49',
-    annual: '£24.99',
-    lifetime: '£79.99',
-    monthlyNum: 2.49,
-    annualNum: 24.99,
-    lifetimeNum: 79.99,
-    usdMonthlyNum: 3.26,
-    usdAnnualNum: 32.70,
-    usdLifetimeNum: 104.75,
-    usdMonthlyFormatted: '$3.26 USD',
-    usdAnnualFormatted: '$32.70 USD',
-    usdLifetimeFormatted: '$104.75 USD',
   },
   AUD: {
-    code: 'AUD',
-    symbol: '$',
-    name: 'AUD ($) - Australia',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - Australia',
     country: 'Australia & New Zealand',
-    monthly: '$4.49',
-    annual: '$44.99',
-    lifetime: '$149.99',
-    monthlyNum: 4.49,
-    annualNum: 44.99,
-    lifetimeNum: 149.99,
-    usdMonthlyNum: 2.99,
-    usdAnnualNum: 29.99,
-    usdLifetimeNum: 99.99,
-    usdMonthlyFormatted: '$2.99 USD',
-    usdAnnualFormatted: '$29.99 USD',
-    usdLifetimeFormatted: '$99.99 USD',
   },
   INR: {
-    code: 'INR',
-    symbol: '₹',
-    name: 'INR (₹) - India',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - India',
     country: 'India',
-    monthly: '₹199',
-    annual: '₹1,999',
-    lifetime: '₹4,999',
-    monthlyNum: 199,
-    annualNum: 1999,
-    lifetimeNum: 4999,
-    usdMonthlyNum: 2.38,
-    usdAnnualNum: 23.90,
-    usdLifetimeNum: 59.90,
-    usdMonthlyFormatted: '$2.38 USD',
-    usdAnnualFormatted: '$23.90 USD',
-    usdLifetimeFormatted: '$59.90 USD',
-    originalMonthly: '₹299',
-    originalAnnual: '₹2,999',
-    originalLifetime: '₹7,999',
-    monthlyDiscountPercent: '33% OFF',
-    annualDiscountPercent: '33% OFF',
-    lifetimeDiscountPercent: '38% OFF',
   },
   JPY: {
-    code: 'JPY',
-    symbol: '¥',
-    name: 'JPY (¥) - Japan',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - Japan',
     country: 'Japan',
-    monthly: '¥450',
-    annual: '¥4,500',
-    lifetime: '¥14,800',
-    monthlyNum: 450,
-    annualNum: 4500,
-    lifetimeNum: 14800,
-    usdMonthlyNum: 3.10,
-    usdAnnualNum: 31.00,
-    usdLifetimeNum: 102.00,
-    usdMonthlyFormatted: '$3.10 USD',
-    usdAnnualFormatted: '$31.00 USD',
-    usdLifetimeFormatted: '$102.00 USD',
   },
   BRL: {
-    code: 'BRL',
-    symbol: 'R$',
-    name: 'BRL (R$) - Brazil',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - Brazil',
     country: 'Brazil',
-    monthly: 'R$14.90',
-    annual: 'R$149.90',
-    lifetime: 'R$499.90',
-    monthlyNum: 14.90,
-    annualNum: 149.90,
-    lifetimeNum: 499.90,
-    usdMonthlyNum: 2.71,
-    usdAnnualNum: 27.20,
-    usdLifetimeNum: 90.90,
-    usdMonthlyFormatted: '$2.71 USD',
-    usdAnnualFormatted: '$27.20 USD',
-    usdLifetimeFormatted: '$90.90 USD',
   },
   MXN: {
-    code: 'MXN',
-    symbol: '$',
-    name: 'MXN ($) - Mexico',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - Mexico',
     country: 'Mexico',
-    monthly: '$59',
-    annual: '$599',
-    lifetime: '$1,999',
-    monthlyNum: 59,
-    annualNum: 599,
-    lifetimeNum: 1999,
-    usdMonthlyNum: 3.03,
-    usdAnnualNum: 30.70,
-    usdLifetimeNum: 102.50,
-    usdMonthlyFormatted: '$3.03 USD',
-    usdAnnualFormatted: '$30.70 USD',
-    usdLifetimeFormatted: '$102.50 USD',
   },
   AED: {
-    code: 'AED',
-    symbol: 'AED ',
-    name: 'AED - United Arab Emirates',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - United Arab Emirates',
     country: 'UAE & Gulf States',
-    monthly: 'AED 11',
-    annual: 'AED 110',
-    lifetime: 'AED 399.99',
-    monthlyNum: 11,
-    annualNum: 110,
-    lifetimeNum: 399.99,
-    usdMonthlyNum: 2.99,
-    usdAnnualNum: 29.90,
-    usdLifetimeNum: 108.90,
-    usdMonthlyFormatted: '$2.99 USD',
-    usdAnnualFormatted: '$29.90 USD',
-    usdLifetimeFormatted: '$108.90 USD',
   },
 };
 
@@ -230,7 +111,7 @@ export function detectUserCurrency(): string {
  */
 export function saveUserCurrency(currencyCode: string): void {
   if (SUPPORTED_CURRENCIES[currencyCode]) {
-    localStorage.setItem('isa_user_currency', currencyCode);
+    localStorage.setItem('isa_user_currency', 'USD');
   }
 }
 
@@ -238,7 +119,7 @@ export function saveUserCurrency(currencyCode: string): void {
  * Gets pricing details for a given plan and currency code
  */
 export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', currencyCode: string = 'USD') {
-  const currency = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
+  const currency = SUPPORTED_CURRENCIES.USD;
   const planKey = plan.charAt(0).toUpperCase() + plan.slice(1);
   return {
     formatted: currency[plan],
@@ -247,7 +128,7 @@ export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', cur
     amountNum: currency[`${plan}Num` as keyof CurrencyConfig] as number,
     usdAmountNum: currency[`usd${planKey}Num` as keyof CurrencyConfig] as number,
     usdFormatted: currency[`usd${planKey}Formatted` as keyof CurrencyConfig] as string,
-    originalFormatted: currency[`original${planKey}` as keyof CurrencyConfig] as string | undefined,
-    discountPercent: currency[`${plan}DiscountPercent` as keyof CurrencyConfig] as string | undefined,
+    originalFormatted: undefined,
+    discountPercent: undefined,
   };
 }
