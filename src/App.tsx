@@ -1181,6 +1181,7 @@ export const App: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreatePDF={handleCreateBlankPDF}
+        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
       />
 
       {/* Merge / Combine PDFs Modal */}

@@ -7,12 +7,14 @@ interface CreatePDFModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreatePDF: (options: CreatePDFOptions) => void;
+  onOpenCheckout?: (plan?: 'monthly' | 'annual' | 'lifetime') => void;
 }
 
 export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
   isOpen,
   onClose,
   onCreatePDF,
+  onOpenCheckout,
 }) => {
   const [templateType, setTemplateType] = useState<TemplateType>('blank');
   const [pageSize, setPageSize] = useState<'A4' | 'Letter' | 'Legal'>('Letter');
@@ -99,17 +101,24 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
     }
   };
 
-  const handleCompleteSubscription = () => {
-    try {
-      localStorage.setItem('isasecuredpdf_pro_active', 'true');
-      localStorage.setItem('isa_pro_active', 'true');
-    } catch (e) {}
+  const handleTriggerCheckout = (plan: 'monthly' | 'annual' | 'lifetime') => {
     setIsCheckoutOpen(false);
-
-    if (pendingProTemplate) {
-      onCreatePDF({ pageSize: 'Letter', orientation: 'portrait', pageCount: 1, templateType: pendingProTemplate, jurisdiction });
-      setPendingProTemplate(null);
-      onClose();
+    if (onOpenCheckout) {
+      onOpenCheckout(plan);
+    } else {
+      const baseTokens = {
+        monthly: '8cab3b693d79e2929b76f9',
+        annual: '7c45c83a1f97e5346967ea',
+        lifetime: '6deee5a8794d0282a8c3b2',
+      };
+      const baseAmounts = {
+        monthly: '2.99',
+        annual: '29.99',
+        lifetime: '99.99',
+      };
+      const token = baseTokens[plan];
+      const amount = baseAmounts[plan];
+      window.open(`https://isasecuredpdf.myhelcim.com/hosted/?token=${token}&amount=${amount}`, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -159,7 +168,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <span>🇺🇸 United States ($USD)</span>
+              <span>🇺🇸 United States</span>
             </button>
             <button
               type="button"
@@ -170,7 +179,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <span>🇨🇦 Canada ($CAD)</span>
+              <span>🇨🇦 Canada</span>
             </button>
           </div>
         </div>
@@ -404,43 +413,43 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
 
             <div className="space-y-3">
               <button
-                onClick={handleCompleteSubscription}
+                onClick={() => handleTriggerCheckout('monthly')}
                 className="w-full p-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-2xl text-left transition flex items-center justify-between group"
               >
                 <div>
                   <div className="text-xs font-bold text-white flex items-center space-x-2">
-                    <span>Pro Monthly Subscription</span>
-                    <span className="text-[10px] font-extrabold bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full">7-Day Free Trial</span>
+                    <span>Pro Monthly Plan ($2.99 USD)</span>
+                    <span className="text-[10px] font-extrabold bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full">Save 33%</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">Billed monthly in local currency • Cancel anytime</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">$2.99 USD / month • Billed monthly • Cancel anytime</div>
                 </div>
                 <Sparkles className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
               </button>
 
               <button
-                onClick={handleCompleteSubscription}
+                onClick={() => handleTriggerCheckout('annual')}
                 className="w-full p-4 bg-gradient-to-r from-cyan-950/50 to-blue-950/50 hover:from-cyan-900/60 hover:to-blue-900/60 border border-cyan-500/40 rounded-2xl text-left transition flex items-center justify-between group"
               >
                 <div>
                   <div className="text-xs font-bold text-white flex items-center space-x-2">
-                    <span>Pro Annual Plan</span>
-                    <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Save 20%</span>
+                    <span>Pro Annual Plan ($29.99 USD)</span>
+                    <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Save 55%</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.annual} {currentPricing.code} / year • Web & Desktop binaries</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">$29.99 USD / year • Web & Desktop binaries</div>
                 </div>
                 <ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
               </button>
 
               <button
-                onClick={handleCompleteSubscription}
+                onClick={() => handleTriggerCheckout('lifetime')}
                 className="w-full p-4 bg-slate-950 hover:bg-purple-950/60 border border-purple-500/40 rounded-2xl text-left transition flex items-center justify-between group"
               >
                 <div>
                   <div className="text-xs font-bold text-white flex items-center space-x-2">
-                    <span>Lifetime VIP License</span>
+                    <span>Lifetime VIP License ($99.99 USD)</span>
                     <span className="text-[10px] font-extrabold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">Best Value</span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.lifetime} {currentPricing.code} one-time • Permanent VIP status</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">$99.99 USD one-time • Permanent VIP status</div>
                 </div>
                 <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition" />
               </button>
