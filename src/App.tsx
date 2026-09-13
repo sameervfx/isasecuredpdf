@@ -109,7 +109,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
-      const modeVal = urlParams.get('mode') || urlParams.get('reset') || urlParams.get('vip');
+      const modeVal = urlParams.get('mode') || urlParams.get('reset') || urlParams.get('vip') || urlParams.get('demo');
       
       if (modeVal === 'free' || modeVal === 'reset') {
         localStorage.removeItem('isa_pro_active');
@@ -118,7 +118,16 @@ export const App: React.FC = () => {
         return;
       }
 
-      if (modeVal === 'pro' || modeVal === 'tester' || modeVal === 'family' || modeVal === 'vip') {
+      if (
+        modeVal === 'pro' ||
+        modeVal === 'tester' ||
+        modeVal === 'family' ||
+        modeVal === 'vip' ||
+        modeVal === 'demo' ||
+        modeVal === 'unlocked' ||
+        modeVal === '1' ||
+        modeVal === 'true'
+      ) {
         localStorage.setItem('isa_pro_active', 'true');
         setIsProActive(true);
         setShowProWelcomeModal(true);
