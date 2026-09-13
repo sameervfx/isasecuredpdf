@@ -738,7 +738,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               📋 Subscriptions & Billing Policy Notice:
             </p>
             <p className="leading-relaxed">
-              Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via your Account Settings or Store Account. All displayed prices are shown in localized currency ({SUPPORTED_CURRENCIES[currencyCode]?.code} {SUPPORTED_CURRENCIES[currencyCode]?.symbol}) and match final checkout.
+              Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via your Account Settings or Store Account. All displayed prices are shown in USD ($2.99/mo, $29.99/yr, $99.99 lifetime) and match final checkout.
             </p>
           </div>
         </div>

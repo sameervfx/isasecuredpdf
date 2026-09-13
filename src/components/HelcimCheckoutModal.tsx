@@ -287,7 +287,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   📋 Subscription & Billing Policy Notice:
                 </p>
                 <p>
-                  Subscriptions automatically renew at the end of each billing cycle ({selectedPlan === 'monthly' ? `${currentPricing.monthly} ${currentPricing.code}/month` : selectedPlan === 'annual' ? `${currentPricing.annual} ${currentPricing.code}/year` : `${currentPricing.lifetime} ${currentPricing.code} one-time`}) until canceled. Checkout charges on Helcim are processed as {selectedPriceObj.usdFormatted} (equivalent to {selectedPriceObj.formatted} {currentPricing.code}). You can manage or cancel your subscription anytime via Google Play / App Store settings, or by emailing <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a>.
+                  Subscriptions automatically renew at the end of each billing cycle ({selectedPlan === 'monthly' ? '$2.99 USD/month' : selectedPlan === 'annual' ? '$29.99 USD/year' : '$99.99 USD one-time'}) until canceled. Checkout charges on Helcim match final checkout ({selectedPlan === 'monthly' ? '$2.99 USD' : selectedPlan === 'annual' ? '$29.99 USD' : '$99.99 USD'}). You can manage or cancel your subscription anytime via Google Play / App Store settings, or by emailing <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a>.
                 </p>
               </div>
 
@@ -298,8 +298,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               >
                 <Lock className="w-4 h-4 text-cyan-200" />
                 <span>
-                  Proceed to Checkout ({currentPricing.code === 'USD' ? selectedPriceObj.formatted : `${selectedPriceObj.usdFormatted} USD (${selectedPriceObj.formatted} ${currentPricing.code})`}
-                  {selectedPlan === 'monthly' ? '/mo' : selectedPlan === 'annual' ? '/yr' : ''})
+                  Proceed to Checkout ({selectedPlan === 'monthly' ? '$2.99 USD/mo' : selectedPlan === 'annual' ? '$29.99 USD/yr' : '$99.99 USD'})
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
