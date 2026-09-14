@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Zap } from 'lucide-react';
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { Sidebar } from './components/Sidebar';
 import { ThemePreset, getActiveTheme } from './utils/themeManager';
@@ -110,6 +110,32 @@ export const App: React.FC = () => {
   const activeTheme = getActiveTheme(themePreset);
 
   const [showProWelcomeModal, setShowProWelcomeModal] = useState<boolean>(false);
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState<boolean>(false);
+
+  // 7-Day Free Trial Expiration Evaluator (Runs on App Load & 8th Day Interruption)
+  useEffect(() => {
+    try {
+      const isPaid = localStorage.getItem('isa_pro_active') === 'true';
+      if (isPaid) return;
+
+      const isTrial = localStorage.getItem('isa_pro_trial_active') === 'true';
+      const trialStart = Number(localStorage.getItem('isa_trial_start') || '0');
+
+      if (isTrial && trialStart > 0) {
+        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+        const elapsed = Date.now() - trialStart;
+        if (elapsed >= SEVEN_DAYS_MS) {
+          // Trial expired on 8th day - Interrupt Pro features & prompt for activation
+          localStorage.removeItem('isa_pro_trial_active');
+          setIsProActive(false);
+          setShowTrialExpiredModal(true);
+        } else {
+          // Trial still active
+          setIsProActive(true);
+        }
+      }
+    } catch (e) {}
+  }, []);
 
   // Helcim Payment Redirect Listener & Mode Reset / Tester Unlock
   useEffect(() => {
@@ -1343,6 +1369,42 @@ export const App: React.FC = () => {
             >
               Start Using Pro Features →
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 7-Day Free Trial Expired Notification Modal */}
+      {showTrialExpiredModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-rose-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100 text-center">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl -z-10" />
+            <div className="mx-auto w-14 h-14 bg-gradient-to-tr from-amber-500 to-rose-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-rose-500/20">
+              <Zap className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-extrabold text-white">Your 7-Day Free Trial Ended</h3>
+            <p className="text-xs text-slate-300 my-3 leading-relaxed">
+              Your 7-day free trial expired today. To continue using unlimited PDF compressions, password encryption, legal templates, and 4K vector supersampling without interruption, please activate a plan.
+            </p>
+            <div className="space-y-2 mt-5">
+              <button
+                onClick={() => {
+                  setShowTrialExpiredModal(false);
+                  handleOpenCheckout('monthly');
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition"
+              >
+                Unlock Pro Monthly ($2.99 USD/mo) →
+              </button>
+              <button
+                onClick={() => {
+                  setShowTrialExpiredModal(false);
+                  handleOpenCheckout('lifetime');
+                }}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white font-bold text-xs rounded-xl border border-purple-500/30 transition"
+              >
+                Unlock Lifetime VIP ($99.99 USD)
+              </button>
+            </div>
           </div>
         </div>
       )}
