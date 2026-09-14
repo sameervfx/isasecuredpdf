@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Globe } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing, saveUserCurrency } from '../utils/currencyFormatter';
-import { isIOSPlatform } from '../utils/platform';
+import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
 
 interface HelcimCheckoutModalProps {
   isOpen: boolean;
@@ -26,7 +26,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     setCurrencyCode(detectUserCurrency());
   }, []);
 
-  const isIOS = isIOSPlatform();
+  const isNativeApp = isIOSPlatform() || isNativeMobileApp();
 
   if (!isOpen) return null;
 
@@ -35,7 +35,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
 
   // Dynamic Helcim URL Builder passing exact localized USD equivalent amount
   const getDynamicPayUrl = (plan: 'monthly' | 'annual' | 'lifetime', currency: string) => {
-    if (isIOS) return '';
+    if (isNativeApp) return '';
     const priceInfo = getLocalizedPricing(plan, currency);
     const baseTokens = {
       monthly: '8cab3b693d79e2929b76f9',
@@ -48,8 +48,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
 
   const handleHelcimCheckout = () => {
     trackEvent('pricing_checkout_clicked', `${selectedPlan}_${currencyCode}`);
-    if (isIOS) {
-      onPaymentSuccess('Pro');
+    if (isNativeApp) {
+      onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
       onClose();
       return;
     }
@@ -106,11 +106,11 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
                 <span>Unlock ISA Secure PDF Pro</span>
                 <span className="shrink-0 whitespace-nowrap text-[10px] bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold px-2.5 py-0.5 rounded-md">
-                  {isIOS ? 'iOS Native Pro' : 'Helcim Secure'}
+                  {isNativeApp ? 'Mobile Native Pro' : 'Helcim Secure'}
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                {isIOS ? '100% Client-Side Air-Gapped PDF Suite for iOS' : '100% Client-Side Air-Gapped PDF Suite • Powered by Helcim Gateway'}
+                {isNativeApp ? '100% Client-Side Air-Gapped PDF Suite for Mobile' : '100% Client-Side Air-Gapped PDF Suite • Powered by Helcim Gateway'}
               </p>
             </div>
           </div>
@@ -356,10 +356,10 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
         <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
           <div className="flex items-center space-x-1.5 text-emerald-400 font-medium">
             <ShieldCheck className="w-4 h-4" />
-            <span>{isIOS ? 'Air-Gapped Client-Side Security Guarantee' : '256-Bit SSL Encrypted Helcim Merchant Protection'}</span>
+            <span>{isNativeApp ? 'Air-Gapped Client-Side Security Guarantee' : '256-Bit SSL Encrypted Helcim Merchant Protection'}</span>
           </div>
 
-          <span className="text-slate-500 font-mono text-[10px]">{isIOS ? 'iOS Edition' : 'Merchant ID: Helcim-ISA-Secure'}</span>
+          <span className="text-slate-500 font-mono text-[10px]">{isNativeApp ? 'Mobile Edition' : 'Merchant ID: Helcim-ISA-Secure'}</span>
         </div>
       </div>
     </div>

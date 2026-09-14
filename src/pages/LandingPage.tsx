@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, saveUserCurrency } from '../utils/currencyFormatter';
-import { isIOSPlatform } from '../utils/platform';
+import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
 
 import appLogo from '../assets/app_logo.jpg';
 
@@ -71,6 +71,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   useEffect(() => {
     setCurrencyCode(detectUserCurrency());
   }, []);
+
+  const isNativeApp = isIOSPlatform() || isNativeMobileApp();
 
   const handleGateCheckAndLaunch = () => {
     // 1-click launch straight into editor workspace with zero registration barrier
@@ -597,7 +599,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {isIOSPlatform() ? (
+              {isNativeApp ? (
                 <button
                   onClick={() => setIsProMonthlyModalOpen(true)}
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
@@ -654,7 +656,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {isIOSPlatform() ? (
+              {isNativeApp ? (
                 <button
                   onClick={() => setIsProAnnualModalOpen(true)}
                   className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
@@ -707,7 +709,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {isIOSPlatform() ? (
+              {isNativeApp ? (
                 <button
                   onClick={() => setIsLifetimeModalOpen(true)}
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
@@ -1051,7 +1053,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   🚀 Activate 7-Day Free Trial & Start
                 </button>
 
-                {isIOSPlatform() ? (
+                {isNativeApp ? (
                   <button
                     onClick={handleGateCheckAndLaunch}
                     className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
@@ -1105,7 +1107,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /><span>14-Day Money-Back Guarantee</span></div>
               </div>
 
-              {isIOSPlatform() ? (
+              {isNativeApp ? (
                 <button
                   onClick={handleGateCheckAndLaunch}
                   className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
@@ -1156,7 +1158,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
               </div>
 
-              {isIOSPlatform() ? (
+              {isNativeApp ? (
                 <button
                   onClick={handleGateCheckAndLaunch}
                   className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
