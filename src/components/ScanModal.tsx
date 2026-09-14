@@ -597,37 +597,44 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file, idx) => {
+    const fileList = Array.from(files);
+    const newPagesToAppend: ScannedPage[] = [];
+    let processedCount = 0;
+
+    fileList.forEach((file, idx) => {
       const reader = new FileReader();
       reader.onload = (evt) => {
         const rawDataUrl = evt.target?.result as string;
-        if (!rawDataUrl) return;
+        if (rawDataUrl) {
+          const newPage: ScannedPage = {
+            id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${idx}`,
+            dataUrl: rawDataUrl,
+            originalDataUrl: rawDataUrl,
+            filter: 'none',
+            rotation: 0,
+            brightness: 0,
+            contrast: 0,
+            midTone: 0,
+            cropLeft: 5,
+            cropRight: 5,
+            cropTop: 15,
+            cropBottom: 15,
+          };
+          newPagesToAppend.push(newPage);
+        }
 
-        const newPage: ScannedPage = {
-          id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${idx}`,
-          dataUrl: rawDataUrl,
-          originalDataUrl: rawDataUrl,
-          filter: 'none',
-          rotation: 0,
-          brightness: 0,
-          contrast: 0,
-          midTone: 0,
-          cropLeft: 5,
-          cropRight: 5,
-          cropTop: 15,
-          cropBottom: 15,
-        };
-
-        setPages((prev) => {
-          const updated = [...prev, newPage];
-          if (idx === 0) {
-            const targetIndex = updated.length - 1;
+        processedCount++;
+        if (processedCount === fileList.length && newPagesToAppend.length > 0) {
+          setPages((prev) => {
+            const updated = [...prev, ...newPagesToAppend];
+            const firstNewIndex = prev.length;
+            const firstNewPage = newPagesToAppend[0];
             setTimeout(() => {
-              openEditStepForPage(newPage, targetIndex);
+              openEditStepForPage(firstNewPage, firstNewIndex);
             }, 50);
-          }
-          return updated;
-        });
+            return updated;
+          });
+        }
       };
       reader.readAsDataURL(file);
     });
@@ -1048,24 +1055,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               </button>
             </div>
           )}
-
-          {/* Hidden File Inputs */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept="image/*,.jpg,.jpeg,.png,.webp"
-            multiple
-            className="hidden"
-          />
-          <input
-            type="file"
-            ref={cameraInputRef}
-            onChange={handleFileUpload}
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-          />
         </div>
       )}
 
@@ -1663,6 +1652,25 @@ export const ScanModal: React.FC<ScanModalProps> = ({
           </div>
         </div>
       )}
+      {/* Hidden Native Phone Camera 4K Launcher Input */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
+      {/* Hidden Gallery / File Upload Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf"
+        multiple
+        onChange={handleFileUpload}
+        className="hidden"
+      />
     </div>
   );
 };
