@@ -976,6 +976,7 @@ export const App: React.FC = () => {
           onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
           onOpenScanModal={() => setIsScanModalOpen(true)}
           isProActive={isProActive}
+          onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
         />
         {isScanModalOpen && (
           <ScanModal
@@ -984,6 +985,19 @@ export const App: React.FC = () => {
             onScanComplete={(pdfBytes, fileName) => {
               loadPDFData(pdfBytes, fileName);
               setCurrentView('editor');
+            }}
+          />
+        )}
+        {isHelcimCheckoutOpen && (
+          <HelcimCheckoutModal
+            isOpen={isHelcimCheckoutOpen}
+            onClose={() => setIsHelcimCheckoutOpen(false)}
+            onPaymentSuccess={(plan) => {
+              try {
+                localStorage.setItem('isa_pro_active', 'true');
+              } catch (e) {}
+              setIsProActive(true);
+              setShowProWelcomeModal(true);
             }}
           />
         )}
@@ -1000,6 +1014,7 @@ export const App: React.FC = () => {
             }}
             onOpenCheckout={() => {
               setIsThemeModalOpen(false);
+              setIsHelcimCheckoutOpen(true);
             }}
           />
         )}

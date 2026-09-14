@@ -304,7 +304,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               >
                 <Lock className="w-4 h-4 text-cyan-200" />
                 <span>
-                  Proceed to Checkout ({selectedPlan === 'monthly' ? '$2.99 USD/mo' : selectedPlan === 'annual' ? '$29.99 USD/yr' : '$99.99 USD'})
+                  {isNativeApp
+                    ? `Activate Pro Access (${selectedPlan === 'monthly' ? '$2.99 USD/mo' : selectedPlan === 'annual' ? '$29.99 USD/yr' : '$99.99 USD'})`
+                    : `Proceed to Checkout (${selectedPlan === 'monthly' ? '$2.99 USD/mo' : selectedPlan === 'annual' ? '$29.99 USD/yr' : '$99.99 USD'})`}
                 </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
