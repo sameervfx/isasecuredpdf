@@ -603,7 +603,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               {isNativeApp ? (
                 <button
-                  onClick={() => setIsProMonthlyModalOpen(true)}
+                  onClick={() => {
+                    if (onOpenCheckout) {
+                      onOpenCheckout('monthly');
+                    } else {
+                      setIsProMonthlyModalOpen(true);
+                    }
+                  }}
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
                 >
                   Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/mo)
@@ -631,7 +637,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="flex items-center justify-between min-h-[32px] mb-1">
                     <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Pro Annual</h3>
                     <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
-                      {currencyCode === 'INR' ? 'Intro Offer • Save 55%' : 'Save 55%'}
+                      {currencyCode === 'INR' ? 'Intro Offer • Save 16%' : 'Save 16%'}
                     </span>
                   </div>
                   <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>Complete web & desktop freedom.</p>
@@ -660,7 +666,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               {isNativeApp ? (
                 <button
-                  onClick={() => setIsProAnnualModalOpen(true)}
+                  onClick={() => {
+                    if (onOpenCheckout) {
+                      onOpenCheckout('annual');
+                    } else {
+                      setIsProAnnualModalOpen(true);
+                    }
+                  }}
                   className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
                 >
                   Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)
@@ -713,7 +725,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               {isNativeApp ? (
                 <button
-                  onClick={() => setIsLifetimeModalOpen(true)}
+                  onClick={() => {
+                    if (onOpenCheckout) {
+                      onOpenCheckout('lifetime');
+                    } else {
+                      setIsLifetimeModalOpen(true);
+                    }
+                  }}
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
                 >
                   Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'})

@@ -405,52 +405,58 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
               {/* Monthly Plan */}
               <button
                 onClick={() => handleTriggerCheckout('monthly')}
-                className="w-full p-3.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-2xl text-left transition flex items-center justify-between group"
+                className="w-full p-3.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-2xl text-left transition group space-y-1"
               >
-                <div className="flex-1 min-w-0 pr-2">
-                  <div className="text-xs font-bold text-white flex flex-wrap items-center gap-1.5">
-                    <span className="truncate">Pro Monthly Plan ({currentPricing.monthly} {currentPricing.code})</span>
-                    <span className="text-[9px] font-extrabold bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full whitespace-nowrap">
-                      Save 33%
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.monthly} {currentPricing.code} / month • Cancel anytime</div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-white truncate">
+                    Pro Monthly Plan ({currentPricing.monthly} {currentPricing.code})
+                  </span>
+                  <span className="text-[9px] font-extrabold bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                    Save 33%
+                  </span>
                 </div>
-                <Sparkles className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition shrink-0 ml-1" />
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>{currentPricing.monthly} {currentPricing.code} / month • Cancel anytime</span>
+                  <Sparkles className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition shrink-0 ml-1" />
+                </div>
               </button>
 
               {/* Annual Plan */}
               <button
                 onClick={() => handleTriggerCheckout('annual')}
-                className="w-full p-3.5 bg-gradient-to-r from-cyan-950/50 to-blue-950/50 hover:from-cyan-900/60 hover:to-blue-900/60 border border-cyan-500/40 rounded-2xl text-left transition flex items-center justify-between group"
+                className="w-full p-3.5 bg-gradient-to-r from-cyan-950/50 to-blue-950/50 hover:from-cyan-900/60 hover:to-blue-900/60 border border-cyan-500/40 rounded-2xl text-left transition group space-y-1"
               >
-                <div className="flex-1 min-w-0 pr-2">
-                  <div className="text-xs font-bold text-white flex flex-wrap items-center gap-1.5">
-                    <span className="truncate">Pro Annual Plan ({currentPricing.annual} {currentPricing.code})</span>
-                    <span className="text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full whitespace-nowrap">
-                      Save 55%
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.annual} {currentPricing.code} / year • Web & Desktop</div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-white truncate">
+                    Pro Annual Plan ({currentPricing.annual} {currentPricing.code})
+                  </span>
+                  <span className="text-[9px] font-extrabold bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                    Save 16%
+                  </span>
                 </div>
-                <ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0 ml-1" />
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>{currentPricing.annual} {currentPricing.code} / year • Web & Desktop</span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0 ml-1" />
+                </div>
               </button>
 
               {/* Lifetime Plan */}
               <button
                 onClick={() => handleTriggerCheckout('lifetime')}
-                className="w-full p-3.5 bg-slate-950 hover:bg-purple-950/60 border border-purple-500/40 rounded-2xl text-left transition flex items-center justify-between group"
+                className="w-full p-3.5 bg-slate-950 hover:bg-purple-950/60 border border-purple-500/40 rounded-2xl text-left transition group space-y-1"
               >
-                <div className="flex-1 min-w-0 pr-2">
-                  <div className="text-xs font-bold text-white flex flex-wrap items-center gap-1.5">
-                    <span className="truncate">Lifetime VIP License ({currentPricing.lifetime} {currentPricing.code})</span>
-                    <span className="text-[9px] font-extrabold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full whitespace-nowrap">
-                      Best Value
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.lifetime} {currentPricing.code} one-time • VIP Status</div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-white truncate">
+                    Lifetime VIP License ({currentPricing.lifetime} {currentPricing.code})
+                  </span>
+                  <span className="text-[9px] font-extrabold bg-purple-500/20 border border-purple-500/30 text-purple-300 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                    Best Value
+                  </span>
                 </div>
-                <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition shrink-0 ml-1" />
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>{currentPricing.lifetime} {currentPricing.code} one-time • VIP Status</span>
+                  <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition shrink-0 ml-1" />
+                </div>
               </button>
             </div>
           </div>

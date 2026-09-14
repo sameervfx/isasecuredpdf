@@ -241,16 +241,16 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     }`}
                   >
                     <div>
-                      <div className="flex items-center justify-between gap-1 mb-1">
-                        <h4 className="font-bold text-white text-xs truncate">Annual Pass</h4>
-                        <span className="bg-emerald-500 text-slate-950 font-black text-[8px] uppercase tracking-wider px-1 py-0.5 rounded shrink-0">
-                          Save 55%
-                        </span>
-                      </div>
+                      <h4 className="font-bold text-white text-xs mb-1">Annual Pass</h4>
                       <div className="my-1 text-sm sm:text-base font-extrabold text-emerald-300">
                         {currentPricing.annual}
                       </div>
-                      <p className="text-[10px] text-emerald-400 font-semibold">{currentPricing.code}/yr</p>
+                      <div className="flex items-center justify-between text-[10px] mt-1">
+                        <span className="text-emerald-400 font-semibold">{currentPricing.code}/yr</span>
+                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[9px] px-1.5 py-0.5 rounded">
+                          Save 16%
+                        </span>
+                      </div>
                     </div>
                   </div>
 
