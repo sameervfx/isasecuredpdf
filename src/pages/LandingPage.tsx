@@ -636,7 +636,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div>
                   <div className="flex items-center justify-between min-h-[32px] mb-1">
                     <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap`}>Pro Annual</h3>
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="text-[9px] font-extrabold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded-full shrink-0">
                       {currencyCode === 'INR' ? 'Intro Offer • Save 16%' : 'Save 16%'}
                     </span>
                   </div>
@@ -647,7 +647,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <div className="flex items-center space-x-2 mb-0.5 text-xs">
                         <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual}</span>
                         <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 rounded">
-                          {SUPPORTED_CURRENCIES[currencyCode]?.annualDiscountPercent || '33% OFF'}
+                          {SUPPORTED_CURRENCIES[currencyCode]?.annualDiscountPercent || '16% OFF'}
                         </span>
                       </div>
                     )}
@@ -695,21 +695,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div>
                   <div className="flex items-center justify-between min-h-[32px] mb-1">
                     <h3 className={`text-base font-bold ${cardTitleClass} whitespace-nowrap shrink-0`}>Lifetime License</h3>
-                    {currencyCode === 'INR' && (
-                      <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-2 py-0.5 rounded-full shrink-0 ml-1">Special Intro Offer</span>
-                    )}
+                    <span className="text-[9px] font-extrabold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 rounded-full shrink-0 ml-1">
+                      50% OFF Intro Offer
+                    </span>
                   </div>
                   <p className={`text-xs ${cardDescClass} min-h-[20px] mb-4`}>One-time investment forever.</p>
                   
                   <div className="min-h-[64px] flex flex-col justify-end mb-6">
-                    {SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime && (
-                      <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                        <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime}</span>
-                        <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 rounded">
-                          {SUPPORTED_CURRENCIES[currencyCode]?.lifetimeDiscountPercent || '38% OFF'}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center space-x-2 mb-0.5 text-xs">
+                      <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime || '$199.99'}</span>
+                      <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 rounded">
+                        {SUPPORTED_CURRENCIES[currencyCode]?.lifetimeDiscountPercent || '50% OFF'}
+                      </span>
+                    </div>
                     <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
                       {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
                     </div>

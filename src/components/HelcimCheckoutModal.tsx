@@ -245,9 +245,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       <div className="my-1 text-sm sm:text-base font-extrabold text-emerald-300">
                         {currentPricing.annual}
                       </div>
-                      <div className="flex items-center justify-between text-[10px] mt-1">
+                      <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
                         <span className="text-emerald-400 font-semibold">{currentPricing.code}/yr</span>
-                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[9px] px-1.5 py-0.5 rounded">
+                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
                           Save 16%
                         </span>
                       </div>
@@ -268,9 +268,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       <div className="my-1 text-sm sm:text-base font-extrabold text-purple-300">
                         {currentPricing.lifetime}
                       </div>
-                      <div className="flex items-center justify-between text-[10px] mt-1">
-                        <span className="line-through text-slate-500 font-medium">{currentPricing.originalLifetime || '$199.99'}</span>
-                        <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[9px] px-1.5 py-0.5 rounded">
+                      <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
+                        <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalLifetime || '$199.99'}</span>
+                        <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
                           50% OFF
                         </span>
                       </div>
