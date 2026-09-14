@@ -1376,33 +1376,65 @@ export const App: React.FC = () => {
       {/* 7-Day Free Trial Expired Notification Modal */}
       {showTrialExpiredModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-md bg-slate-900 border border-rose-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100 text-center">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl -z-10" />
-            <div className="mx-auto w-14 h-14 bg-gradient-to-tr from-amber-500 to-rose-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-rose-500/20">
+          <div className="relative w-full max-w-md bg-slate-900 border border-emerald-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100 text-center">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -z-10" />
+            <div className="mx-auto w-14 h-14 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/20">
               <Zap className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-xl font-extrabold text-white">Your 7-Day Free Trial Ended</h3>
-            <p className="text-xs text-slate-300 my-3 leading-relaxed">
-              Your 7-day free trial expired today. To continue using unlimited PDF compressions, password encryption, legal templates, and 4K vector supersampling without interruption, please activate a plan.
+            <p className="text-xs text-slate-300 my-2 leading-relaxed">
+              Your trial period has concluded. Upgrade to continue using unlimited PDF compression, password protection, and commercial legal templates without interruption.
             </p>
-            <div className="space-y-2 mt-5">
+
+            {/* Main Hero Action: Yearly Subscription */}
+            <button
+              onClick={() => {
+                setShowTrialExpiredModal(false);
+                handleOpenCheckout('annual');
+              }}
+              className="w-full mt-4 p-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-slate-950 rounded-2xl shadow-xl transition transform active:scale-95 text-left group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-slate-950 text-emerald-400 px-2 py-0.5 rounded-full">
+                  Recommended • Save 16%
+                </span>
+                <span className="text-[11px] font-bold text-slate-950">$2.50 / month</span>
+              </div>
+              <div className="text-sm font-extrabold text-slate-950 mt-1.5 flex items-center justify-between">
+                <span>Get Yearly Access ($29.99 USD/yr) →</span>
+              </div>
+              <div className="text-[10px] text-slate-900/90 font-medium mt-0.5">
+                Best value over monthly • Saves $5.89 vs 12x monthly payments
+              </div>
+            </button>
+
+            {/* Secondary Options Grid */}
+            <div className="grid grid-cols-2 gap-2.5 mt-3">
               <button
                 onClick={() => {
                   setShowTrialExpiredModal(false);
                   handleOpenCheckout('monthly');
                 }}
-                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition"
+                className="p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-left transition"
               >
-                Unlock Pro Monthly ($2.99 USD/mo) →
+                <div className="text-[10px] text-slate-400 font-semibold">Pro Monthly</div>
+                <div className="text-xs font-bold text-white">$2.99 USD/mo</div>
               </button>
+
               <button
                 onClick={() => {
                   setShowTrialExpiredModal(false);
                   handleOpenCheckout('lifetime');
                 }}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white font-bold text-xs rounded-xl border border-purple-500/30 transition"
+                className="p-3 bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/40 text-purple-200 rounded-xl text-left transition"
               >
-                Unlock Lifetime VIP ($99.99 USD)
+                <div className="flex items-center justify-between text-[10px] text-purple-300 font-semibold">
+                  <span>Lifetime VIP</span>
+                  <span className="text-[9px] bg-purple-500/20 px-1 rounded font-extrabold">50% OFF</span>
+                </div>
+                <div className="text-xs font-bold text-purple-200">
+                  $99.99 <span className="line-through text-slate-500 text-[10px] font-normal">$199.99</span>
+                </div>
               </button>
             </div>
           </div>

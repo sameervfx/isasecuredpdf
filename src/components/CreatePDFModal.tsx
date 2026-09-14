@@ -450,11 +450,13 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                     Lifetime VIP License ({currentPricing.lifetime} {currentPricing.code})
                   </span>
                   <span className="text-[9px] font-extrabold bg-purple-500/20 border border-purple-500/30 text-purple-300 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                    Best Value
+                    50% OFF Intro Offer
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>{currentPricing.lifetime} {currentPricing.code} one-time • VIP Status</span>
+                  <span>
+                    {currentPricing.lifetime} {currentPricing.code} <span className="line-through text-slate-500 font-normal">{currentPricing.originalLifetime || '$199.99'}</span> • Pay Once
+                  </span>
                   <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition shrink-0 ml-1" />
                 </div>
               </button>

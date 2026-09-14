@@ -42,6 +42,12 @@ const STANDARD_USD_CONFIG: Omit<CurrencyConfig, 'name' | 'country'> = {
   usdMonthlyFormatted: '$2.99 USD',
   usdAnnualFormatted: '$29.99 USD',
   usdLifetimeFormatted: '$99.99 USD',
+  originalMonthly: '$5.99',
+  originalAnnual: '$35.88',
+  originalLifetime: '$199.99',
+  monthlyDiscountPercent: '50% OFF',
+  annualDiscountPercent: '16% OFF',
+  lifetimeDiscountPercent: '50% OFF',
 };
 
 export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {

@@ -264,11 +264,16 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     }`}
                   >
                     <div>
-                      <h4 className="font-bold text-white text-xs">Lifetime VIP</h4>
+                      <h4 className="font-bold text-white text-xs mb-1">Lifetime VIP</h4>
                       <div className="my-1 text-sm sm:text-base font-extrabold text-purple-300">
                         {currentPricing.lifetime}
                       </div>
-                      <p className="text-[10px] text-purple-300">Pay Once</p>
+                      <div className="flex items-center justify-between text-[10px] mt-1">
+                        <span className="line-through text-slate-500 font-medium">{currentPricing.originalLifetime || '$199.99'}</span>
+                        <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[9px] px-1.5 py-0.5 rounded">
+                          50% OFF
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
