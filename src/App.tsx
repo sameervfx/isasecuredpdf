@@ -89,6 +89,12 @@ export const App: React.FC = () => {
   const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
   const [isUserGuideModalOpen, setIsUserGuideModalOpen] = useState<boolean>(false);
   const [isHelcimCheckoutOpen, setIsHelcimCheckoutOpen] = useState<boolean>(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'annual' | 'lifetime'>('annual');
+
+  const handleOpenCheckout = useCallback((plan?: 'monthly' | 'annual' | 'lifetime') => {
+    setCheckoutPlan(plan || 'annual');
+    setIsHelcimCheckoutOpen(true);
+  }, []);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
   const [passwordModalMode, setPasswordModalMode] = useState<'protect' | 'unlock'>('protect');
   const [isCompressModalOpen, setIsCompressModalOpen] = useState<boolean>(false);
@@ -976,7 +982,7 @@ export const App: React.FC = () => {
           onOpenUserGuide={() => setIsUserGuideModalOpen(true)}
           onOpenScanModal={() => setIsScanModalOpen(true)}
           isProActive={isProActive}
-          onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
+          onOpenCheckout={handleOpenCheckout}
         />
         {isScanModalOpen && (
           <ScanModal
@@ -991,6 +997,7 @@ export const App: React.FC = () => {
         {isHelcimCheckoutOpen && (
           <HelcimCheckoutModal
             isOpen={isHelcimCheckoutOpen}
+            initialPlan={checkoutPlan}
             onClose={() => setIsHelcimCheckoutOpen(false)}
             onPaymentSuccess={(plan) => {
               try {
@@ -1098,7 +1105,7 @@ export const App: React.FC = () => {
         onOpenScanModal={() => setIsScanModalOpen(true)}
         onOpenDesktopDownloadModal={() => setIsAppDownloadModalOpen(true)}
         isProActive={isProActive}
-        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
+        onOpenCheckout={handleOpenCheckout}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -1186,7 +1193,7 @@ export const App: React.FC = () => {
         onSaveSignature={handleSaveSignature}
         initialTab={signatureModalTab}
         isProActive={isProActive}
-        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
+        onOpenCheckout={handleOpenCheckout}
       />
 
       {/* Page Manager Grid Modal */}
@@ -1205,7 +1212,7 @@ export const App: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreatePDF={handleCreateBlankPDF}
-        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
+        onOpenCheckout={handleOpenCheckout}
       />
 
       {/* Merge / Combine PDFs Modal */}
@@ -1231,7 +1238,7 @@ export const App: React.FC = () => {
         state={docState}
         initialFormat={premiumExportFormat}
         isProActive={isProActive}
-        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
+        onOpenCheckout={handleOpenCheckout}
       />
 
       {/* Custom Watermark & Logo Overlay Modal */}
@@ -1254,6 +1261,7 @@ export const App: React.FC = () => {
         }}
         onOpenCheckout={() => {
           setIsThemeModalOpen(false);
+          handleOpenCheckout();
         }}
       />
 
@@ -1261,12 +1269,13 @@ export const App: React.FC = () => {
       <UserGuideModal
         isOpen={isUserGuideModalOpen}
         onClose={() => setIsUserGuideModalOpen(false)}
-        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
+        onOpenCheckout={handleOpenCheckout}
       />
 
       {/* Helcim Checkout & License Key Modal */}
       <HelcimCheckoutModal
         isOpen={isHelcimCheckoutOpen}
+        initialPlan={checkoutPlan}
         onClose={() => setIsHelcimCheckoutOpen(false)}
         onPaymentSuccess={(plan) => {
           localStorage.setItem('isa_pro_active', 'true');
@@ -1283,7 +1292,7 @@ export const App: React.FC = () => {
         fileName={docState.fileName}
         initialMode={passwordModalMode}
         isProActive={isProActive}
-        onOpenCheckout={() => setIsHelcimCheckoutOpen(true)}
+        onOpenCheckout={handleOpenCheckout}
         onApplyDecryptedPDF={(decryptedBytes) => {
           const unlockedName = docState.fileName
             ? docState.fileName.replace(/\.pdf$/i, '_unlocked.pdf')

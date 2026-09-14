@@ -246,7 +246,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
 
           {/* SECTION 2: STANDARD TEMPLATES CATEGORY */}
           <div>
-            <label className="block text-xs font-bold text-slate-200 mb-2 flex items-center justify-between">
+            <label className="block text-xs font-semibold text-slate-300 mb-2.5 flex items-center justify-between">
               <span>Standard Form Template</span>
               <span className="text-[10px] font-normal text-cyan-400">Free Blank Canvas</span>
             </label>
@@ -298,20 +298,20 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                       type="button"
                       key={size.id}
                       onClick={() => setPageSize(size.id as any)}
-                      className={`p-2.5 rounded-xl border text-left transition flex flex-col ${
+                      className={`p-2.5 rounded-xl border text-center transition ${
                         pageSize === size.id
-                          ? 'border-cyan-500 bg-cyan-950/40 text-white ring-1 ring-cyan-500/50'
+                          ? 'border-cyan-500 bg-cyan-500/10 text-cyan-300 font-bold'
                           : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
                       }`}
                     >
-                      <span className="text-xs font-bold">{size.name}</span>
-                      <span className="text-[10px] text-slate-500 mt-0.5">{size.desc}</span>
+                      <div className="text-xs">{size.name}</div>
+                      <div className="text-[9px] opacity-70 mt-0.5">{size.desc}</div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-2">Orientation</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -323,9 +323,9 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                         type="button"
                         key={o.id}
                         onClick={() => setOrientation(o.id as any)}
-                        className={`p-2 rounded-xl border text-center text-xs font-semibold transition ${
+                        className={`p-2.5 rounded-xl border text-center text-xs transition ${
                           orientation === o.id
-                            ? 'border-cyan-500 bg-cyan-950/40 text-white ring-1 ring-cyan-500/50'
+                            ? 'border-cyan-500 bg-cyan-500/10 text-cyan-300 font-bold'
                             : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700'
                         }`}
                       >
@@ -375,23 +375,26 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
       {/* PRO CHECKOUT MODAL OVERLAY */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-md bg-slate-900 border border-purple-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100">
+          <div className="relative w-full max-w-md bg-slate-900 border border-purple-500/50 rounded-3xl p-5 sm:p-7 shadow-2xl overflow-hidden text-slate-100">
             <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -z-10" />
-            <button
-              onClick={() => setIsCheckoutOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
 
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-gradient-to-tr from-purple-500 to-indigo-600 rounded-2xl shadow-lg shadow-purple-500/20">
-                <Crown className="w-5 h-5 text-white" />
+            {/* Header Flex Row - No X Collisions */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center space-x-3 pr-2">
+                <div className="p-3 bg-gradient-to-tr from-purple-500 to-indigo-600 rounded-2xl shadow-lg shadow-purple-500/20 shrink-0">
+                  <Crown className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">Unlock Pro Template Access</h3>
+                  <p className="text-xs text-purple-300 font-medium">Commercial Legal Forms Suite</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-extrabold text-white">Unlock Pro Template Access</h3>
-                <p className="text-xs text-purple-300 font-medium">Commercial Legal Forms Suite</p>
-              </div>
+              <button
+                onClick={() => setIsCheckoutOpen(false)}
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="mb-5 p-3.5 bg-purple-950/40 border border-purple-500/30 text-purple-200 text-xs rounded-xl font-semibold leading-relaxed">
@@ -399,46 +402,55 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
             </div>
 
             <div className="space-y-3">
+              {/* Monthly Plan */}
               <button
                 onClick={() => handleTriggerCheckout('monthly')}
-                className="w-full p-4 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-2xl text-left transition flex items-center justify-between group"
+                className="w-full p-3.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-2xl text-left transition flex items-center justify-between group"
               >
-                <div>
-                  <div className="text-xs font-bold text-white flex items-center space-x-2">
-                    <span>Pro Monthly Plan ($2.99 USD)</span>
-                    <span className="text-[10px] font-extrabold bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full">Save 33%</span>
+                <div className="flex-1 min-w-0 pr-2">
+                  <div className="text-xs font-bold text-white flex flex-wrap items-center gap-1.5">
+                    <span className="truncate">Pro Monthly Plan ({currentPricing.monthly} {currentPricing.code})</span>
+                    <span className="text-[9px] font-extrabold bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      Save 33%
+                    </span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">$2.99 USD / month • Billed monthly • Cancel anytime</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.monthly} {currentPricing.code} / month • Cancel anytime</div>
                 </div>
-                <Sparkles className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+                <Sparkles className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition shrink-0 ml-1" />
               </button>
 
+              {/* Annual Plan */}
               <button
                 onClick={() => handleTriggerCheckout('annual')}
-                className="w-full p-4 bg-gradient-to-r from-cyan-950/50 to-blue-950/50 hover:from-cyan-900/60 hover:to-blue-900/60 border border-cyan-500/40 rounded-2xl text-left transition flex items-center justify-between group"
+                className="w-full p-3.5 bg-gradient-to-r from-cyan-950/50 to-blue-950/50 hover:from-cyan-900/60 hover:to-blue-900/60 border border-cyan-500/40 rounded-2xl text-left transition flex items-center justify-between group"
               >
-                <div>
-                  <div className="text-xs font-bold text-white flex items-center space-x-2">
-                    <span>Pro Annual Plan ($29.99 USD)</span>
-                    <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">Save 55%</span>
+                <div className="flex-1 min-w-0 pr-2">
+                  <div className="text-xs font-bold text-white flex flex-wrap items-center gap-1.5">
+                    <span className="truncate">Pro Annual Plan ({currentPricing.annual} {currentPricing.code})</span>
+                    <span className="text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      Save 55%
+                    </span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">$29.99 USD / year • Web & Desktop binaries</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.annual} {currentPricing.code} / year • Web & Desktop</div>
                 </div>
-                <ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
+                <ShieldCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0 ml-1" />
               </button>
 
+              {/* Lifetime Plan */}
               <button
                 onClick={() => handleTriggerCheckout('lifetime')}
-                className="w-full p-4 bg-slate-950 hover:bg-purple-950/60 border border-purple-500/40 rounded-2xl text-left transition flex items-center justify-between group"
+                className="w-full p-3.5 bg-slate-950 hover:bg-purple-950/60 border border-purple-500/40 rounded-2xl text-left transition flex items-center justify-between group"
               >
-                <div>
-                  <div className="text-xs font-bold text-white flex items-center space-x-2">
-                    <span>Lifetime VIP License ($99.99 USD)</span>
-                    <span className="text-[10px] font-extrabold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">Best Value</span>
+                <div className="flex-1 min-w-0 pr-2">
+                  <div className="text-xs font-bold text-white flex flex-wrap items-center gap-1.5">
+                    <span className="truncate">Lifetime VIP License ({currentPricing.lifetime} {currentPricing.code})</span>
+                    <span className="text-[9px] font-extrabold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      Best Value
+                    </span>
                   </div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">$99.99 USD one-time • Permanent VIP status</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{currentPricing.lifetime} {currentPricing.code} one-time • VIP Status</div>
                 </div>
-                <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition" />
+                <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition shrink-0 ml-1" />
               </button>
             </div>
           </div>

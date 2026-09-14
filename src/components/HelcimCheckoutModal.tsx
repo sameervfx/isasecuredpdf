@@ -8,14 +8,16 @@ interface HelcimCheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPaymentSuccess: (planName: string) => void;
+  initialPlan?: 'monthly' | 'annual' | 'lifetime';
 }
 
 export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   isOpen,
   onClose,
   onPaymentSuccess,
+  initialPlan = 'annual',
 }) => {
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>('annual');
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>(initialPlan);
   const [paymentTab, setPaymentTab] = useState<'card' | 'upi' | 'key'>('card');
   
   // Card Form State
@@ -41,6 +43,12 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   useEffect(() => {
     setCurrencyCode(detectUserCurrency());
   }, []);
+
+  useEffect(() => {
+    if (isOpen && initialPlan) {
+      setSelectedPlan(initialPlan);
+    }
+  }, [isOpen, initialPlan]);
 
   const isNativeApp = isIOSPlatform() || isNativeMobileApp();
 
@@ -226,17 +234,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   {/* Annual Plan (Best Value) */}
                   <div
                     onClick={() => setSelectedPlan('annual')}
-                    className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between relative ${
+                    className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
                       selectedPlan === 'annual'
                         ? 'bg-gradient-to-b from-cyan-950/60 to-emerald-950/60 border-emerald-400 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
                         : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                     }`}
                   >
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 font-black text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-full shadow">
-                      Save 55%
-                    </span>
                     <div>
-                      <h4 className="font-bold text-white text-xs">Annual Pass</h4>
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <h4 className="font-bold text-white text-xs truncate">Annual Pass</h4>
+                        <span className="bg-emerald-500 text-slate-950 font-black text-[8px] uppercase tracking-wider px-1 py-0.5 rounded shrink-0">
+                          Save 55%
+                        </span>
+                      </div>
                       <div className="my-1 text-sm sm:text-base font-extrabold text-emerald-300">
                         {currentPricing.annual}
                       </div>

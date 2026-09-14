@@ -45,7 +45,7 @@ interface LandingPageProps {
   onOpenUserGuide?: () => void;
   onOpenScanModal?: () => void;
   isProActive?: boolean;
-  onOpenCheckout?: () => void;
+  onOpenCheckout?: (plan?: 'monthly' | 'annual' | 'lifetime') => void;
 }
 
 type LegalModalType = 'privacy' | 'terms' | 'refund' | 'contact' | null;
@@ -1060,7 +1060,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     onClick={() => {
                       setIsProMonthlyModalOpen(false);
                       if (onOpenCheckout) {
-                        onOpenCheckout();
+                        onOpenCheckout('monthly');
                       } else {
                         handleGateCheckAndLaunch();
                       }
@@ -1121,7 +1121,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={() => {
                     setIsProAnnualModalOpen(false);
                     if (onOpenCheckout) {
-                      onOpenCheckout();
+                      onOpenCheckout('annual');
                     } else {
                       handleGateCheckAndLaunch();
                     }
@@ -1179,7 +1179,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={() => {
                     setIsLifetimeModalOpen(false);
                     if (onOpenCheckout) {
-                      onOpenCheckout();
+                      onOpenCheckout('lifetime');
                     } else {
                       handleGateCheckAndLaunch();
                     }
