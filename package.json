@@ -2,7 +2,7 @@
   "name": "isasecuredpdf-suite",
   "productName": "ISASecuredPDF Suite",
   "private": true,
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "ISASecuredPDF Suite - 100% client-side secure PDF Editor & Camera Scanner.",
   "author": "ISASecuredPDF Inc.",
   "type": "module",

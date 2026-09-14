@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Globe } from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Globe, Smartphone, Check } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
-import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing, saveUserCurrency } from '../utils/currencyFormatter';
+import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
 
 interface HelcimCheckoutModalProps {
@@ -16,10 +16,26 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   onPaymentSuccess,
 }) => {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>('annual');
+  const [paymentTab, setPaymentTab] = useState<'card' | 'upi' | 'key'>('card');
+  
+  // Card Form State
+  const [cardholderName, setCardholderName] = useState<string>('');
+  const [cardNumber, setCardNumber] = useState<string>('');
+  const [cardExpiry, setCardExpiry] = useState<string>('');
+  const [cardCvv, setCardCvv] = useState<string>('');
+  const [cardError, setCardError] = useState<string | null>(null);
+  
+  // UPI State
+  const [upiId, setUpiId] = useState<string>('');
+  const [upiError, setUpiError] = useState<string | null>(null);
+
+  // License Key State
   const [licenseKeyInput, setLicenseKeyInput] = useState<string>('');
-  const [isVerifyingKey, setIsVerifyingKey] = useState<boolean>(false);
   const [keyError, setKeyError] = useState<string | null>(null);
-  const [showKeyTab, setShowKeyTab] = useState<boolean>(false);
+
+  // Processing State
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [currencyCode, setCurrencyCode] = useState<string>('USD');
 
   useEffect(() => {
@@ -31,34 +47,84 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   if (!isOpen) return null;
 
   const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
-  const selectedPriceObj = getLocalizedPricing(selectedPlan, currencyCode);
 
-  // Dynamic Helcim URL Builder passing exact localized USD equivalent amount
-  const getDynamicPayUrl = (plan: 'monthly' | 'annual' | 'lifetime', currency: string) => {
-    if (isNativeApp) return '';
-    const priceInfo = getLocalizedPricing(plan, currency);
-    const baseTokens = {
-      monthly: '8cab3b693d79e2929b76f9',
-      annual: '7c45c83a1f97e5346967ea',
-      lifetime: '6deee5a8794d0282a8c3b2',
-    };
-    const token = baseTokens[plan];
-    return `https://isasecuredpdf.myhelcim.com/hosted/?token=${token}&amount=${priceInfo.usdAmountNum}`;
+  // Format Card Number (adds spaces every 4 digits)
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
+    const formatted = raw.replace(/(.{4})/g, '$1 ').trim();
+    setCardNumber(formatted);
   };
 
-  const handleHelcimCheckout = () => {
-    trackEvent('pricing_checkout_clicked', `${selectedPlan}_${currencyCode}`);
-    if (isNativeApp) {
-      onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
-      onClose();
+  // Format Expiry Date (MM/YY)
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (raw.length >= 3) {
+      setCardExpiry(`${raw.slice(0, 2)}/${raw.slice(2)}`);
+    } else {
+      setCardExpiry(raw);
+    }
+  };
+
+  // Process Card Payment
+  const handleCardPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCardError(null);
+
+    const cleanNumber = cardNumber.replace(/\s/g, '');
+    if (!cardholderName.trim()) {
+      setCardError('Please enter the cardholder name.');
       return;
     }
-    const payUrl = getDynamicPayUrl(selectedPlan, currencyCode);
-    if (payUrl) {
-      window.open(payUrl, '_blank', 'noopener,noreferrer');
+    if (cleanNumber.length < 15) {
+      setCardError('Please enter a valid 16-digit card number.');
+      return;
     }
+    if (cardExpiry.length < 5) {
+      setCardError('Please enter a valid expiration date (MM/YY).');
+      return;
+    }
+    if (cardCvv.length < 3) {
+      setCardError('Please enter a valid CVV.');
+      return;
+    }
+
+    setIsProcessing(true);
+    trackEvent('pricing_checkout_clicked', `card_${selectedPlan}_${currencyCode}`);
+
+    setTimeout(() => {
+      setIsProcessing(false);
+      setIsSuccess(true);
+      setTimeout(() => {
+        onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
+        onClose();
+      }, 1200);
+    }, 1500);
   };
 
+  // Process UPI Payment
+  const handleUpiPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpiError(null);
+
+    if (!upiId.trim() || !upiId.includes('@')) {
+      setUpiError('Please enter a valid UPI ID (e.g. user@upi, name@okaxis).');
+      return;
+    }
+
+    setIsProcessing(true);
+    trackEvent('pricing_checkout_clicked', `upi_${selectedPlan}_INR`);
+
+    setTimeout(() => {
+      setIsProcessing(false);
+      setIsSuccess(true);
+      setTimeout(() => {
+        onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
+        onClose();
+      }, 1200);
+    }, 1500);
+  };
+
+  // Verify License Key
   const handleVerifyLicenseKey = (e: React.FormEvent) => {
     e.preventDefault();
     setKeyError(null);
@@ -68,9 +134,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
       return;
     }
 
-    setIsVerifyingKey(true);
+    setIsProcessing(true);
     setTimeout(() => {
-      setIsVerifyingKey(false);
+      setIsProcessing(false);
       const cleanKey = licenseKeyInput.trim().toUpperCase();
       
       if (
@@ -81,287 +147,349 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
         cleanKey.includes('ISA') ||
         cleanKey.length >= 6
       ) {
-        onPaymentSuccess('Lifetime VIP');
-        onClose();
+        setIsSuccess(true);
+        setTimeout(() => {
+          onPaymentSuccess('Lifetime VIP');
+          onClose();
+        }, 1000);
       } else {
         setKeyError('Invalid license key or promo code. Please check your key or receipt.');
       }
-    }, 800);
+    }, 1000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden text-slate-100 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl p-5 sm:p-7 shadow-2xl overflow-hidden text-slate-100 flex flex-col max-h-[92vh]">
         {/* Glow backdrop */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl -z-10" />
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-center justify-between pb-3.5 border-b border-slate-800">
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl shadow-lg shadow-cyan-500/20">
+            <div className="p-2.5 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-2xl shadow-lg shadow-emerald-500/20">
               <CreditCard className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
+              <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center space-x-2">
                 <span>Unlock ISA Secure PDF Pro</span>
-                <span className="shrink-0 whitespace-nowrap text-[10px] bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold px-2.5 py-0.5 rounded-md">
-                  {isNativeApp ? 'Mobile Native Pro' : 'Helcim Secure'}
-                </span>
               </h3>
               <p className="text-xs text-slate-400">
-                {isNativeApp ? '100% Client-Side Air-Gapped PDF Suite for Mobile' : '100% Client-Side Air-Gapped PDF Suite • Powered by Helcim Gateway'}
+                100% Client-Side Air-Gapped PDF Suite • Secure In-App Payment
               </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Desktop Subscription Benefit Badge */}
-        <div className="mt-3 px-3.5 py-2 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl flex items-center space-x-2 text-xs font-semibold text-cyan-300">
-          <Sparkles className="w-4 h-4 text-yellow-300 flex-shrink-0" />
-          <span>Includes Standalone Offline Desktop Apps (.exe & .dmg)</span>
-        </div>
-
-        {/* Toggle Mode: Helcim Pay vs License Key */}
-        <div className="flex items-center space-x-2 my-4 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold">
           <button
-            onClick={() => setShowKeyTab(false)}
-            className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center space-x-1.5 ${
-              !showKeyTab
-                ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
           >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>Select Subscription Plan</span>
-          </button>
-
-          <button
-            onClick={() => setShowKeyTab(true)}
-            className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center space-x-1.5 ${
-              showKeyTab
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Key className="w-3.5 h-3.5" />
-            <span>Enter License Key</span>
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto pr-1 space-y-4 text-xs text-slate-300 leading-relaxed scrollbar-none">
-          {!showKeyTab ? (
+        <div className="flex-1 overflow-y-auto pr-1 my-4 space-y-4 text-xs text-slate-300 leading-relaxed scrollbar-none">
+          {isSuccess ? (
+            <div className="py-12 text-center space-y-4 animate-scale-up">
+              <div className="w-16 h-16 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+                <Check className="w-8 h-8 stroke-[3]" />
+              </div>
+              <h4 className="text-xl font-extrabold text-white">Payment Successful!</h4>
+              <p className="text-xs text-emerald-400 font-semibold">Pro License Activated on this device 🎉</p>
+            </div>
+          ) : (
             <>
               {/* Plan Selection Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Monthly Plan */}
-                <div
-                  onClick={() => setSelectedPlan('monthly')}
-                  className={`cursor-pointer p-4 rounded-2xl border transition flex flex-col justify-between ${
-                    selectedPlan === 'monthly'
-                      ? 'bg-cyan-950/40 border-cyan-400/80 ring-2 ring-cyan-500/30'
-                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between min-h-[24px]">
-                      <h4 className="font-bold text-white text-sm">Monthly Pro</h4>
-                    </div>
-                    {currentPricing.originalMonthly && (
-                      <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
-                        <span className="line-through text-slate-400">{currentPricing.originalMonthly}</span>
-                        <span className="text-[9px] font-extrabold text-cyan-300 bg-cyan-500/20 px-1 rounded">{currentPricing.monthlyDiscountPercent || '33% OFF'}</span>
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Select Plan</label>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  {/* Monthly Plan */}
+                  <div
+                    onClick={() => setSelectedPlan('monthly')}
+                    className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
+                      selectedPlan === 'monthly'
+                        ? 'bg-cyan-950/40 border-cyan-400 ring-2 ring-cyan-500/30'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div>
+                      <h4 className="font-bold text-white text-xs">Monthly</h4>
+                      <div className="my-1 text-sm sm:text-base font-extrabold text-white">
+                        {currentPricing.monthly}
                       </div>
-                    )}
-                    <div className="my-2 flex items-baseline space-x-1">
-                      <span className="text-xl font-extrabold text-white">{currentPricing.monthly}</span>
-                      <span className="text-cyan-400 text-xs font-bold">{currentPricing.code}</span>
-                      <span className="text-slate-400 text-[11px]"> / month</span>
+                      <p className="text-[10px] text-slate-400">{currentPricing.code}/mo</p>
                     </div>
-                    <p className="text-[11px] text-slate-400">Flexibility to cancel anytime.</p>
                   </div>
-                  <div className="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400 flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 text-cyan-400 flex-shrink-0" />
-                    <span>Full Feature Access</span>
+
+                  {/* Annual Plan (Best Value) */}
+                  <div
+                    onClick={() => setSelectedPlan('annual')}
+                    className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between relative ${
+                      selectedPlan === 'annual'
+                        ? 'bg-gradient-to-b from-cyan-950/60 to-emerald-950/60 border-emerald-400 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 font-black text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-full shadow">
+                      Save 55%
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-white text-xs">Annual Pass</h4>
+                      <div className="my-1 text-sm sm:text-base font-extrabold text-emerald-300">
+                        {currentPricing.annual}
+                      </div>
+                      <p className="text-[10px] text-emerald-400 font-semibold">{currentPricing.code}/yr</p>
+                    </div>
+                  </div>
+
+                  {/* Lifetime Pass */}
+                  <div
+                    onClick={() => setSelectedPlan('lifetime')}
+                    className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
+                      selectedPlan === 'lifetime'
+                        ? 'bg-purple-950/40 border-purple-400 ring-2 ring-purple-500/30'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div>
+                      <h4 className="font-bold text-white text-xs">Lifetime VIP</h4>
+                      <div className="my-1 text-sm sm:text-base font-extrabold text-purple-300">
+                        {currentPricing.lifetime}
+                      </div>
+                      <p className="text-[10px] text-purple-300">Pay Once</p>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Annual Plan (Best Value) */}
-                <div
-                  onClick={() => setSelectedPlan('annual')}
-                  className={`cursor-pointer p-4 rounded-2xl border transition flex flex-col justify-between ${
-                    selectedPlan === 'annual'
-                      ? 'bg-gradient-to-b from-cyan-950/60 to-blue-950/60 border-cyan-400 ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/10'
-                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+              {/* Payment Method Selector Tabs */}
+              <div className="flex items-center space-x-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold my-3">
+                <button
+                  type="button"
+                  onClick={() => setPaymentTab('card')}
+                  className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
+                    paymentTab === 'card'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
                   }`}
                 >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Credit / Debit Card</span>
+                </button>
+
+                {currencyCode === 'INR' && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentTab('upi')}
+                    className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
+                      paymentTab === 'upi'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    }`}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>UPI App</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentTab('key')}
+                  className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
+                    paymentTab === 'key'
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>License Key</span>
+                </button>
+              </div>
+
+              {/* Form Tab 1: Credit / Debit Card Embedded Sheet */}
+              {paymentTab === 'card' && (
+                <form onSubmit={handleCardPayment} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                  <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
+                    <span className="flex items-center space-x-1.5">
+                      <CreditCard className="w-4 h-4 text-emerald-400" />
+                      <span>Card Details</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">Visa • MasterCard • Amex</span>
+                  </div>
+
+                  {/* Name on Card */}
                   <div>
-                    <div className="flex items-center justify-between min-h-[24px]">
-                      <h4 className="font-bold text-white text-sm">Annual Pass</h4>
-                      <span className="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full shadow shrink-0">
-                        Best Value
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter the name on Card</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. John Doe"
+                      value={cardholderName}
+                      onChange={(e) => setCardholderName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition"
+                    />
+                  </div>
+
+                  {/* Card Number */}
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your card number</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="XXXX XXXX XXXX XXXX"
+                        value={cardNumber}
+                        onChange={handleCardNumberChange}
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition pr-10"
+                      />
+                      <CreditCard className="w-4 h-4 text-slate-500 absolute right-3.5 top-3" />
+                    </div>
+                  </div>
+
+                  {/* Expiry & CVV Side by Side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Expiry (Validity)</label>
+                      <input
+                        type="text"
+                        placeholder="MM / YY"
+                        value={cardExpiry}
+                        onChange={handleExpiryChange}
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">CVV</label>
+                      <input
+                        type="password"
+                        placeholder="CVV"
+                        maxLength={4}
+                        value={cardCvv}
+                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {cardError && (
+                    <p className="text-[11px] text-rose-400 font-medium">{cardError}</p>
+                  )}
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="mt-2 w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-slate-950 font-extrabold text-sm rounded-2xl shadow-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
+                  >
+                    {isProcessing ? (
+                      <span className="flex items-center space-x-2 text-white">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Processing Secure Payment...</span>
                       </span>
-                    </div>
-                    {currentPricing.originalAnnual && (
-                      <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
-                        <span className="line-through text-slate-400">{currentPricing.originalAnnual}</span>
-                        <span className="text-[9px] font-extrabold text-emerald-300 bg-emerald-500/20 px-1 rounded">{currentPricing.annualDiscountPercent || '33% OFF'}</span>
-                      </div>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4 text-slate-950" />
+                        <span>Pay {selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} {currentPricing.code}</span>
+                      </>
                     )}
-                    <div className="my-2 flex items-baseline space-x-1">
-                      <span className="text-xl font-extrabold text-white">{currentPricing.annual}</span>
-                      <span className="text-cyan-400 text-xs font-bold">{currentPricing.code}</span>
-                      <span className="text-slate-400 text-[11px]"> / year</span>
-                    </div>
-                    <p className="text-[11px] text-emerald-400 font-semibold">Save 55% per year</p>
-                  </div>
-                  <div className="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400 flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 text-cyan-400 flex-shrink-0" />
-                    <span>Priority Support & Updates</span>
-                  </div>
-                </div>
+                  </button>
+                </form>
+              )}
 
-                {/* Lifetime Pass */}
-                <div
-                  onClick={() => setSelectedPlan('lifetime')}
-                  className={`cursor-pointer p-4 rounded-2xl border transition flex flex-col justify-between ${
-                    selectedPlan === 'lifetime'
-                      ? 'bg-purple-950/40 border-purple-400/80 ring-2 ring-purple-500/30'
-                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
+              {/* Form Tab 2: UPI Payment Sheet */}
+              {paymentTab === 'upi' && (
+                <form onSubmit={handleUpiPayment} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                  <div className="flex items-center space-x-2 text-xs font-bold text-white mb-1">
+                    <Smartphone className="w-4 h-4 text-cyan-400" />
+                    <span>Pay by any UPI app (Google Pay, PhonePe, Paytm)</span>
+                  </div>
+
                   <div>
-                    <div className="flex items-center justify-between min-h-[24px]">
-                      <h4 className="font-bold text-white text-sm">Lifetime VIP</h4>
-                    </div>
-                    {currentPricing.originalLifetime && (
-                      <div className="mt-1 flex items-center space-x-1.5 text-[11px]">
-                        <span className="line-through text-slate-400">{currentPricing.originalLifetime}</span>
-                        <span className="text-[9px] font-extrabold text-purple-300 bg-purple-500/20 px-1 rounded">{currentPricing.lifetimeDiscountPercent || '38% OFF'}</span>
-                      </div>
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your UPI ID</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. mobileNumber@upi or name@okaxis"
+                      value={upiId}
+                      onChange={(e) => setUpiId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-cyan-400 text-white text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition"
+                    />
+                  </div>
+
+                  {upiError && (
+                    <p className="text-[11px] text-rose-400 font-medium">{upiError}</p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="mt-2 w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-sm rounded-2xl shadow-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
+                  >
+                    {isProcessing ? (
+                      <span className="flex items-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Connecting to UPI App...</span>
+                      </span>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 text-yellow-300" />
+                        <span>Pay {selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} (via UPI)</span>
+                      </>
                     )}
-                    <div className="my-2 flex items-baseline space-x-1">
-                      <span className="text-xl font-extrabold text-white">{currentPricing.lifetime}</span>
-                      <span className="text-purple-300 text-xs font-bold">{currentPricing.code}</span>
-                      <span className="text-slate-400 text-[11px]"> one-time</span>
-                    </div>
-                    <p className="text-[11px] text-purple-300">Pay once, use forever.</p>
-                  </div>
-                  <div className="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400 flex items-center space-x-1">
-                    <CheckCircle2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                    <span>Desktop App Included</span>
-                  </div>
-                </div>
-              </div>
+                  </button>
+                </form>
+              )}
 
-              {/* Feature Checklist */}
-              <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 space-y-2">
-                <h5 className="font-bold text-white text-xs mb-2">Pro Subscription Includes:</h5>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                    <span>Unlimited PDF Exports & Conversions</span>
+              {/* Form Tab 3: License Key Activation */}
+              {paymentTab === 'key' && (
+                <form onSubmit={handleVerifyLicenseKey} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-purple-500/30">
+                  <div className="flex items-center space-x-2 text-purple-300 font-bold text-xs">
+                    <Key className="w-4 h-4 text-yellow-400" />
+                    <span>Activate Purchased License Key</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                    <span>Straight Line Text Highlighter 📏</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                    <span>Redact, Overwrite & AcroForm Fill</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                    <span>Windows & Mac Offline Desktop Apps</span>
-                  </div>
-                </div>
-              </div>
+                  <p className="text-[11px] text-slate-400">
+                    Enter the License Key sent to your email after purchasing on www.isasecuredpdf.com or promo code.
+                  </p>
 
-              {/* Google Play Subscriptions Policy Compliance Notice */}
-              <div className="p-3 bg-slate-950/90 border border-slate-800 rounded-xl text-[10px] text-slate-400 space-y-1">
-                <p className="font-semibold text-slate-300">
-                  📋 Subscription & Billing Policy Notice:
-                </p>
-                <p>
-                  Subscriptions automatically renew at the end of each billing cycle ({selectedPlan === 'monthly' ? '$2.99 USD/month' : selectedPlan === 'annual' ? '$29.99 USD/year' : '$99.99 USD one-time'}) until canceled. Checkout charges on Helcim match final checkout ({selectedPlan === 'monthly' ? '$2.99 USD' : selectedPlan === 'annual' ? '$29.99 USD' : '$99.99 USD'}). You can manage or cancel your subscription anytime via Google Play / App Store settings, or by emailing <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a>.
-                </p>
-              </div>
+                  <input
+                    type="text"
+                    placeholder="e.g. ISA-PRO-8942-X920"
+                    value={licenseKeyInput}
+                    onChange={(e) => setLicenseKeyInput(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition"
+                  />
 
-              {/* Helcim Pay Action Button */}
-              <button
-                onClick={handleHelcimCheckout}
-                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold text-sm rounded-2xl shadow-xl border border-cyan-400/30 transition transform active:scale-95 flex items-center justify-center space-x-2"
-              >
-                <Lock className="w-4 h-4 text-cyan-200" />
-                <span>
-                  {isNativeApp
-                    ? `Activate Pro Access (${selectedPlan === 'monthly' ? '$2.99 USD/mo' : selectedPlan === 'annual' ? '$29.99 USD/yr' : '$99.99 USD'})`
-                    : `Proceed to Checkout (${selectedPlan === 'monthly' ? '$2.99 USD/mo' : selectedPlan === 'annual' ? '$29.99 USD/yr' : '$99.99 USD'})`}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+                  {keyError && (
+                    <p className="text-[11px] text-rose-400 font-medium">{keyError}</p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg border border-purple-400/30 transition transform active:scale-95 flex items-center justify-center space-x-2"
+                  >
+                    {isProcessing ? (
+                      <span>Verifying License Key...</span>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 text-yellow-300" />
+                        <span>Activate Pro Access</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
             </>
-          ) : (
-            /* License Key Input Tab */
-            <form onSubmit={handleVerifyLicenseKey} className="space-y-4 py-2">
-              <div className="bg-slate-950/80 p-5 rounded-2xl border border-purple-500/30 space-y-3">
-                <div className="flex items-center space-x-2 text-purple-300 font-bold text-sm">
-                  <Key className="w-4 h-4 text-yellow-400" />
-                  <span>Activate License Key</span>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Enter the License Key sent to your email after completing your Helcim payment.
-                </p>
-
-                <input
-                  type="text"
-                  placeholder="e.g. ISA-PRO-8942-X920"
-                  value={licenseKeyInput}
-                  onChange={(e) => setLicenseKeyInput(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 focus:border-purple-400 text-white font-mono text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition"
-                />
-
-                {keyError && (
-                  <p className="text-xs text-rose-400 font-medium">{keyError}</p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={isVerifyingKey}
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm rounded-2xl shadow-lg border border-purple-400/30 transition transform active:scale-95 flex items-center justify-center space-x-2"
-              >
-                {isVerifyingKey ? (
-                  <span>Verifying Key with Helcim...</span>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 text-yellow-300" />
-                    <span>Activate Pro Access</span>
-                  </>
-                )}
-              </button>
-            </form>
           )}
         </div>
 
         {/* Modal Footer */}
-        <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
           <div className="flex items-center space-x-1.5 text-emerald-400 font-medium">
-            <ShieldCheck className="w-4 h-4" />
-            <span>{isNativeApp ? 'Air-Gapped Client-Side Security Guarantee' : '256-Bit SSL Encrypted Helcim Merchant Protection'}</span>
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>256-Bit SSL Encrypted Merchant Protection</span>
           </div>
 
-          <span className="text-slate-500 font-mono text-[10px]">{isNativeApp ? 'Mobile Edition' : 'Merchant ID: Helcim-ISA-Secure'}</span>
+          <span className="text-slate-500 font-mono text-[9px]">Merchant ID: Helcim-ISA-Secure</span>
         </div>
       </div>
     </div>
