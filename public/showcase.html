@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ISASecuredPDF Suite - Official Live Website & Product Demo Showcase</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    
+    .gradient-brand {
+      background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .canvas-shadow {
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 30px rgba(6, 182, 212, 0.15);
+    }
+
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.05); }
+    }
+    .pulse-soft { animation: pulseSoft 4s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col justify-between p-2 sm:p-4 overflow-x-hidden select-none">
+
+  <!-- TOP REEL HEADER BRAND CONTROLLER -->
+  <div class="max-w-6xl mx-auto w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl backdrop-blur-md">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 shrink-0">
+        <img src="./app_logo.jpg" alt="ISASecuredPDF Logo" class="w-full h-full object-cover" />
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-sm sm:text-base font-black text-white tracking-tight gradient-brand">ISASecuredPDF Suite</h1>
+          <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold rounded-full">Official App UI</span>
+        </div>
+        <p class="text-[11px] text-slate-400">100% Authentic Product Interface Showcase • www.isasecuredpdf.com</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center space-x-2">
+      <button onclick="prevSlide()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition">
+        ⏮ Prev
+      </button>
+      <button onclick="togglePlay()" id="playBtn" class="px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl text-xs font-black transition flex items-center space-x-1 shadow-lg shadow-cyan-500/20">
+        <span id="playIcon">⏸</span> <span id="playLabel">Pause</span>
+      </button>
+      <button onclick="nextSlide()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition">
+        Next ⏭
+      </button>
+      <a href="https://www.isasecuredpdf.com" target="_blank" rel="noopener noreferrer" class="px-4 py-1.5 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition transform active:scale-95 shrink-0 ml-2">
+        Launch www.isasecuredpdf.com ↗
+      </a>
+    </div>
+  </div>
+
+  <!-- MAIN AUTHENTIC WEBSITE & EDITOR INTERFACE FRAME -->
+  <div class="max-w-6xl mx-auto w-full aspect-[16/10] sm:aspect-video bg-slate-950 border-2 border-slate-800 rounded-3xl relative shadow-2xl overflow-hidden flex flex-col justify-between my-3">
+    
+    <!-- Background Ambient Glow -->
+    <div id="bgGlow" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-3xl pulse-soft pointer-events-none z-0"></div>
+
+    <!-- 1. AUTHENTIC ISASECUREDPDF WEBSITE NAVBAR -->
+    <nav class="relative z-20 px-4 py-2.5 bg-slate-950/95 border-b border-slate-800/80 flex items-center justify-between text-xs backdrop-blur-md">
+      <div class="flex items-center space-x-3">
+        <div class="w-7 h-7 rounded-lg overflow-hidden shadow ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 shrink-0">
+          <img src="./app_logo.jpg" alt="Logo" class="w-full h-full object-cover" />
+        </div>
+        <span class="font-extrabold text-white text-xs sm:text-sm tracking-tight gradient-brand">ISASecuredPDF</span>
+      </div>
+
+      <!-- Center Navigation Links -->
+      <div class="hidden md:flex items-center space-x-6 text-[11px] font-bold text-slate-300">
+        <span class="text-cyan-400">Features</span>
+        <span>Security & Compliance</span>
+        <span>Pricing ($99.99 VIP)</span>
+        <span>FAQ</span>
+      </div>
+
+      <!-- Right Action CTA -->
+      <div class="flex items-center space-x-2">
+        <span id="slideTag" class="px-2.5 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-mono font-bold rounded-full">
+          TOOL 1 / 7
+        </span>
+        <a href="https://www.isasecuredpdf.com" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-[11px] rounded-xl shadow-md transition transform active:scale-95">
+          Open Free Editor →
+        </a>
+      </div>
+    </nav>
+
+    <!-- 2. AUTHENTIC ISASECUREDPDF WORKSPACE TOOLBAR & CANVAS -->
+    <div class="relative z-10 flex-1 flex flex-col bg-slate-950 overflow-hidden">
+      
+      <!-- Real Editor Header Toolbar -->
+      <div class="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-2 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-[11px] font-bold text-slate-200" id="mockFileName">Sample_Agreement.pdf</span>
+        </div>
+
+        <!-- Real App Tool Buttons Mockup -->
+        <div class="flex items-center space-x-1.5 overflow-x-auto py-0.5 scrollbar-none">
+          <span id="toolBtn-0" class="px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold shrink-0">✏️ Text & Redact</span>
+          <span id="toolBtn-1" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 text-[10px] font-medium shrink-0">🔒 AES-256 Lock</span>
+          <span id="toolBtn-2" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 text-[10px] font-medium shrink-0">⚡ Compress</span>
+          <span id="toolBtn-3" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 text-[10px] font-medium shrink-0">📷 4K Camera</span>
+          <span id="toolBtn-4" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 text-[10px] font-medium shrink-0">✍️ Sign & Stamp</span>
+          <span id="toolBtn-5" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 text-[10px] font-medium shrink-0">✂️ Page Manager</span>
+        </div>
+
+        <div class="hidden sm:flex items-center space-x-1.5">
+          <span class="px-2.5 py-1 bg-slate-800 text-indigo-300 rounded-lg text-[10px] font-bold">Print</span>
+          <span class="px-3 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg text-[10px] font-bold shadow">Export PDF</span>
+        </div>
+      </div>
+
+      <!-- Real Workspace Area: Thumbnails + Live PDF Canvas -->
+      <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Thumbnail Sidebar Mockup -->
+        <div class="hidden sm:flex flex-col w-40 bg-slate-900/90 border-r border-slate-800 p-2 space-y-2 shrink-0">
+          <div class="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider px-1">Pages Overview</div>
+          <div class="p-2 bg-slate-950 border-2 border-cyan-400 rounded-xl space-y-1 shadow">
+            <div class="h-14 bg-slate-900 rounded border border-slate-800 flex items-center justify-center text-[9px] text-cyan-300 font-bold">Page 1</div>
+            <div class="text-[8px] text-cyan-400 text-center font-bold">Active</div>
+          </div>
+          <div class="p-2 bg-slate-950 border border-slate-800 rounded-xl space-y-1 opacity-70">
+            <div class="h-14 bg-slate-900 rounded border border-slate-800 flex items-center justify-center text-[9px] text-slate-400 font-bold">Page 2</div>
+            <div class="text-[8px] text-slate-500 text-center">Page 2</div>
+          </div>
+        </div>
+
+        <!-- Central Canvas Viewport Frame -->
+        <div class="flex-1 p-3 sm:p-5 flex flex-col items-center justify-center overflow-hidden relative">
+          
+          <!-- Authentic Document Page Canvas -->
+          <div class="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl p-5 sm:p-7 canvas-shadow relative space-y-3.5 text-left transition-all duration-500">
+            
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <div class="flex items-center space-x-2.5">
+                <div id="slideIcon" class="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 text-lg sm:text-xl shadow">
+                  📄
+                </div>
+                <div>
+                  <h2 id="slideTitle" class="text-sm sm:text-lg font-black text-white tracking-tight">
+                    Full PDF Text Editing & Form Filling
+                  </h2>
+                  <p id="slideDesc" class="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+                    Edit text, redact sensitive numbers, and fill AcroForms 100% in-browser without cloud server uploads.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Interactive Dynamic Feature UI Content Box -->
+            <div id="featureInteractiveBox" class="p-3.5 bg-slate-950 border border-cyan-500/30 rounded-xl space-y-2">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Footer Badge Row & Live CTA Link -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-1">
+              <div id="slideBadges" class="flex flex-wrap gap-1.5">
+                <!-- Badges -->
+              </div>
+
+              <a
+                href="https://www.isasecuredpdf.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-extrabold text-xs rounded-xl shadow-xl shadow-cyan-500/20 transition transform active:scale-95 flex items-center justify-center space-x-1 shrink-0 border border-cyan-300/40"
+              >
+                <span>Launch Live Editor at www.isasecuredpdf.com</span>
+                <span>→</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. VOICE-OVER CAPTION & DIRECT LIFETIME VIP OFFER BANNER -->
+    <div class="relative z-20 bg-slate-900/95 border-t border-slate-800 p-3 sm:p-3.5 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center space-x-2 w-full sm:w-auto">
+        <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shrink-0"></span>
+        <p id="voiceoverCaption" class="text-xs text-cyan-200 font-medium italic truncate">
+          "Voiceover: Edit text, redact sensitive info, and fill forms 100% locally at www.isasecuredpdf.com."
+        </p>
+      </div>
+
+      <a
+        href="https://www.isasecuredpdf.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="w-full sm:w-auto px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs rounded-xl shadow-lg transition text-center shrink-0 border border-purple-400/40"
+      >
+        <span>💎 Get Lifetime VIP ($99.99 USD) at www.isasecuredpdf.com →</span>
+      </a>
+    </div>
+
+    <!-- 4. PROGRESS TIMELINE BAR -->
+    <div class="w-full bg-slate-800 h-1.5 relative z-30">
+      <div id="progressBar" class="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 h-full w-0 transition-all duration-300"></div>
+    </div>
+  </div>
+
+  <!-- SLIDE THUMBNAIL TABS -->
+  <div class="max-w-6xl mx-auto w-full grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+    <button onclick="goToSlide(0)" id="thumb-0" class="p-2.5 bg-slate-900 border-2 border-cyan-400 rounded-xl text-left transition space-y-1">
+      <div class="text-[10px] text-cyan-400 font-bold">1. Edit & Forms</div>
+      <div class="text-[9px] text-slate-400 truncate">Text & Redaction</div>
+    </button>
+    <button onclick="goToSlide(1)" id="thumb-1" class="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-left transition space-y-1">
+      <div class="text-[10px] text-slate-300 font-bold">2. Encryption</div>
+      <div class="text-[9px] text-slate-400 truncate">AES Password Lock</div>
+    </button>
+    <button onclick="goToSlide(2)" id="thumb-2" class="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-left transition space-y-1">
+      <div class="text-[10px] text-slate-300 font-bold">3. Compression</div>
+      <div class="text-[9px] text-slate-400 truncate">Reduce File Size</div>
+    </button>
+    <button onclick="goToSlide(3)" id="thumb-3" class="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-left transition space-y-1">
+      <div class="text-[10px] text-slate-300 font-bold">4. 4K Scanner</div>
+      <div class="text-[9px] text-slate-400 truncate">Camera Doc Scan</div>
+    </button>
+    <button onclick="goToSlide(4)" id="thumb-4" class="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-left transition space-y-1">
+      <div class="text-[10px] text-slate-300 font-bold">5. E-Signatures</div>
+      <div class="text-[9px] text-slate-400 truncate">Stamps & Seals</div>
+    </button>
+    <button onclick="goToSlide(5)" id="thumb-5" class="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-left transition space-y-1">
+      <div class="text-[10px] text-slate-300 font-bold">6. Page Manager</div>
+      <div class="text-[9px] text-slate-400 truncate">Split, Merge & Rotate</div>
+    </button>
+    <button onclick="goToSlide(6)" id="thumb-6" class="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-left transition space-y-1">
+      <div class="text-[10px] text-purple-300 font-bold">7. Lifetime VIP</div>
+      <div class="text-[9px] text-slate-400 truncate">Pay Once $99.99</div>
+    </button>
+  </div>
+
+  <script>
+    const slides = [
+      {
+        tag: 'TOOL 1 / 7 • TEXT & FORMS',
+        mockFileName: 'Non_Disclosure_Agreement.pdf',
+        icon: '📝',
+        title: 'Full PDF Text Editing & Form Filling',
+        desc: 'Edit text, redact sensitive information, draw shapes, and fill AcroForm fields with 100% client-side vector precision.',
+        interactiveHtml: `
+          <div class="flex items-center justify-between text-xs text-slate-300">
+            <span>Client Name: <strong class="text-white">Johnathan Doe</strong></span>
+            <span class="px-2 py-0.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded font-mono text-[10px]">■ REDACTED SSN</span>
+          </div>
+          <div class="p-2 bg-slate-900 rounded border border-slate-800 text-[11px] font-mono text-cyan-300">
+            Agreement Term: 24 Months • Security Clearance: Level 5
+          </div>
+        `,
+        badges: ['Text Redaction', 'Form Filling', 'High-DPI Vector Crisp'],
+        voiceover: '"Edit text, redact sensitive info, and fill forms 100% locally at www.isasecuredpdf.com."',
+        glowColor: 'rgba(6, 182, 212, 0.25)'
+      },
+      {
+        tag: 'TOOL 2 / 7 • AES ENCRYPTION',
+        mockFileName: 'Confidential_Financial_Report.pdf',
+        icon: '🔒',
+        title: 'Client-Side AES-256 Encryption & Lock',
+        desc: 'Protect confidential financial & legal documents with AES-128/256 password encryption or unlock protected files instantly.',
+        interactiveHtml: `
+          <div class="flex items-center justify-between text-xs text-purple-300">
+            <span class="flex items-center space-x-1.5 font-bold"><span>🔒</span> <span>AES-256 Military Encryption Active</span></span>
+            <span class="text-[10px] text-slate-400">Zero Server Transfer</span>
+          </div>
+          <div class="w-full bg-slate-900 border border-purple-500/40 rounded px-3 py-1.5 text-xs text-white font-mono flex items-center justify-between">
+            <span>••••••••••••••••</span>
+            <span class="text-purple-400 text-[10px] font-bold">ENCRYPTED</span>
+          </div>
+        `,
+        badges: ['AES-256 Lock', 'Password Removal', 'Zero Cloud Transfer'],
+        voiceover: '"Protect your files with military-grade AES-256 password encryption."',
+        glowColor: 'rgba(168, 85, 247, 0.25)'
+      },
+      {
+        tag: 'TOOL 3 / 7 • SMART COMPRESSION',
+        mockFileName: 'Annual_Tax_Package_2026.pdf',
+        icon: '⚡',
+        title: 'Smart PDF File Size Compression',
+        desc: 'Reduce bulky PDF file sizes by up to 80% using multi-preset image resampling and stream compaction without losing readability.',
+        interactiveHtml: `
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-400">Original Size: <strong class="line-through text-slate-500">18.4 MB</strong></span>
+            <span class="text-emerald-400 font-extrabold">Compressed Size: 3.2 MB (82% Smaller)</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-400 to-teal-500 h-full w-[18%]"></div>
+          </div>
+        `,
+        badges: ['Lossless Preset', 'High Compression', 'Fast GPU Execution'],
+        voiceover: '"Compress large PDFs in seconds using multi-preset client-side resampling."',
+        glowColor: 'rgba(234, 179, 8, 0.25)'
+      },
+      {
+        tag: 'TOOL 4 / 7 • CAMERA SCANNER',
+        mockFileName: 'Scanned_Paper_Invoice.pdf',
+        icon: '📷',
+        title: '4K Document Camera Scanner',
+        desc: 'Snap multi-page paper documents using your camera. Includes perspective tilt correction, auto-trimming, auto-flatten, and soft B&W filters.',
+        interactiveHtml: `
+          <div class="flex items-center justify-between text-xs text-emerald-300">
+            <span class="font-bold">📷 4K Camera Scanner Active</span>
+            <span class="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300">Auto-Flatten & Trim</span>
+          </div>
+          <div class="p-2 bg-slate-900 border border-emerald-500/30 rounded text-[11px] text-slate-300 flex items-center justify-between">
+            <span>Page 1 of 3 (Soft B&W Filter Applied)</span>
+            <span class="text-emerald-400 font-bold">READY</span>
+          </div>
+        `,
+        badges: ['Perspective Crop', 'Auto-Flatten', 'Multi-Page Package'],
+        voiceover: '"Turn paper contracts into clean digital PDFs using our 4K Document Camera Scanner."',
+        glowColor: 'rgba(16, 185, 129, 0.25)'
+      },
+      {
+        tag: 'TOOL 5 / 7 • STAMPS & SIGNATURES',
+        mockFileName: 'Commercial_Lease_Agreement.pdf',
+        icon: '✍️',
+        title: 'E-Signatures & Official Document Seals',
+        desc: 'Draw, type, or upload transparent PNG signatures. Stamp documents with CONFIDENTIAL, APPROVED, or custom company seals.',
+        interactiveHtml: `
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-indigo-300 font-bold">✍️ Official Digital Signature Applied</span>
+            <span class="px-2 py-0.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded text-[10px] font-black">CONFIDENTIAL</span>
+          </div>
+          <div class="p-2 bg-slate-900 border border-slate-800 rounded font-serif italic text-cyan-300 text-sm text-center">
+            Johnathan Doe (Digitally Verified Sign-off)
+          </div>
+        `,
+        badges: ['Handwritten Signatures', 'Transparent Seals', 'Drag-and-Drop Handles'],
+        voiceover: '"Sign contracts and apply legal stamps with drag-and-drop ease at www.isasecuredpdf.com."',
+        glowColor: 'rgba(99, 102, 241, 0.25)'
+      },
+      {
+        tag: 'TOOL 6 / 7 • PAGE MANAGER',
+        mockFileName: 'Merged_Master_Portfolio.pdf',
+        icon: '✂️',
+        title: 'Visual Page Reorder, Split & Merge',
+        desc: 'Visually drag and reorder pages, rotate orientation 90°, split page ranges into new files, or merge multiple PDFs into one master file.',
+        interactiveHtml: `
+          <div class="flex items-center justify-between text-xs text-purple-300">
+            <span class="font-bold">✂️ Visual Page Manager & Batch Merge</span>
+            <span class="text-[10px] text-slate-400">4 PDF Files Combined</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1.5 text-center text-[10px] font-bold">
+            <div class="p-1.5 bg-slate-900 border border-cyan-500/40 rounded text-cyan-300">Page 1 ↻</div>
+            <div class="p-1.5 bg-slate-900 border border-slate-800 rounded text-slate-400">Page 2</div>
+            <div class="p-1.5 bg-slate-900 border border-slate-800 rounded text-slate-400">Page 3</div>
+            <div class="p-1.5 bg-slate-900 border border-purple-500/40 rounded text-purple-300">Page 4 ✂️</div>
+          </div>
+        `,
+        badges: ['Visual Page Reorder', 'Split & Extract', 'Batch Merge PDF'],
+        voiceover: '"Reorder pages, split ranges, and merge multiple documents seamlessly."',
+        glowColor: 'rgba(236, 72, 153, 0.25)'
+      },
+      {
+        tag: 'TOOL 7 / 7 • LIFETIME ACCESS',
+        mockFileName: 'ISASecuredPDF_Lifetime_VIP.pdf',
+        icon: '💎',
+        title: '100% Air-Gapped • Lifetime VIP Access',
+        desc: 'Zero recurring subscriptions. Get Lifetime VIP Access for $99.99 USD ($199.99 50% OFF Intro Offer) with priority updates forever.',
+        interactiveHtml: `
+          <div class="flex items-center justify-between text-xs text-purple-300">
+            <span class="font-bold text-sm text-white">Lifetime VIP Pass</span>
+            <span class="px-2 py-0.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded text-[10px] font-black">50% OFF INTRO OFFER</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span class="text-2xl font-black text-white">$99.99 USD</span>
+            <span class="line-through text-slate-500 text-xs">$199.99 USD</span>
+            <span class="text-xs text-slate-400">/ one-time payment</span>
+          </div>
+        `,
+        badges: ['No Monthly Fees', '$99.99 USD One-Time', 'Google Play & Web App'],
+        voiceover: '"Zero monthly fees. Get Lifetime VIP Access for $99.99 USD at www.isasecuredpdf.com and own it forever!"',
+        glowColor: 'rgba(168, 85, 247, 0.35)'
+      }
+    ];
+
+    let currentIndex = 0;
+    let isPlaying = true;
+    let timer = null;
+
+    function renderSlide(index) {
+      const s = slides[index];
+      document.getElementById('mockFileName').innerText = s.mockFileName;
+      document.getElementById('slideTag').innerText = s.tag;
+      document.getElementById('slideIcon').innerText = s.icon;
+      document.getElementById('slideTitle').innerText = s.title;
+      document.getElementById('slideDesc').innerText = s.desc;
+      document.getElementById('voiceoverCaption').innerText = s.voiceover;
+      document.getElementById('bgGlow').style.backgroundColor = s.glowColor;
+      document.getElementById('featureInteractiveBox').innerHTML = s.interactiveHtml;
+
+      const badgesHtml = s.badges.map(b => `<span class="px-2.5 py-0.5 bg-slate-900 border border-slate-700 text-slate-300 text-[10px] font-semibold rounded-lg">${b}</span>`).join('');
+      document.getElementById('slideBadges').innerHTML = badgesHtml;
+
+      for (let i = 0; i < 6; i++) {
+        const b = document.getElementById(`toolBtn-${i}`);
+        if (b) {
+          if (i === index) {
+            b.className = "px-2.5 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold shadow shrink-0";
+          } else {
+            b.className = "px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 text-[10px] font-medium shrink-0";
+          }
+        }
+      }
+
+      const pct = ((index + 1) / slides.length) * 100;
+      document.getElementById('progressBar').style.width = pct + '%';
+
+      for (let i = 0; i < slides.length; i++) {
+        const thumb = document.getElementById(`thumb-${i}`);
+        if (i === index) {
+          thumb.className = "p-2.5 bg-slate-900 border-2 border-cyan-400 rounded-xl text-left transition shadow-lg ring-2 ring-cyan-500/20";
+        } else {
+          thumb.className = "p-2.5 bg-slate-900 border border-slate-800 opacity-60 hover:opacity-100 rounded-xl text-left transition";
+        }
+      }
+    }
+
+    function nextSlide() {
+      currentIndex = (currentIndex + 1) % slides.length;
+      renderSlide(currentIndex);
+    }
+
+    function prevSlide() {
+      currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+      renderSlide(currentIndex);
+    }
+
+    function goToSlide(index) {
+      currentIndex = index;
+      renderSlide(currentIndex);
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      const btnLabel = document.getElementById('playLabel');
+      const btnIcon = document.getElementById('playIcon');
+      if (isPlaying) {
+        btnLabel.innerText = 'Pause';
+        btnIcon.innerText = '⏸';
+        startAutoPlay();
+      } else {
+        btnLabel.innerText = 'Play';
+        btnIcon.innerText = '▶';
+        clearInterval(timer);
+      }
+    }
+
+    function startAutoPlay() {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        if (isPlaying) {
+          nextSlide();
+        }
+      }, 5000);
+    }
+
+    renderSlide(0);
+    startAutoPlay();
+  </script>
+</body>
+</html>
