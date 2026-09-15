@@ -320,11 +320,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <span>Connecting to Google Play...</span>
                       </span>
                     ) : (
-                      <span>
-                        🔒 {selectedPlan === 'monthly' ? `Subscribe for ${currentPricing.monthly} ${currentPricing.code}/mo via Google Play` : selectedPlan === 'annual' ? `Subscribe for ${currentPricing.annual} ${currentPricing.code}/yr via Google Play` : `Unlock Lifetime License for ${currentPricing.lifetime} ${currentPricing.code} via Google Play`}
-                      </span>
+                      <span>🔒 Subscribe via Google Play</span>
                     )}
                   </button>
+
+                  {/* Subtext below the button */}
+                  <p className="text-[11px] text-cyan-300 font-semibold text-center leading-normal px-2">
+                    Billed annually through your Google Play account. Price and local currency will be displayed in the Google Play confirmation sheet.
+                  </p>
 
                   {/* Mandatory Google Play Subscriptions Policy Disclosure */}
                   <div className="text-[10px] text-slate-400 text-center leading-relaxed px-2 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80">
