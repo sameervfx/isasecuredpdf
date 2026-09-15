@@ -29,7 +29,8 @@ import {
   BookOpen,
   Camera,
   Menu,
-  Globe
+  Globe,
+  Star
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, saveUserCurrency } from '../utils/currencyFormatter';
@@ -215,6 +216,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span className="font-bold">Theme</span>
             </button>
           )}
+
+          <a
+            href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Rate 5-Stars on Google Play Store"
+            className="hidden sm:flex items-center space-x-1 px-2.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 rounded-xl text-xs font-extrabold text-amber-300 transition active:scale-95 shadow"
+          >
+            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+            <span>Rate 5★</span>
+          </a>
 
           <button
             onClick={handleGateCheckAndLaunch}

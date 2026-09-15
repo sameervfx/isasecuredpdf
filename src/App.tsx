@@ -29,6 +29,7 @@ const PasswordModal = React.lazy(() => import('./components/PasswordModal').then
 const CompressModal = React.lazy(() => import('./components/CompressModal').then(m => ({ default: m.CompressModal })));
 import { ScanModal } from './components/ScanModal';
 const AppDownloadModal = React.lazy(() => import('./components/AppDownloadModal').then(m => ({ default: m.AppDownloadModal })));
+const ReviewModal = React.lazy(() => import('./components/ReviewModal').then(m => ({ default: m.ReviewModal })));
 import './types/electron.d';
 import {
   PDFDocumentState,
@@ -90,6 +91,7 @@ export const App: React.FC = () => {
   const [isUserGuideModalOpen, setIsUserGuideModalOpen] = useState<boolean>(false);
   const [isHelcimCheckoutOpen, setIsHelcimCheckoutOpen] = useState<boolean>(false);
   const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'annual' | 'lifetime'>('annual');
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState<boolean>(false);
 
   const handleOpenCheckout = useCallback((plan?: 'monthly' | 'annual' | 'lifetime') => {
     setCheckoutPlan(plan || 'annual');
@@ -831,6 +833,18 @@ export const App: React.FC = () => {
     return btoa(binary);
   };
 
+  const handleTriggerExportReview = useCallback(() => {
+    const hasRated = localStorage.getItem('isa_has_rated');
+    if (hasRated === 'true') return;
+    const currentCount = parseInt(localStorage.getItem('isa_export_count') || '0', 10) + 1;
+    localStorage.setItem('isa_export_count', currentCount.toString());
+    if (currentCount >= 2) {
+      setTimeout(() => {
+        setIsReviewModalOpen(true);
+      }, 1500);
+    }
+  }, []);
+
   const handleExportPDF = useCallback(async () => {
     if (!docState.fileBytes) return;
     setIsExporting(true);
@@ -851,6 +865,7 @@ export const App: React.FC = () => {
         await downloadFile({ fileName: defaultName, blob, mimeType: 'application/pdf' });
       }
       trackEvent('export_downloaded');
+      handleTriggerExportReview();
     } catch (err) {
       console.error('Export error:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -1096,6 +1111,7 @@ export const App: React.FC = () => {
         onOpenMergeModal={() => setIsMergeModalOpen(true)}
         onOpenSaveMultipleModal={() => setIsSaveMultipleModalOpen(true)}
         onOpenPremiumExportModal={handleOpenPremiumExportModal}
+        onOpenReviewModal={() => setIsReviewModalOpen(true)}
         onOpenRecentFile={handleOpenRecentFile}
         onSelectSavedSignature={handleSelectSavedSignature}
         onRotatePage={handleRotatePage}
@@ -1349,6 +1365,12 @@ export const App: React.FC = () => {
       <AppDownloadModal
         isOpen={isAppDownloadModalOpen}
         onClose={() => setIsAppDownloadModalOpen(false)}
+      />
+
+      {/* Smart In-App & Web 5-Star Review Modal */}
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
       />
 
       {/* Post-Payment Pro Welcome Modal */}

@@ -43,6 +43,7 @@ import {
   XCircle,
   Clock,
   Highlighter,
+  Star,
   RotateCcw,
   Eye,
   EyeOff,
@@ -88,6 +89,7 @@ interface HeaderToolbarProps {
   onOpenMergeModal: () => void;
   onOpenSaveMultipleModal: () => void;
   onOpenPremiumExportModal: (format?: ExportFormatType) => void;
+  onOpenReviewModal?: () => void;
   onOpenRecentFile?: (fileItem: RecentFileItem) => void;
   onSelectSavedSignature: (dataUrl: string) => void;
   onRotatePage?: (pageIndex: number) => void;
@@ -148,6 +150,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   onOpenMergeModal,
   onOpenSaveMultipleModal,
   onOpenPremiumExportModal,
+  onOpenReviewModal,
   onOpenRecentFile,
   onSelectSavedSignature,
   onRotatePage,
@@ -1601,6 +1604,17 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               <Download className="w-3.5 h-3.5" />
               <span>{isExporting ? 'Exporting...' : 'Export'}</span>
             </button>
+
+            {onOpenReviewModal && (
+              <button
+                onClick={onOpenReviewModal}
+                title="Rate ISASecured PDF 5-Stars on Google Play Store"
+                className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-extrabold rounded-lg sm:rounded-xl border border-amber-500/40 transition active:scale-95"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span className="hidden sm:inline">Rate 5★</span>
+              </button>
+            )}
           </div>
         </div>
       )}
