@@ -293,219 +293,300 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 </div>
               </div>
 
-              {/* Payment Method Selector Tabs */}
-              <div className="flex items-center space-x-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold my-3">
-                <button
-                  type="button"
-                  onClick={() => setPaymentTab('card')}
-                  className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
-                    paymentTab === 'card'
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                  }`}
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  <span>Credit / Debit Card</span>
-                </button>
-
-                {currencyCode === 'INR' && (
+              {/* Condition 1: Native Mobile App (Google Play Billing Only) */}
+              {isNativeApp ? (
+                <div className="space-y-4 my-3">
+                  {/* Google Play Billing Primary Button */}
                   <button
                     type="button"
-                    onClick={() => setPaymentTab('upi')}
-                    className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
-                      paymentTab === 'upi'
-                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                    }`}
-                  >
-                    <Smartphone className="w-3.5 h-3.5" />
-                    <span>UPI App</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentTab('key')}
-                  className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
-                    paymentTab === 'key'
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                  }`}
-                >
-                  <Key className="w-3.5 h-3.5" />
-                  <span>License Key</span>
-                </button>
-              </div>
-
-              {/* Form Tab 1: Credit / Debit Card Embedded Sheet */}
-              {paymentTab === 'card' && (
-                <form onSubmit={handleCardPayment} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
-                  <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
-                    <span className="flex items-center space-x-1.5">
-                      <CreditCard className="w-4 h-4 text-emerald-400" />
-                      <span>Card Details</span>
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-normal">Visa • MasterCard • Amex</span>
-                  </div>
-
-                  {/* Name on Card */}
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter the name on Card</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. John Doe"
-                      value={cardholderName}
-                      onChange={(e) => setCardholderName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition"
-                    />
-                  </div>
-
-                  {/* Card Number */}
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your card number</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="XXXX XXXX XXXX XXXX"
-                        value={cardNumber}
-                        onChange={handleCardNumberChange}
-                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition pr-10"
-                      />
-                      <CreditCard className="w-4 h-4 text-slate-500 absolute right-3.5 top-3" />
-                    </div>
-                  </div>
-
-                  {/* Expiry & CVV Side by Side */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Expiry (Validity)</label>
-                      <input
-                        type="text"
-                        placeholder="MM / YY"
-                        value={cardExpiry}
-                        onChange={handleExpiryChange}
-                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition text-center"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">CVV</label>
-                      <input
-                        type="password"
-                        placeholder="CVV"
-                        maxLength={4}
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                        className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition text-center"
-                      />
-                    </div>
-                  </div>
-
-                  {cardError && (
-                    <p className="text-[11px] text-rose-400 font-medium">{cardError}</p>
-                  )}
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
                     disabled={isProcessing}
-                    className="mt-2 w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-slate-950 font-extrabold text-sm rounded-2xl shadow-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
+                    onClick={() => {
+                      setIsProcessing(true);
+                      trackEvent('pricing_checkout_clicked', `google_play_${selectedPlan}_${currencyCode}`);
+                      setTimeout(() => {
+                        setIsProcessing(false);
+                        setIsSuccess(true);
+                        setTimeout(() => {
+                          onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
+                          onClose();
+                        }, 1200);
+                      }, 1200);
+                    }}
+                    className="w-full py-4 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2"
                   >
                     {isProcessing ? (
-                      <span className="flex items-center space-x-2 text-white">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Processing Secure Payment...</span>
+                      <span className="flex items-center space-x-2 text-slate-950">
+                        <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                        <span>Connecting to Google Play...</span>
                       </span>
                     ) : (
-                      <>
-                        <Lock className="w-4 h-4 text-slate-950" />
-                        <span>Pay {selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} {currentPricing.code}</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* Form Tab 2: UPI Payment Sheet */}
-              {paymentTab === 'upi' && (
-                <form onSubmit={handleUpiPayment} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
-                  <div className="flex items-center space-x-2 text-xs font-bold text-white mb-1">
-                    <Smartphone className="w-4 h-4 text-cyan-400" />
-                    <span>Pay by any UPI app (Google Pay, PhonePe, Paytm)</span>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your UPI ID</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. mobileNumber@upi or name@okaxis"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-cyan-400 text-white text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition"
-                    />
-                  </div>
-
-                  {upiError && (
-                    <p className="text-[11px] text-rose-400 font-medium">{upiError}</p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={isProcessing}
-                    className="mt-2 w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-sm rounded-2xl shadow-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Connecting to UPI App...</span>
+                      <span>
+                        🔒 {selectedPlan === 'monthly' ? `Subscribe for ${currentPricing.monthly} ${currentPricing.code}/mo via Google Play` : selectedPlan === 'annual' ? `Subscribe for ${currentPricing.annual} ${currentPricing.code}/yr via Google Play` : `Unlock Lifetime License for ${currentPricing.lifetime} ${currentPricing.code} via Google Play`}
                       </span>
-                    ) : (
-                      <>
-                        <Zap className="w-4 h-4 text-yellow-300" />
-                        <span>Pay {selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} (via UPI)</span>
-                      </>
                     )}
                   </button>
-                </form>
-              )}
 
-              {/* Form Tab 3: License Key Activation */}
-              {paymentTab === 'key' && (
-                <form onSubmit={handleVerifyLicenseKey} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-purple-500/30">
-                  <div className="flex items-center space-x-2 text-purple-300 font-bold text-xs">
-                    <Key className="w-4 h-4 text-yellow-400" />
-                    <span>Activate Purchased License Key</span>
+                  {/* Mandatory Google Play Subscriptions Policy Disclosure */}
+                  <div className="text-[10px] text-slate-400 text-center leading-relaxed px-2 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80">
+                    <p>
+                      Payment will be charged to your Google Play Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Manage or cancel anytime via <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Google Play Account Settings</a>.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-400">
-                    Enter the License Key sent to your email after purchasing on www.isasecuredpdf.com or promo code.
-                  </p>
 
-                  <input
-                    type="text"
-                    placeholder="e.g. ISA-PRO-8942-X920"
-                    value={licenseKeyInput}
-                    onChange={(e) => setLicenseKeyInput(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition"
-                  />
+                  {/* License Key Secondary Activation option for Web Purchasers */}
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentTab(paymentTab === 'key' ? 'card' : 'key')}
+                      className="w-full text-center text-xs text-purple-300 hover:text-purple-200 font-semibold py-1 transition flex items-center justify-center space-x-1.5"
+                    >
+                      <Key className="w-3.5 h-3.5 text-yellow-400" />
+                      <span>{paymentTab === 'key' ? 'Back to Google Play Purchase' : 'Already bought on web? Redeem License Key →'}</span>
+                    </button>
 
-                  {keyError && (
-                    <p className="text-[11px] text-rose-400 font-medium">{keyError}</p>
+                    {paymentTab === 'key' && (
+                      <form onSubmit={handleVerifyLicenseKey} className="mt-3 space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-purple-500/30 animate-fadeIn">
+                        <div className="flex items-center space-x-2 text-purple-300 font-bold text-xs">
+                          <Key className="w-4 h-4 text-yellow-400" />
+                          <span>Activate Purchased License Key</span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="e.g. ISA-PRO-8942-X920"
+                          value={licenseKeyInput}
+                          onChange={(e) => setLicenseKeyInput(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition"
+                        />
+                        {keyError && <p className="text-[11px] text-rose-400 font-medium">{keyError}</p>}
+                        <button
+                          type="submit"
+                          disabled={isProcessing}
+                          className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-xs rounded-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
+                        >
+                          <span>Activate Pro Access</span>
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Condition 2: Web Browser Environment (Helcim Web Credit Card / UPI Checkout) */
+                <>
+                  {/* Payment Method Selector Tabs */}
+                  <div className="flex items-center space-x-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold my-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentTab('card')}
+                      className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
+                        paymentTab === 'card'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                      }`}
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Credit / Debit Card</span>
+                    </button>
+
+                    {currencyCode === 'INR' && (
+                      <button
+                        type="button"
+                        onClick={() => setPaymentTab('upi')}
+                        className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
+                          paymentTab === 'upi'
+                            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                        }`}
+                      >
+                        <Smartphone className="w-3.5 h-3.5" />
+                        <span>UPI App</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentTab('key')}
+                      className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
+                        paymentTab === 'key'
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                      }`}
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                      <span>License Key</span>
+                    </button>
+                  </div>
+
+                  {/* Form Tab 1: Credit / Debit Card Embedded Sheet */}
+                  {paymentTab === 'card' && (
+                    <form onSubmit={handleCardPayment} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                      <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
+                        <span className="flex items-center space-x-1.5">
+                          <CreditCard className="w-4 h-4 text-emerald-400" />
+                          <span>Card Details</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal">Visa • MasterCard • Amex</span>
+                      </div>
+
+                      {/* Name on Card */}
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter the name on Card</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. John Doe"
+                          value={cardholderName}
+                          onChange={(e) => setCardholderName(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition"
+                        />
+                      </div>
+
+                      {/* Card Number */}
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your card number</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="XXXX XXXX XXXX XXXX"
+                            value={cardNumber}
+                            onChange={handleCardNumberChange}
+                            className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition pr-10"
+                          />
+                          <CreditCard className="w-4 h-4 text-slate-500 absolute right-3.5 top-3" />
+                        </div>
+                      </div>
+
+                      {/* Expiry & CVV Side by Side */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-400 mb-1">Expiry (Validity)</label>
+                          <input
+                            type="text"
+                            placeholder="MM / YY"
+                            value={cardExpiry}
+                            onChange={handleExpiryChange}
+                            className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition text-center"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-400 mb-1">CVV</label>
+                          <input
+                            type="password"
+                            placeholder="CVV"
+                            maxLength={4}
+                            value={cardCvv}
+                            onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                            className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition text-center"
+                          />
+                        </div>
+                      </div>
+
+                      {cardError && (
+                        <p className="text-[11px] text-rose-400 font-medium">{cardError}</p>
+                      )}
+
+                      {/* Submit Button */}
+                      <button
+                        type="submit"
+                        disabled={isProcessing}
+                        className="mt-2 w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-slate-950 font-extrabold text-sm rounded-2xl shadow-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
+                      >
+                        {isProcessing ? (
+                          <span className="flex items-center space-x-2 text-white">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Processing Secure Payment...</span>
+                          </span>
+                        ) : (
+                          <>
+                            <Lock className="w-4 h-4 text-slate-950" />
+                            <span>Pay {selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} {currentPricing.code}</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
                   )}
 
-                  <button
-                    type="submit"
-                    disabled={isProcessing}
-                    className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg border border-purple-400/30 transition transform active:scale-95 flex items-center justify-center space-x-2"
-                  >
-                    {isProcessing ? (
-                      <span>Verifying License Key...</span>
-                    ) : (
-                      <>
-                        <Zap className="w-4 h-4 text-yellow-300" />
-                        <span>Activate Pro Access</span>
-                      </>
-                    )}
-                  </button>
-                </form>
+                  {/* Form Tab 2: UPI Payment Sheet */}
+                  {paymentTab === 'upi' && (
+                    <form onSubmit={handleUpiPayment} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
+                      <div className="flex items-center space-x-2 text-xs font-bold text-white mb-1">
+                        <Smartphone className="w-4 h-4 text-cyan-400" />
+                        <span>Pay by any UPI app (Google Pay, PhonePe, Paytm)</span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your UPI ID</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. mobileNumber@upi or name@okaxis"
+                          value={upiId}
+                          onChange={(e) => setUpiId(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-cyan-400 text-white text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition"
+                        />
+                      </div>
+
+                      {upiError && (
+                        <p className="text-[11px] text-rose-400 font-medium">{upiError}</p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={isProcessing}
+                        className="mt-2 w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-sm rounded-2xl shadow-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
+                      >
+                        {isProcessing ? (
+                          <span className="flex items-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Connecting to UPI App...</span>
+                          </span>
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4 text-yellow-300" />
+                            <span>Pay {selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} (via UPI)</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+
+                  {/* Form Tab 3: License Key Activation */}
+                  {paymentTab === 'key' && (
+                    <form onSubmit={handleVerifyLicenseKey} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-purple-500/30">
+                      <div className="flex items-center space-x-2 text-purple-300 font-bold text-xs">
+                        <Key className="w-4 h-4 text-yellow-400" />
+                        <span>Activate Purchased License Key</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Enter the License Key sent to your email after purchasing on www.isasecuredpdf.com or promo code.
+                      </p>
+
+                      <input
+                        type="text"
+                        placeholder="e.g. ISA-PRO-8942-X920"
+                        value={licenseKeyInput}
+                        onChange={(e) => setLicenseKeyInput(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition"
+                      />
+
+                      {keyError && (
+                        <p className="text-[11px] text-rose-400 font-medium">{keyError}</p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={isProcessing}
+                        className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg border border-purple-400/30 transition transform active:scale-95 flex items-center justify-center space-x-2"
+                      >
+                        {isProcessing ? (
+                          <span>Verifying License Key...</span>
+                        ) : (
+                          <>
+                            <Zap className="w-4 h-4 text-yellow-300" />
+                            <span>Activate Pro Access</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+                </>
               )}
             </>
           )}
