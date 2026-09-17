@@ -3,7 +3,7 @@ import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, Arr
 import { trackEvent } from '../utils/analytics';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
-import { launchNativeGooglePlayBilling, PLAY_PRODUCT_IDS } from '../utils/playBilling';
+import { launchNativeGooglePlayBilling, PLAY_PRODUCT_IDS, initializeStoreCatalog, getCachedStoreProducts, DynamicProductInfo, PlanType } from '../utils/playBilling';
 
 interface HelcimCheckoutModalProps {
   isOpen: boolean;
@@ -21,6 +21,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>(initialPlan);
   const [paymentTab, setPaymentTab] = useState<'card' | 'upi' | 'key'>('card');
   
+  // Dynamic Google Play Store Catalog State
+  const [storeProducts, setStoreProducts] = useState<Record<PlanType, DynamicProductInfo | null>>({
+    monthly: null,
+    annual: null,
+    lifetime: null,
+  });
+  const [isStoreLoading, setIsStoreLoading] = useState<boolean>(true);
+
   // Card Form State
   const [cardholderName, setCardholderName] = useState<string>('');
   const [cardNumber, setCardNumber] = useState<string>('');
@@ -45,13 +53,27 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     setCurrencyCode(detectUserCurrency());
   }, []);
 
+  const isNativeApp = isIOSPlatform() || isNativeMobileApp();
+
   useEffect(() => {
     if (isOpen && initialPlan) {
       setSelectedPlan(initialPlan);
     }
   }, [isOpen, initialPlan]);
 
-  const isNativeApp = isIOSPlatform() || isNativeMobileApp();
+  useEffect(() => {
+    if (isOpen && isNativeApp) {
+      setIsStoreLoading(true);
+      initializeStoreCatalog()
+        .then((prods) => {
+          setStoreProducts(prods);
+          setIsStoreLoading(false);
+        })
+        .catch(() => {
+          setIsStoreLoading(false);
+        });
+    }
+  }, [isOpen, isNativeApp]);
 
   if (!isOpen) return null;
 
@@ -225,13 +247,13 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Select Plan</label>
                 
-                {/* 1. NATIVE MOBILE PLAN CARDS (Zero Hardcoded Prices / Currency Strings) */}
+                {/* 1. NATIVE MOBILE PLAN CARDS (Dynamic Play Store Catalog Binding) */}
                 {isNativeApp ? (
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {/* Monthly Plan */}
                     <div
                       onClick={() => setSelectedPlan('monthly')}
-                      className={`cursor-pointer p-3.5 rounded-2xl border transition flex flex-col justify-between ${
+                      className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
                         selectedPlan === 'monthly'
                           ? 'bg-cyan-950/40 border-cyan-400 ring-2 ring-cyan-500/30'
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
@@ -241,14 +263,24 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-bold text-white text-xs">Monthly Pass</h4>
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-2">Billed Monthly</p>
+                        {isStoreLoading ? (
+                          <div className="flex items-center space-x-1 my-1.5">
+                            <div className="w-2.5 h-2.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
+                          </div>
+                        ) : storeProducts.monthly?.price ? (
+                          <div className="my-1 text-sm font-extrabold text-cyan-300">
+                            {storeProducts.monthly.price}
+                          </div>
+                        ) : null}
+                        <p className="text-[10px] text-slate-400 mt-1">Billed Monthly</p>
                       </div>
                     </div>
 
                     {/* Annual Plan (Best Value) */}
                     <div
                       onClick={() => setSelectedPlan('annual')}
-                      className={`cursor-pointer p-3.5 rounded-2xl border transition flex flex-col justify-between ${
+                      className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
                         selectedPlan === 'annual'
                           ? 'bg-gradient-to-b from-cyan-950/60 to-emerald-950/60 border-emerald-400 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
@@ -261,14 +293,24 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             Best Value
                           </span>
                         </div>
-                        <p className="text-[10px] text-emerald-400 font-semibold mt-2">Billed Annually</p>
+                        {isStoreLoading ? (
+                          <div className="flex items-center space-x-1 my-1.5">
+                            <div className="w-2.5 h-2.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
+                          </div>
+                        ) : storeProducts.annual?.price ? (
+                          <div className="my-1 text-sm font-extrabold text-emerald-300">
+                            {storeProducts.annual.price}
+                          </div>
+                        ) : null}
+                        <p className="text-[10px] text-emerald-400 font-semibold mt-1">Billed Annually</p>
                       </div>
                     </div>
 
                     {/* Lifetime License */}
                     <div
                       onClick={() => setSelectedPlan('lifetime')}
-                      className={`cursor-pointer p-3.5 rounded-2xl border transition flex flex-col justify-between ${
+                      className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
                         selectedPlan === 'lifetime'
                           ? 'bg-purple-950/40 border-purple-400 ring-2 ring-purple-500/30'
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
@@ -278,10 +320,20 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-bold text-white text-xs">Lifetime License</h4>
                           <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
-                            50% OFF
+                            VIP Access
                           </span>
                         </div>
-                        <p className="text-[10px] text-purple-300 font-semibold mt-2">One-Time Access</p>
+                        {isStoreLoading ? (
+                          <div className="flex items-center space-x-1 my-1.5">
+                            <div className="w-2.5 h-2.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
+                          </div>
+                        ) : storeProducts.lifetime?.price ? (
+                          <div className="my-1 text-sm font-extrabold text-purple-300">
+                            {storeProducts.lifetime.price}
+                          </div>
+                        ) : null}
+                        <p className="text-[10px] text-purple-300 font-semibold mt-1">One-Time Access</p>
                       </div>
                     </div>
                   </div>

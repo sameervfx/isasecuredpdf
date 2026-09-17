@@ -1418,15 +1418,14 @@ export const App: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-wider bg-slate-950 text-emerald-400 px-2 py-0.5 rounded-full">
-                  Recommended • Save 16%
+                  Recommended
                 </span>
-                <span className="text-[11px] font-bold text-slate-950">$2.50 / month</span>
               </div>
               <div className="text-sm font-extrabold text-slate-950 mt-1.5 flex items-center justify-between">
-                <span>Get Yearly Access ($29.99 USD/yr) →</span>
+                <span>Get Yearly Access →</span>
               </div>
               <div className="text-[10px] text-slate-900/90 font-medium mt-0.5">
-                Best value over monthly • Saves $5.89 vs 12x monthly payments
+                Best value over monthly plan
               </div>
             </button>
 
@@ -1440,7 +1439,7 @@ export const App: React.FC = () => {
                 className="p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-left transition"
               >
                 <div className="text-[10px] text-slate-400 font-semibold">Pro Monthly</div>
-                <div className="text-xs font-bold text-white">$2.99 USD/mo</div>
+                <div className="text-xs font-bold text-white">Monthly Pass</div>
               </button>
 
               <button
@@ -1452,10 +1451,10 @@ export const App: React.FC = () => {
               >
                 <div className="flex items-center justify-between text-[10px] text-purple-300 font-semibold">
                   <span>Lifetime VIP</span>
-                  <span className="text-[9px] bg-purple-500/20 px-1 rounded font-extrabold">50% OFF</span>
+                  <span className="text-[9px] bg-purple-500/20 px-1 rounded font-extrabold">VIP</span>
                 </div>
                 <div className="text-xs font-bold text-purple-200">
-                  $99.99 <span className="line-through text-slate-500 text-[10px] font-normal">$199.99</span>
+                  Lifetime Access
                 </div>
               </button>
             </div>

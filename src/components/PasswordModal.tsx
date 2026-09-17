@@ -50,7 +50,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
         onClose();
         onOpenCheckout();
       } else {
-        setErrorMessage('AES-256 PDF Password Encryption is a Pro feature ($2.99 USD).');
+        setErrorMessage('AES-256 PDF Password Encryption is a Pro feature.');
       }
       return;
     }
@@ -224,7 +224,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                       <Lock className="w-3.5 h-3.5 text-amber-300 shrink-0" />
                       <span>Pro Feature: AES-256 PDF Encryption</span>
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">Password protection requires Pro Access ($2.99 USD)</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">Password protection requires Pro Access</div>
                   </div>
                   <button
                     type="button"
