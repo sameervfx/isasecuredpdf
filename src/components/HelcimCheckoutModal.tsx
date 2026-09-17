@@ -3,6 +3,7 @@ import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, Arr
 import { trackEvent } from '../utils/analytics';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
+import { launchNativeGooglePlayBilling, PLAY_PRODUCT_IDS } from '../utils/playBilling';
 
 interface HelcimCheckoutModalProps {
   isOpen: boolean;
@@ -166,6 +167,17 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     }, 1000);
   };
 
+  // Dynamic Google Play Subtext based on selected plan
+  const getNativeSubtext = () => {
+    if (selectedPlan === 'monthly') {
+      return 'Billed monthly through your Google Play account. Local pricing and currency will be confirmed on Google Play.';
+    }
+    if (selectedPlan === 'lifetime') {
+      return 'One-time charge through your Google Play account. Local pricing and currency will be confirmed on Google Play.';
+    }
+    return 'Billed annually through your Google Play account. Local pricing and currency will be confirmed on Google Play.';
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl p-5 sm:p-7 shadow-2xl overflow-hidden text-slate-100 flex flex-col max-h-[92vh]">
@@ -184,7 +196,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 <span>Unlock ISA Secure PDF Pro</span>
               </h3>
               <p className="text-xs text-slate-400">
-                100% Client-Side Air-Gapped PDF Suite • Secure In-App Payment
+                100% Client-Side Air-Gapped PDF Suite • {isNativeApp ? 'Google Play In-App Billing' : 'Secure In-App Payment'}
               </p>
             </div>
           </div>
@@ -212,105 +224,177 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               {/* Plan Selection Cards */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Select Plan</label>
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  {/* Monthly Plan */}
-                  <div
-                    onClick={() => setSelectedPlan('monthly')}
-                    className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
-                      selectedPlan === 'monthly'
-                        ? 'bg-cyan-950/40 border-cyan-400 ring-2 ring-cyan-500/30'
-                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-white text-xs">Monthly Pass</h4>
-                        <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
-                          {currentPricing.monthlyDiscountPercent || '50% OFF'}
-                        </span>
-                      </div>
-                      <div className="my-1 text-sm sm:text-base font-extrabold text-white">
-                        {currentPricing.monthly}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                        <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalMonthly || '$5.99'}</span>
-                        <span className="text-slate-400 text-[10px]">{currentPricing.code}/mo</span>
+                
+                {/* 1. NATIVE MOBILE PLAN CARDS (Zero Hardcoded Prices / Currency Strings) */}
+                {isNativeApp ? (
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {/* Monthly Plan */}
+                    <div
+                      onClick={() => setSelectedPlan('monthly')}
+                      className={`cursor-pointer p-3.5 rounded-2xl border transition flex flex-col justify-between ${
+                        selectedPlan === 'monthly'
+                          ? 'bg-cyan-950/40 border-cyan-400 ring-2 ring-cyan-500/30'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-bold text-white text-xs">Monthly Pass</h4>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-2">Billed Monthly</p>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Annual Plan (Best Value) */}
-                  <div
-                    onClick={() => setSelectedPlan('annual')}
-                    className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
-                      selectedPlan === 'annual'
-                        ? 'bg-gradient-to-b from-cyan-950/60 to-emerald-950/60 border-emerald-400 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
-                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-white text-xs">Annual Pass</h4>
-                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
-                          {currentPricing.annualDiscountPercent || '16% OFF'}
-                        </span>
-                      </div>
-                      <div className="my-1 text-sm sm:text-base font-extrabold text-emerald-300">
-                        {currentPricing.annual}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                        <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || '$35.88'}</span>
-                        <span className="text-emerald-400 font-semibold text-[10px]">{currentPricing.code}/yr</span>
+                    {/* Annual Plan (Best Value) */}
+                    <div
+                      onClick={() => setSelectedPlan('annual')}
+                      className={`cursor-pointer p-3.5 rounded-2xl border transition flex flex-col justify-between ${
+                        selectedPlan === 'annual'
+                          ? 'bg-gradient-to-b from-cyan-950/60 to-emerald-950/60 border-emerald-400 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-bold text-white text-xs">Annual Pass</h4>
+                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
+                            Best Value
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-emerald-400 font-semibold mt-2">Billed Annually</p>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Lifetime License */}
-                  <div
-                    onClick={() => setSelectedPlan('lifetime')}
-                    className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
-                      selectedPlan === 'lifetime'
-                        ? 'bg-purple-950/40 border-purple-400 ring-2 ring-purple-500/30'
-                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-white text-xs">Lifetime License</h4>
-                        <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
-                          {currentPricing.lifetimeDiscountPercent || '50% OFF'}
-                        </span>
-                      </div>
-                      <div className="my-1 text-sm sm:text-base font-extrabold text-purple-300">
-                        {currentPricing.lifetime}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                        <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalLifetime || '$199.99'}</span>
-                        <span className="text-purple-300 text-[10px] font-semibold">{currentPricing.code}</span>
+                    {/* Lifetime License */}
+                    <div
+                      onClick={() => setSelectedPlan('lifetime')}
+                      className={`cursor-pointer p-3.5 rounded-2xl border transition flex flex-col justify-between ${
+                        selectedPlan === 'lifetime'
+                          ? 'bg-purple-950/40 border-purple-400 ring-2 ring-purple-500/30'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-bold text-white text-xs">Lifetime License</h4>
+                          <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
+                            50% OFF
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-purple-300 font-semibold mt-2">One-Time Access</p>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* 2. WEB BROWSER PLAN CARDS (With Localized Currency Display) */
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {/* Monthly Plan */}
+                    <div
+                      onClick={() => setSelectedPlan('monthly')}
+                      className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
+                        selectedPlan === 'monthly'
+                          ? 'bg-cyan-950/40 border-cyan-400 ring-2 ring-cyan-500/30'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-bold text-white text-xs">Monthly Pass</h4>
+                          <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
+                            {currentPricing.monthlyDiscountPercent || '50% OFF'}
+                          </span>
+                        </div>
+                        <div className="my-1 text-sm sm:text-base font-extrabold text-white">
+                          {currentPricing.monthly}
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalMonthly || '$5.99'}</span>
+                          <span className="text-slate-400 text-[10px]">{currentPricing.code}/mo</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Annual Plan (Best Value) */}
+                    <div
+                      onClick={() => setSelectedPlan('annual')}
+                      className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
+                        selectedPlan === 'annual'
+                          ? 'bg-gradient-to-b from-cyan-950/60 to-emerald-950/60 border-emerald-400 ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-bold text-white text-xs">Annual Pass</h4>
+                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
+                            {currentPricing.annualDiscountPercent || '16% OFF'}
+                          </span>
+                        </div>
+                        <div className="my-1 text-sm sm:text-base font-extrabold text-emerald-300">
+                          {currentPricing.annual}
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || '$35.88'}</span>
+                          <span className="text-emerald-400 font-semibold text-[10px]">{currentPricing.code}/yr</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lifetime License */}
+                    <div
+                      onClick={() => setSelectedPlan('lifetime')}
+                      className={`cursor-pointer p-3 rounded-2xl border transition flex flex-col justify-between ${
+                        selectedPlan === 'lifetime'
+                          ? 'bg-purple-950/40 border-purple-400 ring-2 ring-purple-500/30'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="font-bold text-white text-xs">Lifetime License</h4>
+                          <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[8px] px-1 py-0.5 rounded shrink-0">
+                            {currentPricing.lifetimeDiscountPercent || '50% OFF'}
+                          </span>
+                        </div>
+                        <div className="my-1 text-sm sm:text-base font-extrabold text-purple-300">
+                          {currentPricing.lifetime}
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalLifetime || '$199.99'}</span>
+                          <span className="text-purple-300 text-[10px] font-semibold">{currentPricing.code}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Condition 1: Native Mobile App (Google Play Billing Only) */}
               {isNativeApp ? (
                 <div className="space-y-4 my-3">
-                  {/* Google Play Billing Primary Button */}
+                  {/* Google Play Billing Primary Button with Native Launch */}
                   <button
                     type="button"
                     disabled={isProcessing}
-                    onClick={() => {
+                    onClick={async () => {
                       setIsProcessing(true);
-                      trackEvent('pricing_checkout_clicked', `google_play_${selectedPlan}_${currencyCode}`);
-                      setTimeout(() => {
+                      trackEvent('pricing_checkout_clicked', `google_play_${selectedPlan}`);
+                      try {
+                        const res = await launchNativeGooglePlayBilling(selectedPlan);
                         setIsProcessing(false);
-                        setIsSuccess(true);
-                        setTimeout(() => {
-                          onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
-                          onClose();
-                        }, 1200);
-                      }, 1200);
+                        if (res.success) {
+                          setIsSuccess(true);
+                          setTimeout(() => {
+                            onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
+                            onClose();
+                          }, 1200);
+                        } else {
+                          alert(res.error || 'Google Play Billing encountered an error.');
+                        }
+                      } catch (err) {
+                        setIsProcessing(false);
+                        alert('Google Play Billing connection error.');
+                      }
                     }}
                     className="w-full py-4 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2"
                   >
@@ -324,9 +408,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     )}
                   </button>
 
-                  {/* Subtext below the button */}
+                  {/* Dynamic Subtext below the button based on selection */}
                   <p className="text-[11px] text-cyan-300 font-semibold text-center leading-normal px-2">
-                    Billed annually through your Google Play account. Price and local currency will be displayed in the Google Play confirmation sheet.
+                    {getNativeSubtext()}
                   </p>
 
                   {/* Mandatory Google Play Subscriptions Policy Disclosure */}
@@ -430,7 +514,6 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <span className="text-[10px] text-slate-400 font-normal">Visa • MasterCard • Amex</span>
                       </div>
 
-                      {/* Name on Card */}
                       <div>
                         <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter the name on Card</label>
                         <input
@@ -442,7 +525,6 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         />
                       </div>
 
-                      {/* Card Number */}
                       <div>
                         <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your card number</label>
                         <div className="relative">
@@ -457,7 +539,6 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Expiry & CVV Side by Side */}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-[10px] font-semibold text-slate-400 mb-1">Expiry (Validity)</label>
@@ -482,11 +563,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         </div>
                       </div>
 
-                      {cardError && (
-                        <p className="text-[11px] text-rose-400 font-medium">{cardError}</p>
-                      )}
+                      {cardError && <p className="text-[11px] text-rose-400 font-medium">{cardError}</p>}
 
-                      {/* Submit Button */}
                       <button
                         type="submit"
                         disabled={isProcessing}
@@ -526,9 +604,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         />
                       </div>
 
-                      {upiError && (
-                        <p className="text-[11px] text-rose-400 font-medium">{upiError}</p>
-                      )}
+                      {upiError && <p className="text-[11px] text-rose-400 font-medium">{upiError}</p>}
 
                       <button
                         type="submit"
@@ -569,9 +645,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition"
                       />
 
-                      {keyError && (
-                        <p className="text-[11px] text-rose-400 font-medium">{keyError}</p>
-                      )}
+                      {keyError && <p className="text-[11px] text-rose-400 font-medium">{keyError}</p>}
 
                       <button
                         type="submit"
@@ -595,16 +669,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-          <div className="flex items-center space-x-1.5 text-emerald-400 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>256-Bit SSL Encrypted Merchant Protection</span>
-          </div>
+        {/* Modal Footer: Hidden on Native Mobile App */}
+        {!isNativeApp && (
+          <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+            <div className="flex items-center space-x-1.5 text-emerald-400 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>256-Bit SSL Encrypted Merchant Protection</span>
+            </div>
 
-          <span className="text-slate-500 font-mono text-[9px]">Merchant ID: Helcim-ISA-Secure</span>
-        </div>
+            <span className="text-slate-500 font-mono text-[9px]">Merchant ID: Helcim-ISA-Secure</span>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
