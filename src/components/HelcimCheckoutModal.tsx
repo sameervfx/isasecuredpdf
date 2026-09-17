@@ -3,7 +3,7 @@ import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, Arr
 import { trackEvent } from '../utils/analytics';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
-import { handleNativePurchase, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
+import { handleNativePurchase, launchNativeGooglePlayBilling, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
 interface HelcimCheckoutModalProps {
   isOpen: boolean;
@@ -422,7 +422,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       setIsProcessing(true);
                       trackEvent('pricing_checkout_clicked', `google_play_${selectedPlan}`);
                       try {
-                        const res = await launchNativeGooglePlayBilling(selectedPlan);
+                        const res = await handleNativePurchase(selectedPlan);
                         setIsProcessing(false);
                         if (res.success) {
                           setIsSuccess(true);

@@ -1106,7 +1106,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <h3 className="text-base font-extrabold text-white">Pro Monthly Subscription</h3>
                 <p className="text-xs text-cyan-400 font-semibold">
                   {isNativeApp
-                    ? storeProducts.monthly?.price ? `${storeProducts.monthly.price} / month • Cancel Anytime` : 'Billed Monthly • Cancel Anytime'
+                    ? livePrices[PLAY_PRODUCT_IDS.monthly] ? `${livePrices[PLAY_PRODUCT_IDS.monthly]} / month • Cancel Anytime` : 'Billed Monthly • Cancel Anytime'
                     : `${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'} / month • Cancel Anytime`}
                 </p>
               </div>
