@@ -208,8 +208,10 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center space-x-2">
                 <span>Unlock ISA Secure PDF Pro</span>
               </h3>
-              <p className="text-xs text-slate-400">
-                100% Client-Side Air-Gapped PDF Suite • {isNativeApp ? 'Google Play In-App Billing' : 'Secure In-App Payment'}
+              <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
+                <span>100% Client-Side Air-Gapped PDF Suite</span>
+                <span>•</span>
+                <span>{isNativeApp ? 'Google Play Billing (v1.6.2 Build 111)' : 'Secure In-App Payment'}</span>
               </p>
             </div>
           </div>

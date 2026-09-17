@@ -47,8 +47,22 @@ function notifyPriceListeners() {
   });
 }
 
+let retryCount = 0;
+const MAX_RETRIES = 30;
+
+function getCdvPurchase(): any {
+  if (typeof window === 'undefined') return null;
+  return (
+    (window as any).CdvPurchase ||
+    (window as any).store?.CdvPurchase ||
+    (window as any).cordova?.plugins?.purchase
+  );
+}
+
 /**
  * Initializes CdvPurchase.store and registers product catalog on app boot.
+ * Features an automatic polling retry mechanism (retries up to 30 times every 300ms)
+ * to ensure store binding occurs even if Cordova/Capacitor plugin bridge loads asynchronously.
  */
 export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) => void) => {
   if (onPricesLoaded) {
@@ -57,20 +71,29 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
 
   if (typeof window === 'undefined') return;
 
-  const CdvPurchase = (window as any).CdvPurchase;
-  if (!CdvPurchase || !CdvPurchase.store) {
-    console.warn('[GooglePlayBilling] CdvPurchase not available on window yet');
+  const cdv = getCdvPurchase();
+  const store = cdv?.store || (window as any).store;
+
+  if (!cdv || !store) {
+    if (retryCount < MAX_RETRIES) {
+      retryCount++;
+      console.log(`[GooglePlayBilling] CdvPurchase not ready yet. Scheduling retry ${retryCount}/${MAX_RETRIES}...`);
+      setTimeout(() => initPlayStore(), 300);
+    } else {
+      console.warn('[GooglePlayBilling] CdvPurchase failed to attach after max retries.');
+    }
     return;
   }
 
-  const { store, Platform, ProductType } = CdvPurchase;
+  const Platform = cdv.Platform;
+  const ProductType = cdv.ProductType;
   const targetPlatform = Platform?.GOOGLE_PLAY || 'google-play';
 
   if (!isStoreInitialized) {
     isStoreInitialized = true;
 
     try {
-      console.log('[GooglePlayBilling] Registering products with CdvPurchase.store...');
+      console.log('[GooglePlayBilling] CdvPurchase detected! Registering product catalog...');
       store.register([
         {
           id: PLAY_PRODUCT_IDS.monthly,
@@ -89,6 +112,29 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
         },
       ]);
 
+      const extractPrices = () => {
+        const newPrices: Record<string, string> = {};
+        [PLAY_PRODUCT_IDS.monthly, PLAY_PRODUCT_IDS.annual, PLAY_PRODUCT_IDS.lifetime].forEach((id) => {
+          const prod = store.get ? store.get(id, targetPlatform) : null;
+          if (prod) {
+            const offer = typeof prod.getOffer === 'function' ? prod.getOffer() : (prod.offers && prod.offers[0]);
+            const priceVal =
+              offer?.pricingPhases?.[0]?.price ||
+              prod?.pricing?.price ||
+              prod?.price;
+            if (priceVal) {
+              newPrices[id] = priceVal;
+            }
+          }
+        });
+
+        if (Object.keys(newPrices).length > 0) {
+          console.log('[GooglePlayBilling] Extracted Play Store prices:', newPrices);
+          livePricesMap = { ...livePricesMap, ...newPrices };
+          notifyPriceListeners();
+        }
+      };
+
       // Transaction approval handler
       if (typeof store.when === 'function') {
         store.when().approved((transaction: any) => {
@@ -101,27 +147,7 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
         // Listen for product updates and extract pricing
         store.when().updated(() => {
           console.log('[GooglePlayBilling] store.when().updated event triggered');
-          const newPrices: Record<string, string> = {};
-
-          [PLAY_PRODUCT_IDS.monthly, PLAY_PRODUCT_IDS.annual, PLAY_PRODUCT_IDS.lifetime].forEach((id) => {
-            const prod = store.get ? store.get(id, targetPlatform) : null;
-            if (prod) {
-              const offer = typeof prod.getOffer === 'function' ? prod.getOffer() : (prod.offers && prod.offers[0]);
-              const priceVal =
-                offer?.pricingPhases?.[0]?.price ||
-                prod?.pricing?.price ||
-                prod?.price;
-              if (priceVal) {
-                newPrices[id] = priceVal;
-              }
-            }
-          });
-
-          if (Object.keys(newPrices).length > 0) {
-            console.log('[GooglePlayBilling] Extracted Play Store prices:', newPrices);
-            livePricesMap = { ...livePricesMap, ...newPrices };
-            notifyPriceListeners();
-          }
+          extractPrices();
         });
       }
 
@@ -136,6 +162,7 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
           if (typeof store.update === 'function') {
             store.update();
           }
+          extractPrices();
         })
         .catch((err: any) => {
           console.error('[GooglePlayBilling] Store init error:', err);
@@ -157,7 +184,7 @@ if (typeof window !== 'undefined') {
   };
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(bootBilling, 300);
+    setTimeout(bootBilling, 100);
   } else {
     window.addEventListener('DOMContentLoaded', bootBilling);
   }
@@ -184,17 +211,19 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
     return { success: false, productId, error: 'Window environment not available' };
   }
 
-  const CdvPurchase = (window as any).CdvPurchase;
-  if (!CdvPurchase || !CdvPurchase.store) {
-    alert('Connecting to Google Play. Please verify internet connection and retry in a few seconds.');
-    return { success: false, productId, error: 'CdvPurchase not available' };
-  }
-
-  const { store, Platform } = CdvPurchase;
-  const targetPlatform = Platform?.GOOGLE_PLAY || 'google-play';
-
   // Ensure catalog is registered & updated
   initPlayStore();
+
+  const cdv = getCdvPurchase();
+  const store = cdv?.store || (window as any).store;
+
+  if (!cdv || !store) {
+    alert('Connecting to Google Play Store... Please ensure Google Play Services are enabled and retry in a moment.');
+    return { success: false, productId, error: 'CdvPurchase store not available' };
+  }
+
+  const Platform = cdv.Platform;
+  const targetPlatform = Platform?.GOOGLE_PLAY || 'google-play';
 
   const product = store.get ? store.get(productId, targetPlatform) : null;
   const offer = product && typeof product.getOffer === 'function' ? product.getOffer() : (product?.offers && product.offers[0]);
