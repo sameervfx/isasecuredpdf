@@ -106,15 +106,16 @@ export async function initializeStoreCatalog(): Promise<Record<PlanType, Dynamic
 }
 
 /**
- * Returns cached store products or empty.
+ * Returns cached store products.
  */
 export function getCachedStoreProducts(): Record<PlanType, DynamicProductInfo | null> {
   return storeProductsCache;
 }
 
 /**
- * Launches the native Google Play Billing flow for a given plan and acknowledges the purchase.
- * Triggers store.order(product.getOffer() || product).
+ * Launches native Google Play Billing flow for a given plan and acknowledges the purchase.
+ * Directly executes store.order(product.getOffer() || product).
+ * NO Play Store URL/browser redirect fallbacks.
  */
 export async function launchNativeGooglePlayBilling(plan: PlanType): Promise<PurchaseResult> {
   const productId = PLAY_PRODUCT_IDS[plan] || PLAY_PRODUCT_IDS.annual;
@@ -126,59 +127,60 @@ export async function launchNativeGooglePlayBilling(plan: PlanType): Promise<Pur
   }
 
   const cdvPurchase = (window as any).CdvPurchase;
-  if (cdvPurchase && cdvPurchase.store) {
-    try {
-      const store = cdvPurchase.store;
-      
-      // Ensure catalog is loaded
-      await initializeStoreCatalog();
-
-      const product = store.get ? store.get(productId) : null;
-      if (product) {
-        // Requirement 3: CTA triggers store.order(product.getOffer())
-        const offer = typeof product.getOffer === 'function' ? product.getOffer() : (product.offers && product.offers[0]);
-        const orderTarget = offer || product;
-
-        console.log('[GooglePlayBilling] Executing store.order on target:', orderTarget);
-        const orderResult = await store.order(orderTarget);
-
-        if (orderResult) {
-          const transaction = orderResult.transaction || orderResult;
-          if (transaction && typeof transaction.acknowledge === 'function') {
-            await transaction.acknowledge();
-          }
-          return {
-            success: true,
-            productId,
-            transactionId: transaction?.id || `GPA.${Date.now()}`,
-            purchaseToken: transaction?.purchaseToken || `token_${Date.now()}`,
-          };
-        }
-      }
-    } catch (err: any) {
-      console.warn('[GooglePlayBilling] store.order error:', err);
-    }
+  if (!cdvPurchase || !cdvPurchase.store) {
+    return {
+      success: false,
+      productId,
+      error: 'Connecting to Google Play... please wait a moment and try again.',
+    };
   }
 
-  // Fallback when BillingClient is connecting or in dev environment
-  return new Promise((resolve) => {
-    const playStoreUrl = `https://play.google.com/store/apps/details?id=com.isasecuredpdf.app`;
-    try {
-      if ((window as any).Capacitor && (window as any).Capacitor.isNativePlatform()) {
-        window.open(playStoreUrl, '_system');
-      }
-    } catch (e) {
-      console.log('[GooglePlayBilling] Play store intent opened');
+  const store = cdvPurchase.store;
+
+  try {
+    // Ensure catalog is initialized
+    await initializeStoreCatalog();
+
+    const product = store.get ? store.get(productId) : null;
+    if (!product) {
+      return {
+        success: false,
+        productId,
+        error: 'Google Play Store catalog is connecting. Please wait a few seconds and try again.',
+      };
     }
 
-    setTimeout(() => {
-      const token = `gplay_ack_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      resolve({
+    // Execute store.order(product.getOffer() || product) directly
+    const offer = typeof product.getOffer === 'function' ? product.getOffer() : (product.offers && product.offers[0]);
+    const orderTarget = offer || product;
+
+    console.log('[GooglePlayBilling] Executing store.order directly on target:', orderTarget);
+    const orderResult = await store.order(orderTarget);
+
+    if (orderResult) {
+      const transaction = orderResult.transaction || orderResult;
+      if (transaction && typeof transaction.acknowledge === 'function') {
+        await transaction.acknowledge();
+      }
+      return {
         success: true,
         productId,
-        transactionId: `GPA.${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(10000 + Math.random() * 90000)}`,
-        purchaseToken: token,
-      });
-    }, 1500);
-  });
+        transactionId: transaction?.id || `GPA.${Date.now()}`,
+        purchaseToken: transaction?.purchaseToken || `token_${Date.now()}`,
+      };
+    }
+
+    return {
+      success: false,
+      productId,
+      error: 'Google Play purchase flow was not completed.',
+    };
+  } catch (err: any) {
+    console.error('[GooglePlayBilling] store.order error:', err);
+    return {
+      success: false,
+      productId,
+      error: err?.message || 'Failed to trigger Google Play purchase sheet.',
+    };
+  }
 }

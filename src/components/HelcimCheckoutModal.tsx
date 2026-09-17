@@ -264,16 +264,18 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           <h4 className="font-bold text-white text-xs">Monthly Pass</h4>
                         </div>
                         {isStoreLoading ? (
-                          <div className="flex items-center space-x-1 my-1.5">
+                          <div className="flex items-center space-x-1 my-2">
                             <div className="w-2.5 h-2.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
                             <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
                           </div>
                         ) : storeProducts.monthly?.price ? (
-                          <div className="my-1 text-sm font-extrabold text-cyan-300">
-                            {storeProducts.monthly.price}
+                          <div className="my-1.5 text-xs sm:text-sm font-extrabold text-cyan-300">
+                            {storeProducts.monthly.price} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                           </div>
-                        ) : null}
-                        <p className="text-[10px] text-slate-400 mt-1">Billed Monthly</p>
+                        ) : (
+                          <div className="my-1.5 text-[10px] text-cyan-300 font-semibold">Google Play Price</div>
+                        )}
+                        <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
                       </div>
                     </div>
 
@@ -294,16 +296,18 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         {isStoreLoading ? (
-                          <div className="flex items-center space-x-1 my-1.5">
+                          <div className="flex items-center space-x-1 my-2">
                             <div className="w-2.5 h-2.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
                             <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
                           </div>
                         ) : storeProducts.annual?.price ? (
-                          <div className="my-1 text-sm font-extrabold text-emerald-300">
-                            {storeProducts.annual.price}
+                          <div className="my-1.5 text-xs sm:text-sm font-extrabold text-emerald-300">
+                            {storeProducts.annual.price} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                           </div>
-                        ) : null}
-                        <p className="text-[10px] text-emerald-400 font-semibold mt-1">Billed Annually</p>
+                        ) : (
+                          <div className="my-1.5 text-[10px] text-emerald-300 font-semibold">Google Play Price</div>
+                        )}
+                        <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
                       </div>
                     </div>
 
@@ -324,16 +328,18 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         {isStoreLoading ? (
-                          <div className="flex items-center space-x-1 my-1.5">
+                          <div className="flex items-center space-x-1 my-2">
                             <div className="w-2.5 h-2.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
                             <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
                           </div>
                         ) : storeProducts.lifetime?.price ? (
-                          <div className="my-1 text-sm font-extrabold text-purple-300">
+                          <div className="my-1.5 text-xs sm:text-sm font-extrabold text-purple-300">
                             {storeProducts.lifetime.price}
                           </div>
-                        ) : null}
-                        <p className="text-[10px] text-purple-300 font-semibold mt-1">One-Time Access</p>
+                        ) : (
+                          <div className="my-1.5 text-[10px] text-purple-300 font-semibold">Google Play Price</div>
+                        )}
+                        <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
                       </div>
                     </div>
                   </div>
