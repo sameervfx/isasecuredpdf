@@ -3,7 +3,7 @@ import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, Arr
 import { trackEvent } from '../utils/analytics';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
-import { launchNativeGooglePlayBilling, PLAY_PRODUCT_IDS, initializeStoreCatalog, getCachedStoreProducts, DynamicProductInfo, PlanType } from '../utils/playBilling';
+import { handleNativePurchase, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
 interface HelcimCheckoutModalProps {
   isOpen: boolean;
@@ -21,13 +21,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>(initialPlan);
   const [paymentTab, setPaymentTab] = useState<'card' | 'upi' | 'key'>('card');
   
-  // Dynamic Google Play Store Catalog State
-  const [storeProducts, setStoreProducts] = useState<Record<PlanType, DynamicProductInfo | null>>({
-    monthly: null,
-    annual: null,
-    lifetime: null,
-  });
-  const [isStoreLoading, setIsStoreLoading] = useState<boolean>(true);
+  // Dynamic Live Google Play Store Prices State
+  const [livePrices, setLivePrices] = useState<Record<string, string>>({});
 
   // Card Form State
   const [cardholderName, setCardholderName] = useState<string>('');
@@ -62,18 +57,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   }, [isOpen, initialPlan]);
 
   useEffect(() => {
-    if (isOpen && isNativeApp) {
-      setIsStoreLoading(true);
-      initializeStoreCatalog()
-        .then((prods) => {
-          setStoreProducts(prods);
-          setIsStoreLoading(false);
-        })
-        .catch(() => {
-          setIsStoreLoading(false);
-        });
+    if (isNativeApp) {
+      initPlayStore();
+      const unsubscribe = subscribeToPriceUpdates((updatedPrices) => {
+        setLivePrices(updatedPrices);
+      });
+      return () => unsubscribe();
     }
-  }, [isOpen, isNativeApp]);
+  }, [isNativeApp]);
 
   if (!isOpen) return null;
 
@@ -263,17 +254,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-bold text-white text-xs">Monthly Pass</h4>
                         </div>
-                        {isStoreLoading ? (
-                          <div className="flex items-center space-x-1 my-2">
-                            <div className="w-2.5 h-2.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                            <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
-                          </div>
-                        ) : storeProducts.monthly?.price ? (
+                        {livePrices[PLAY_PRODUCT_IDS.monthly] ? (
                           <div className="my-1.5 text-xs sm:text-sm font-extrabold text-cyan-300">
-                            {storeProducts.monthly.price} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
+                            {livePrices[PLAY_PRODUCT_IDS.monthly]} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                           </div>
                         ) : (
-                          <div className="my-1.5 text-[10px] text-cyan-300 font-semibold">Google Play Price</div>
+                          <div className="my-1.5 text-xs font-bold text-slate-400 animate-pulse">
+                            $ --.-- <span className="text-[9px] font-normal text-slate-500">/ mo</span>
+                          </div>
                         )}
                         <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
                       </div>
@@ -295,17 +283,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             Best Value
                           </span>
                         </div>
-                        {isStoreLoading ? (
-                          <div className="flex items-center space-x-1 my-2">
-                            <div className="w-2.5 h-2.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-                            <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
-                          </div>
-                        ) : storeProducts.annual?.price ? (
+                        {livePrices[PLAY_PRODUCT_IDS.annual] ? (
                           <div className="my-1.5 text-xs sm:text-sm font-extrabold text-emerald-300">
-                            {storeProducts.annual.price} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
+                            {livePrices[PLAY_PRODUCT_IDS.annual]} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                           </div>
                         ) : (
-                          <div className="my-1.5 text-[10px] text-emerald-300 font-semibold">Google Play Price</div>
+                          <div className="my-1.5 text-xs font-bold text-slate-400 animate-pulse">
+                            $ --.-- <span className="text-[9px] font-normal text-slate-500">/ yr</span>
+                          </div>
                         )}
                         <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
                       </div>
@@ -327,17 +312,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             VIP Access
                           </span>
                         </div>
-                        {isStoreLoading ? (
-                          <div className="flex items-center space-x-1 my-2">
-                            <div className="w-2.5 h-2.5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-                            <span className="text-[9px] text-slate-400 animate-pulse">Loading price...</span>
-                          </div>
-                        ) : storeProducts.lifetime?.price ? (
+                        {livePrices[PLAY_PRODUCT_IDS.lifetime] ? (
                           <div className="my-1.5 text-xs sm:text-sm font-extrabold text-purple-300">
-                            {storeProducts.lifetime.price}
+                            {livePrices[PLAY_PRODUCT_IDS.lifetime]}
                           </div>
                         ) : (
-                          <div className="my-1.5 text-[10px] text-purple-300 font-semibold">Google Play Price</div>
+                          <div className="my-1.5 text-xs font-bold text-slate-400 animate-pulse">
+                            $ --.--
+                          </div>
                         )}
                         <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
                       </div>

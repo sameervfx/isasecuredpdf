@@ -9,15 +9,6 @@ export const PLAY_PRODUCT_IDS = {
 
 export type PlanType = 'monthly' | 'annual' | 'lifetime';
 
-export interface DynamicProductInfo {
-  productId: string;
-  price: string;
-  title?: string;
-  description?: string;
-  offer?: any;
-  rawProduct?: any;
-}
-
 export interface PurchaseResult {
   success: boolean;
   productId: string;
@@ -26,43 +17,79 @@ export interface PurchaseResult {
   error?: string;
 }
 
+// Global cached prices map (e.g. { isasecuredpdf_pro_monthly: "CA$2.99", ... })
+let livePricesMap: Record<string, string> = {};
 let isStoreInitialized = false;
-let storeProductsCache: Record<PlanType, DynamicProductInfo | null> = {
-  monthly: null,
-  annual: null,
-  lifetime: null,
-};
+const priceListeners: Array<(prices: Record<string, string>) => void> = [];
 
 /**
- * Initializes CdvPurchase.store and registers product catalog from Google Play.
+ * Subscribe to live Play Store price updates.
+ * Returns an unsubscribe function.
  */
-export async function initializeStoreCatalog(): Promise<Record<PlanType, DynamicProductInfo | null>> {
-  if (typeof window === 'undefined') return storeProductsCache;
+export function subscribeToPriceUpdates(listener: (prices: Record<string, string>) => void): () => void {
+  priceListeners.push(listener);
+  if (Object.keys(livePricesMap).length > 0) {
+    listener({ ...livePricesMap });
+  }
+  return () => {
+    const idx = priceListeners.indexOf(listener);
+    if (idx !== -1) priceListeners.splice(idx, 1);
+  };
+}
 
-  const cdvPurchase = (window as any).CdvPurchase;
-  if (!cdvPurchase || !cdvPurchase.store) {
-    console.log('[GooglePlayBilling] CdvPurchase.store not available in current environment');
-    return storeProductsCache;
+function notifyPriceListeners() {
+  priceListeners.forEach((listener) => {
+    try {
+      listener({ ...livePricesMap });
+    } catch (e) {
+      console.error('[GooglePlayBilling] Price listener error:', e);
+    }
+  });
+}
+
+/**
+ * Initializes CdvPurchase.store and registers product catalog on app boot.
+ */
+export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) => void) => {
+  if (onPricesLoaded) {
+    subscribeToPriceUpdates(onPricesLoaded);
   }
 
-  const store = cdvPurchase.store;
+  if (typeof window === 'undefined') return;
 
-  try {
-    if (!isStoreInitialized) {
-      // Register products
-      if (typeof store.register === 'function') {
-        const productTypeSub = cdvPurchase.ProductType?.PAID_SUBSCRIPTION || 'paid subscription';
-        const productTypeNonConsumable = cdvPurchase.ProductType?.NON_CONSUMABLE || 'non consumable';
-        const platformGoogle = cdvPurchase.Platform?.GOOGLE_PLAY || 'google-play';
+  const CdvPurchase = (window as any).CdvPurchase;
+  if (!CdvPurchase || !CdvPurchase.store) {
+    console.warn('[GooglePlayBilling] CdvPurchase not available on window yet');
+    return;
+  }
 
-        store.register([
-          { id: PLAY_PRODUCT_IDS.monthly, type: productTypeSub, platform: platformGoogle },
-          { id: PLAY_PRODUCT_IDS.annual, type: productTypeSub, platform: platformGoogle },
-          { id: PLAY_PRODUCT_IDS.lifetime, type: productTypeNonConsumable, platform: platformGoogle },
-        ]);
-      }
+  const { store, Platform, ProductType } = CdvPurchase;
+  const targetPlatform = Platform?.GOOGLE_PLAY || 'google-play';
 
-      // Add approval listener to acknowledge transactions
+  if (!isStoreInitialized) {
+    isStoreInitialized = true;
+
+    try {
+      console.log('[GooglePlayBilling] Registering products with CdvPurchase.store...');
+      store.register([
+        {
+          id: PLAY_PRODUCT_IDS.monthly,
+          type: ProductType?.PAID_SUBSCRIPTION || 'paid subscription',
+          platform: targetPlatform,
+        },
+        {
+          id: PLAY_PRODUCT_IDS.annual,
+          type: ProductType?.PAID_SUBSCRIPTION || 'paid subscription',
+          platform: targetPlatform,
+        },
+        {
+          id: PLAY_PRODUCT_IDS.lifetime,
+          type: ProductType?.NON_CONSUMABLE || 'non consumable',
+          platform: targetPlatform,
+        },
+      ]);
+
+      // Transaction approval handler
       if (typeof store.when === 'function') {
         store.when().approved((transaction: any) => {
           console.log('[GooglePlayBilling] Transaction approved:', transaction);
@@ -70,117 +97,133 @@ export async function initializeStoreCatalog(): Promise<Record<PlanType, Dynamic
             transaction.finish();
           }
         });
+
+        // Listen for product updates and extract pricing
+        store.when().updated(() => {
+          console.log('[GooglePlayBilling] store.when().updated event triggered');
+          const newPrices: Record<string, string> = {};
+
+          [PLAY_PRODUCT_IDS.monthly, PLAY_PRODUCT_IDS.annual, PLAY_PRODUCT_IDS.lifetime].forEach((id) => {
+            const prod = store.get ? store.get(id, targetPlatform) : null;
+            if (prod) {
+              const offer = typeof prod.getOffer === 'function' ? prod.getOffer() : (prod.offers && prod.offers[0]);
+              const priceVal =
+                offer?.pricingPhases?.[0]?.price ||
+                prod?.pricing?.price ||
+                prod?.price;
+              if (priceVal) {
+                newPrices[id] = priceVal;
+              }
+            }
+          });
+
+          if (Object.keys(newPrices).length > 0) {
+            console.log('[GooglePlayBilling] Extracted Play Store prices:', newPrices);
+            livePricesMap = { ...livePricesMap, ...newPrices };
+            notifyPriceListeners();
+          }
+        });
       }
 
-      if (typeof store.initialize === 'function') {
-        await store.initialize();
-      }
-      isStoreInitialized = true;
-    }
+      // Initialize store
+      const initPromise = typeof store.initialize === 'function'
+        ? store.initialize([targetPlatform])
+        : Promise.resolve();
 
-    // Extract dynamic product prices
-    const plans: PlanType[] = ['monthly', 'annual', 'lifetime'];
-    for (const plan of plans) {
-      const pid = PLAY_PRODUCT_IDS[plan];
-      const prod = store.get ? store.get(pid) : null;
-      if (prod) {
-        const offer = typeof prod.getOffer === 'function' ? prod.getOffer() : (prod.offers && prod.offers[0]);
-        const price = prod.pricing?.price || offer?.pricingPhases?.[0]?.price || null;
-        if (price) {
-          storeProductsCache[plan] = {
-            productId: pid,
-            price: price,
-            title: prod.title,
-            description: prod.description,
-            offer: offer,
-            rawProduct: prod,
-          };
-        }
-      }
+      initPromise
+        .then(() => {
+          console.log('[GooglePlayBilling] Store initialize completed. Executing store.update()');
+          if (typeof store.update === 'function') {
+            store.update();
+          }
+        })
+        .catch((err: any) => {
+          console.error('[GooglePlayBilling] Store init error:', err);
+        });
+    } catch (err) {
+      console.error('[GooglePlayBilling] Error during store setup:', err);
     }
-  } catch (err) {
-    console.warn('[GooglePlayBilling] Store catalog initialization warning:', err);
+  } else {
+    if (typeof store.update === 'function') {
+      store.update();
+    }
   }
+};
 
-  return storeProductsCache;
+// Auto-boot listener for Cordova / Capacitor deviceready & DOM loaded
+if (typeof window !== 'undefined') {
+  const bootBilling = () => {
+    initPlayStore();
+  };
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(bootBilling, 300);
+  } else {
+    window.addEventListener('DOMContentLoaded', bootBilling);
+  }
+  document.addEventListener('deviceready', bootBilling, false);
 }
 
 /**
- * Returns cached store products.
+ * Returns live cached prices map.
  */
-export function getCachedStoreProducts(): Record<PlanType, DynamicProductInfo | null> {
-  return storeProductsCache;
+export function getLivePrices(): Record<string, string> {
+  return livePricesMap;
 }
 
 /**
- * Launches native Google Play Billing flow for a given plan and acknowledges the purchase.
- * Directly executes store.order(product.getOffer() || product).
- * NO Play Store URL/browser redirect fallbacks.
+ * Triggers native purchase flow for a plan.
+ * Executes store.order(offer || product).
+ * If catalog is not ready, triggers store.update() and alerts user to retry.
  */
-export async function launchNativeGooglePlayBilling(plan: PlanType): Promise<PurchaseResult> {
+export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResult> => {
   const productId = PLAY_PRODUCT_IDS[plan] || PLAY_PRODUCT_IDS.annual;
-
-  console.log(`[GooglePlayBilling] Launching billing flow for Product ID: ${productId}`);
+  console.log(`[GooglePlayBilling] Executing handleNativePurchase for ${plan} (${productId})`);
 
   if (typeof window === 'undefined') {
     return { success: false, productId, error: 'Window environment not available' };
   }
 
-  const cdvPurchase = (window as any).CdvPurchase;
-  if (!cdvPurchase || !cdvPurchase.store) {
-    return {
-      success: false,
-      productId,
-      error: 'Connecting to Google Play... please wait a moment and try again.',
-    };
+  const CdvPurchase = (window as any).CdvPurchase;
+  if (!CdvPurchase || !CdvPurchase.store) {
+    alert('Connecting to Google Play. Please verify internet connection and retry in a few seconds.');
+    return { success: false, productId, error: 'CdvPurchase not available' };
   }
 
-  const store = cdvPurchase.store;
+  const { store, Platform } = CdvPurchase;
+  const targetPlatform = Platform?.GOOGLE_PLAY || 'google-play';
 
-  try {
-    // Ensure catalog is initialized
-    await initializeStoreCatalog();
+  // Ensure catalog is registered & updated
+  initPlayStore();
 
-    const product = store.get ? store.get(productId) : null;
-    if (!product) {
-      return {
-        success: false,
-        productId,
-        error: 'Google Play Store catalog is connecting. Please wait a few seconds and try again.',
-      };
+  const product = store.get ? store.get(productId, targetPlatform) : null;
+  const offer = product && typeof product.getOffer === 'function' ? product.getOffer() : (product?.offers && product.offers[0]);
+
+  if (offer) {
+    console.log('[GooglePlayBilling] Executing store.order(offer):', offer);
+    try {
+      const orderRes = await store.order(offer);
+      return { success: true, productId, transactionId: orderRes?.transaction?.id };
+    } catch (e: any) {
+      return { success: false, productId, error: e?.message || 'Purchase cancelled or failed' };
     }
-
-    // Execute store.order(product.getOffer() || product) directly
-    const offer = typeof product.getOffer === 'function' ? product.getOffer() : (product.offers && product.offers[0]);
-    const orderTarget = offer || product;
-
-    console.log('[GooglePlayBilling] Executing store.order directly on target:', orderTarget);
-    const orderResult = await store.order(orderTarget);
-
-    if (orderResult) {
-      const transaction = orderResult.transaction || orderResult;
-      if (transaction && typeof transaction.acknowledge === 'function') {
-        await transaction.acknowledge();
-      }
-      return {
-        success: true,
-        productId,
-        transactionId: transaction?.id || `GPA.${Date.now()}`,
-        purchaseToken: transaction?.purchaseToken || `token_${Date.now()}`,
-      };
+  } else if (product) {
+    console.log('[GooglePlayBilling] Executing store.order(product):', product);
+    try {
+      const orderRes = await store.order(product);
+      return { success: true, productId, transactionId: orderRes?.transaction?.id };
+    } catch (e: any) {
+      return { success: false, productId, error: e?.message || 'Purchase cancelled or failed' };
     }
-
-    return {
-      success: false,
-      productId,
-      error: 'Google Play purchase flow was not completed.',
-    };
-  } catch (err: any) {
-    console.error('[GooglePlayBilling] store.order error:', err);
-    return {
-      success: false,
-      productId,
-      error: err?.message || 'Failed to trigger Google Play purchase sheet.',
-    };
+  } else {
+    console.warn('[GooglePlayBilling] Product not found in store catalog yet. Triggering store.update()');
+    if (typeof store.update === 'function') {
+      store.update();
+    }
+    alert('Connecting to Google Play. Please verify internet connection and retry in a few seconds.');
+    return { success: false, productId, error: 'Product not ready' };
   }
-}
+};
+
+// Backwards compatibility alias
+export const launchNativeGooglePlayBilling = handleNativePurchase;
