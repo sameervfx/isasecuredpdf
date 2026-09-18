@@ -199,26 +199,27 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl -z-10" />
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-slate-800">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-2xl shadow-lg shadow-emerald-500/20">
+        <div className="flex items-start justify-between pb-3.5 border-b border-slate-800">
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="p-2.5 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-2xl shadow-lg shadow-emerald-500/20 shrink-0">
               <CreditCard className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center space-x-2">
-                <span>Unlock ISA Secure PDF Pro</span>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
+                Unlock ISA Secure PDF Pro
               </h3>
-              <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
-                <span>100% Client-Side Air-Gapped PDF Suite</span>
-                <span>•</span>
-                <span>{isNativeApp ? 'Secure In-App Purchase (v1.6.3 Build 113)' : 'Secure In-App Payment'}</span>
+              <p className="text-[11px] text-slate-400 leading-tight mt-1">
+                100% Client-Side Air-Gapped PDF Suite
+              </p>
+              <p className="text-[10.5px] font-semibold text-emerald-400 leading-tight mt-0.5">
+                {isNativeApp ? 'Secure In-App Purchase' : 'Secure In-App Payment'}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
