@@ -6,22 +6,20 @@ import { Capacitor } from '@capacitor/core';
 export const isAndroidPlatform = (): boolean => {
   if (typeof window === 'undefined') return false;
 
-  const platform = Capacitor.getPlatform();
-  if (platform === 'android') return true;
-  if (Capacitor.isNativePlatform()) {
-    const ua = window.navigator.userAgent || '';
-    if (/Android/i.test(ua)) return true;
-  }
+  // 1. Synchronous Capacitor platform check (guaranteed true immediately on cold start)
+  if (Capacitor.getPlatform() === 'android') return true;
 
-  // Capacitor Android WebView serves locally from localhost or capacitor: scheme
+  // 2. Native platform check combined with Android User-Agent
+  const ua = window.navigator.userAgent || '';
+  const isAndroidUA = /Android/i.test(ua);
+  if (Capacitor.isNativePlatform() && isAndroidUA) return true;
+
+  // 3. Android WebView container checks (strictly independent of CdvPurchase initialization)
   const host = window.location.hostname;
   const isLocalHost = host === 'localhost' || host === '127.0.0.1';
   const isCapacitorScheme = window.location.protocol === 'capacitor:';
 
-  const ua = window.navigator.userAgent || '';
-  const isAndroidUA = /Android/i.test(ua);
-
-  if (isAndroidUA && (isLocalHost || isCapacitorScheme || (window as any).Capacitor !== undefined || (window as any).CdvPurchase !== undefined || (window as any).cordova !== undefined)) {
+  if (isAndroidUA && (isLocalHost || isCapacitorScheme || (window as any).Capacitor !== undefined || (window as any).cordova !== undefined)) {
     return true;
   }
 
@@ -43,8 +41,8 @@ export const isNativeMobileApp = (): boolean => {
   const ua = window.navigator.userAgent || '';
   const isMobileUA = /Android|iPhone|iPad|iPod/i.test(ua);
   
-  // Return true if Capacitor is injected or running in native webview container
-  return isMobileUA && ((window as any).Capacitor !== undefined || (window as any).CdvPurchase !== undefined);
+  // Return true if Capacitor or cordova is injected or running in native webview container
+  return isMobileUA && ((window as any).Capacitor !== undefined || (window as any).cordova !== undefined);
 };
 
 /**
