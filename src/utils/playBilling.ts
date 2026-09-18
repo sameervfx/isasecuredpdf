@@ -15,6 +15,7 @@ export interface PurchaseResult {
   transactionId?: string;
   purchaseToken?: string;
   error?: string;
+  cancelled?: boolean;
 }
 
 // Global cached prices map (e.g. { isasecuredpdf_pro_monthly: "CA$2.99", ... })
@@ -230,29 +231,61 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
     : (store.products && store.products.find((p: any) => p.id === productId));
   const offer = product && typeof product.getOffer === 'function' ? product.getOffer() : (product?.offers && product.offers[0]);
 
-  if (offer) {
-    console.log('[GooglePlayBilling] Executing store.order(offer):', offer);
-    try {
-      const orderRes = await store.order(offer);
-      return { success: true, productId, transactionId: orderRes?.transaction?.id };
-    } catch (e: any) {
-      return { success: false, productId, error: e?.message || 'Purchase cancelled or failed' };
-    }
-  } else if (product) {
-    console.log('[GooglePlayBilling] Executing store.order(product):', product);
-    try {
-      const orderRes = await store.order(product);
-      return { success: true, productId, transactionId: orderRes?.transaction?.id };
-    } catch (e: any) {
-      return { success: false, productId, error: e?.message || 'Purchase cancelled or failed' };
-    }
-  } else {
+  const targetToOrder = offer || product;
+
+  if (!targetToOrder) {
     console.warn('[GooglePlayBilling] Product not found in store catalog yet. Triggering store.update()');
     if (typeof store.update === 'function') {
       store.update();
     }
     alert('Connecting to Google Play catalog. Please ensure your Google account is added under Google Play Console -> Setup -> License Testing to enable instant purchase testing.');
     return { success: false, productId, error: 'Product not ready' };
+  }
+
+  try {
+    console.log('[GooglePlayBilling] Executing store.order():', targetToOrder);
+    // In cordova-plugin-purchase v13:
+    // store.order() returns Promise<IError | undefined>
+    // - On SUCCESSFUL purchase: resolves with undefined.
+    // - On user CANCEL / DISMISS: resolves with an IError object (code 6777006 or 1 / USER_CANCELED).
+    // - On FAILURE: resolves with an IError object or throws.
+    const orderRes: any = await store.order(targetToOrder);
+    console.log('[GooglePlayBilling] store.order resolved with:', orderRes);
+
+    if (orderRes && (orderRes.isError || typeof orderRes === 'object')) {
+      const isCancelled =
+        orderRes.code === 6777006 || // CdvPurchase.ErrorCode.PAYMENT_CANCELLED
+        orderRes.code === 1 || // BillingResponseCode.USER_CANCELED
+        (typeof orderRes.message === 'string' && /cancel/i.test(orderRes.message)) ||
+        orderRes.isCancelled === true;
+
+      if (isCancelled) {
+        console.log('[GooglePlayBilling] Purchase dismissed or cancelled by user.');
+        return { success: false, productId, cancelled: true };
+      }
+
+      console.warn('[GooglePlayBilling] Purchase error returned from store:', orderRes);
+      return {
+        success: false,
+        productId,
+        error: orderRes.message || 'Unable to complete purchase via Google Play. Please try again.',
+      };
+    }
+
+    // Undefined returned means genuine Google Play approval
+    console.log('[GooglePlayBilling] Purchase successfully approved by Google Play for:', productId);
+    return {
+      success: true,
+      productId,
+      transactionId: `gp_${Date.now()}`,
+    };
+  } catch (e: any) {
+    console.error('[GooglePlayBilling] Order exception:', e);
+    const isCancelled = typeof e?.message === 'string' && /cancel/i.test(e.message);
+    if (isCancelled) {
+      return { success: false, productId, cancelled: true };
+    }
+    return { success: false, productId, error: e?.message || 'Purchase cancelled or failed' };
   }
 };
 

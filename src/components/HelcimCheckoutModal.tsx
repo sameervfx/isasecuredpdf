@@ -211,7 +211,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
                 <span>100% Client-Side Air-Gapped PDF Suite</span>
                 <span>•</span>
-                <span>{isNativeApp ? 'Secure In-App Purchase (v1.6.2 Build 112)' : 'Secure In-App Payment'}</span>
+                <span>{isNativeApp ? 'Secure In-App Purchase (v1.6.3 Build 113)' : 'Secure In-App Payment'}</span>
               </p>
             </div>
           </div>
@@ -433,6 +433,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
                             onClose();
                           }, 1200);
+                        } else if (res.cancelled) {
+                          // Dismissed or clicked outside: safely do nothing, Pro remains locked
+                          console.log('[GooglePlayBilling] Purchase dismissed or cancelled by user.');
                         } else {
                           alert(res.error || 'Unable to complete purchase. Please try again.');
                         }
