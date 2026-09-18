@@ -211,7 +211,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
                 <span>100% Client-Side Air-Gapped PDF Suite</span>
                 <span>•</span>
-                <span>{isNativeApp ? 'Google Play Billing (v1.6.2 Build 111)' : 'Secure In-App Payment'}</span>
+                <span>{isNativeApp ? 'Secure In-App Purchase (v1.6.2 Build 111)' : 'Secure In-App Payment'}</span>
               </p>
             </div>
           </div>
@@ -431,11 +431,11 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             onClose();
                           }, 1200);
                         } else {
-                          alert(res.error || 'Google Play Billing encountered an error.');
+                          alert(res.error || 'Unable to complete purchase. Please try again.');
                         }
                       } catch (err) {
                         setIsProcessing(false);
-                        alert('Google Play Billing connection error.');
+                        alert('Store connection error. Please try again.');
                       }
                     }}
                     className="w-full py-4 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2"
@@ -443,10 +443,10 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     {isProcessing ? (
                       <span className="flex items-center space-x-2 text-slate-950">
                         <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                        <span>Connecting to Google Play...</span>
+                        <span>Connecting to store...</span>
                       </span>
                     ) : (
-                      <span>🔒 Subscribe via Google Play</span>
+                      <span>🔒 {selectedPlan === 'lifetime' ? 'Unlock Lifetime VIP' : 'Subscribe Now'}</span>
                     )}
                   </button>
 

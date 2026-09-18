@@ -218,7 +218,7 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
   const store = cdv?.store || (window as any).store;
 
   if (!cdv || !store) {
-    alert('Connecting to Google Play Store... Please ensure Google Play Services are enabled and retry in a moment.');
+    alert('Connecting to store service. Please verify your internet connection and retry in a moment.');
     return { success: false, productId, error: 'CdvPurchase store not available' };
   }
 
@@ -249,7 +249,7 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
     if (typeof store.update === 'function') {
       store.update();
     }
-    alert('Connecting to Google Play. Please verify internet connection and retry in a few seconds.');
+    alert('Connecting to store catalog. Please verify your internet connection and retry in a few seconds.');
     return { success: false, productId, error: 'Product not ready' };
   }
 };
