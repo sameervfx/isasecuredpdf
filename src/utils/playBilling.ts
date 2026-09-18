@@ -225,7 +225,9 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
   const Platform = cdv.Platform;
   const targetPlatform = Platform?.GOOGLE_PLAY || 'google-play';
 
-  const product = store.get ? store.get(productId, targetPlatform) : null;
+  const product = store.get 
+    ? (store.get(productId) || store.get(productId, targetPlatform)) 
+    : (store.products && store.products.find((p: any) => p.id === productId));
   const offer = product && typeof product.getOffer === 'function' ? product.getOffer() : (product?.offers && product.offers[0]);
 
   if (offer) {
@@ -249,7 +251,7 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
     if (typeof store.update === 'function') {
       store.update();
     }
-    alert('Connecting to store catalog. Please verify your internet connection and retry in a few seconds.');
+    alert('Connecting to Google Play catalog. Please ensure your Google account is added under Google Play Console -> Setup -> License Testing to enable instant purchase testing.');
     return { success: false, productId, error: 'Product not ready' };
   }
 };
