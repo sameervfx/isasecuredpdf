@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, saveUserCurrency } from '../utils/currencyFormatter';
-import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
+import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/platform';
 import { handleNativePurchase, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
 import appLogo from '../assets/app_logo.jpg';
@@ -74,12 +74,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Dynamic Google Play Catalog State for Mobile Native App
   const [livePrices, setLivePrices] = useState<Record<string, string>>({});
+  const [isNativeApp, setIsNativeApp] = useState<boolean>(() => isAndroidPlatform() || isNativeMobileApp() || isIOSPlatform());
 
   useEffect(() => {
     setCurrencyCode(detectUserCurrency());
+    const verifyPlatform = () => {
+      if (isAndroidPlatform() || isNativeMobileApp() || isIOSPlatform()) {
+        setIsNativeApp(true);
+      }
+    };
+    verifyPlatform();
+    const t = setTimeout(verifyPlatform, 200);
+    return () => clearTimeout(t);
   }, []);
-
-  const isNativeApp = isIOSPlatform() || isNativeMobileApp();
 
   useEffect(() => {
     if (isNativeApp) {
@@ -90,6 +97,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       return () => unsubscribe();
     }
   }, [isNativeApp]);
+
 
   const handleGateCheckAndLaunch = () => {
     // 1-click launch straight into editor workspace with zero registration barrier
@@ -603,9 +611,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.monthly]} <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
                           </>
                         ) : (
-                          <>
-                            {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
-                          </>
+                          <div className="flex items-center space-x-2">
+                            <span className="inline-block w-28 h-8 bg-slate-700/50 rounded-lg animate-pulse" />
+                            <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -633,29 +642,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {isNativeApp ? (
-                <button
-                  onClick={() => {
-                    if (onOpenCheckout) {
-                      onOpenCheckout('monthly');
-                    } else {
-                      setIsProMonthlyModalOpen(true);
-                    }
-                  }}
-                  className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
-                >
-                  Start Monthly Plan {livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : `(${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}/mo)`}
-                </button>
-              ) : (
-                <a
-                  href={`https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=${SUPPORTED_CURRENCIES[currencyCode]?.usdMonthlyNum || 2.99}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
-                >
-                  Start Monthly Plan ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/mo)
-                </a>
-              )}
+              <button
+                onClick={() => {
+                  if (onOpenCheckout) {
+                    onOpenCheckout('monthly');
+                  } else {
+                    handleGateCheckAndLaunch();
+                  }
+                }}
+                className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
+              >
+                Start Monthly Plan {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/mo)`}
+              </button>
             </div>
 
             {/* Pro Annual */}
@@ -682,9 +680,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.annual]} <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
                           </>
                         ) : (
-                          <>
-                            {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
-                          </>
+                          <div className="flex items-center space-x-2">
+                            <span className="inline-block w-32 h-8 bg-slate-700/50 rounded-lg animate-pulse" />
+                            <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -712,29 +711,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {isNativeApp ? (
-                <button
-                  onClick={() => {
-                    if (onOpenCheckout) {
-                      onOpenCheckout('annual');
-                    } else {
-                      setIsProAnnualModalOpen(true);
-                    }
-                  }}
-                  className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
-                >
-                  Get Annual Plan {livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}/yr)`}
-                </button>
-              ) : (
-                <a
-                  href={`https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=${SUPPORTED_CURRENCIES[currencyCode]?.usdAnnualNum || 29.99}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
-                >
-                  Get Annual Plan ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)
-                </a>
-              )}
+              <button
+                onClick={() => {
+                  if (onOpenCheckout) {
+                    onOpenCheckout('annual');
+                  } else {
+                    handleGateCheckAndLaunch();
+                  }
+                }}
+                className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
+              >
+                Get Annual Plan {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)`}
+              </button>
             </div>
 
             {/* Lifetime License */}
@@ -757,9 +745,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.lifetime]} <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
                           </>
                         ) : (
-                          <>
-                            {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
-                          </>
+                          <div className="flex items-center space-x-2">
+                            <span className="inline-block w-32 h-8 bg-slate-700/50 rounded-lg animate-pulse" />
+                            <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                          </div>
                         )}
                       </div>
                     ) : (
@@ -785,29 +774,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {isNativeApp ? (
-                <button
-                  onClick={() => {
-                    if (onOpenCheckout) {
-                      onOpenCheckout('lifetime');
-                    } else {
-                      setIsLifetimeModalOpen(true);
-                    }
-                  }}
-                  className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
-                >
-                  Buy Lifetime License {livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : `(${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})`}
-                </button>
-              ) : (
-                <a
-                  href={`https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=${SUPPORTED_CURRENCIES[currencyCode]?.usdLifetimeNum || 99.99}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
-                >
-                  Buy Lifetime License ({SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'})
-                </a>
-              )}
+              <button
+                onClick={() => {
+                  if (onOpenCheckout) {
+                    onOpenCheckout('lifetime');
+                  } else {
+                    handleGateCheckAndLaunch();
+                  }
+                }}
+                className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
+              >
+                Buy Lifetime License {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})`}
+              </button>
             </div>
           </div>
 
@@ -821,16 +799,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <p className="font-bold text-slate-200">
               📋 Subscriptions & Billing Policy Notice:
             </p>
-            {isNativeApp ? (
-              <p className="leading-relaxed">
-                Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via Google Play Account Settings. Local pricing and currency will be confirmed on Google Play.
-              </p>
-            ) : (
-              <p className="leading-relaxed">
-                Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via your Account Settings or Store Account. All displayed prices are shown in USD ($2.99/mo, $29.99/yr, $99.99 lifetime) and match final checkout.
-              </p>
-            )}
+            <p className="leading-relaxed">
+              Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via Google Play Account Settings. Local pricing and currency are dynamically provided by Google Play and confirmed prior to purchase.
+            </p>
           </div>
+
         </div>
       </section>
 
@@ -889,7 +862,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="p-1.5 bg-cyan-500/10 text-cyan-500 rounded-lg">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>ISASecuredPDF © 2026 • v1.6.5 (Build 115)</span>
+            <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>ISASecuredPDF © 2026 • v1.6.6 (Build 116)</span>
           </div>
 
           <div className={`flex flex-wrap items-center justify-center gap-6 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
@@ -991,7 +964,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       </div>
 
                       <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
-                        <strong className="text-cyan-400 block">💳 Web & Credit Card Checkout (Helcim Gateway):</strong>
+                        <strong className="text-cyan-400 block">💳 Web & Desktop Purchases:</strong>
                         <p className="text-[11px] text-slate-400">Cancel web billing instantly by emailing our 24/7 support team with your receipt or email address:</p>
                         <a
                           href="mailto:support@isasecuredpdf.com?subject=Cancel%20My%20Subscription"
@@ -1145,30 +1118,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   🚀 Activate 7-Day Free Trial & Start
                 </button>
 
-                {isNativeApp ? (
-                  <button
-                    onClick={() => {
-                      setIsProMonthlyModalOpen(false);
-                      if (onOpenCheckout) {
-                        onOpenCheckout('monthly');
-                      } else {
-                        handleGateCheckAndLaunch();
-                      }
-                    }}
-                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
-                  >
-                    💳 Unlock Pro Access {livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : ''}
-                  </button>
-                ) : (
-                  <a
-                    href={`https://isasecuredpdf.myhelcim.com/hosted/?token=8cab3b693d79e2929b76f9&amount=${SUPPORTED_CURRENCIES[currencyCode]?.usdMonthlyNum || 2.99}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
-                  >
-                    💳 Subscribe Now ({SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/month)
-                  </a>
-                )}
+                <button
+                  onClick={() => {
+                    setIsProMonthlyModalOpen(false);
+                    if (onOpenCheckout) {
+                      onOpenCheckout('monthly');
+                    } else {
+                      handleGateCheckAndLaunch();
+                    }
+                  }}
+                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
+                >
+                  💳 Unlock Pro Access {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/month)`}
+                </button>
               </div>
             </div>
           </div>
@@ -1208,30 +1170,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="flex items-center space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" /><span>14-Day Money-Back Guarantee</span></div>
               </div>
 
-              {isNativeApp ? (
-                <button
-                  onClick={() => {
-                    setIsProAnnualModalOpen(false);
-                    if (onOpenCheckout) {
-                      onOpenCheckout('annual');
-                    } else {
-                      handleGateCheckAndLaunch();
-                    }
-                  }}
-                  className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
-                >
-                  💳 Unlock Annual Pro {livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : ''} →
-                </button>
-              ) : (
-                <a
-                  href={`https://isasecuredpdf.myhelcim.com/hosted/?token=7c45c83a1f97e5346967ea&amount=${SUPPORTED_CURRENCIES[currencyCode]?.usdAnnualNum || 29.99}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
-                >
-                  💳 Complete Annual Checkout ({SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr) →
-                </a>
-              )}
+              <button
+                onClick={() => {
+                  setIsProAnnualModalOpen(false);
+                  if (onOpenCheckout) {
+                    onOpenCheckout('annual');
+                  } else {
+                    handleGateCheckAndLaunch();
+                  }
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
+              >
+                💳 Unlock Annual Pro {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)`} →
+              </button>
             </div>
           </div>
         </div>
@@ -1270,30 +1221,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
               </div>
 
-              {isNativeApp ? (
-                <button
-                  onClick={() => {
-                    setIsLifetimeModalOpen(false);
-                    if (onOpenCheckout) {
-                      onOpenCheckout('lifetime');
-                    } else {
-                      handleGateCheckAndLaunch();
-                    }
-                  }}
-                  className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
-                >
-                  💎 Unlock Lifetime VIP Access {livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : ''} →
-                </button>
-              ) : (
-                <a
-                  href={`https://isasecuredpdf.myhelcim.com/hosted/?token=6deee5a8794d0282a8c3b2&amount=${SUPPORTED_CURRENCIES[currencyCode]?.usdLifetimeNum || 99.99}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
-                >
-                  💎 Pay Once {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} {SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'} - Unlock Lifetime VIP →
-                </a>
-              )}
+              <button
+                onClick={() => {
+                  setIsLifetimeModalOpen(false);
+                  if (onOpenCheckout) {
+                    onOpenCheckout('lifetime');
+                  } else {
+                    handleGateCheckAndLaunch();
+                  }
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
+              >
+                💎 Unlock Lifetime VIP Access {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})`} →
+              </button>
             </div>
           </div>
         </div>
@@ -1301,3 +1241,4 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     </div>
   );
 };
+

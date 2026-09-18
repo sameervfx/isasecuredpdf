@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, FilePlus, Check, BookOpen, FileText, Receipt, Shield, Building, Home, Car, FileCheck, Crown, Lock, Sparkles, ShieldCheck } from 'lucide-react';
 import { CreatePDFOptions, TemplateType } from '../utils/blankPdf';
 import { SUPPORTED_CURRENCIES, detectUserCurrency } from '../utils/currencyFormatter';
+import { isAndroidPlatform, isNativeMobileApp } from '../utils/platform';
+import { launchNativeGooglePlayBilling } from '../utils/playBilling';
 
 interface CreatePDFModalProps {
   isOpen: boolean;
@@ -124,23 +126,11 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
 
   const handleTriggerCheckout = (plan: 'monthly' | 'annual' | 'lifetime') => {
     setIsCheckoutOpen(false);
+    onClose();
     if (onOpenCheckout) {
-      onClose();
       onOpenCheckout(plan);
     } else {
-      const baseTokens = {
-        monthly: '8cab3b693d79e2929b76f9',
-        annual: '7c45c83a1f97e5346967ea',
-        lifetime: '6deee5a8794d0282a8c3b2',
-      };
-      const baseAmounts = {
-        monthly: '2.99',
-        annual: '29.99',
-        lifetime: '99.99',
-      };
-      const token = baseTokens[plan];
-      const amount = baseAmounts[plan];
-      window.open(`https://isasecuredpdf.myhelcim.com/hosted/?token=${token}&amount=${amount}`, '_blank', 'noopener,noreferrer');
+      launchNativeGooglePlayBilling(plan);
     }
   };
 

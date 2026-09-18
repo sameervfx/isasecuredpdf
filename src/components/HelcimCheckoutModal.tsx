@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Globe, Smartphone, Check } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing } from '../utils/currencyFormatter';
-import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
+import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/platform';
 import { handleNativePurchase, launchNativeGooglePlayBilling, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
 interface HelcimCheckoutModalProps {
@@ -44,11 +44,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [currencyCode, setCurrencyCode] = useState<string>('USD');
 
+  const [isNativeApp, setIsNativeApp] = useState<boolean>(() => isAndroidPlatform() || isNativeMobileApp() || isIOSPlatform());
+
   useEffect(() => {
     setCurrencyCode(detectUserCurrency());
+    const verifyPlatform = () => {
+      if (isAndroidPlatform() || isNativeMobileApp() || isIOSPlatform()) {
+        setIsNativeApp(true);
+      }
+    };
+    verifyPlatform();
+    const t = setTimeout(verifyPlatform, 200);
+    return () => clearTimeout(t);
   }, []);
-
-  const isNativeApp = isIOSPlatform() || isNativeMobileApp();
 
   useEffect(() => {
     if (isOpen && initialPlan) {
@@ -57,7 +65,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   }, [isOpen, initialPlan]);
 
   useEffect(() => {
-    if (isNativeApp) {
+    if (isNativeApp || isAndroidPlatform()) {
       initPlayStore();
       const unsubscribe = subscribeToPriceUpdates((updatedPrices) => {
         setLivePrices(updatedPrices);
@@ -65,6 +73,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
       return () => unsubscribe();
     }
   }, [isNativeApp]);
+
 
   if (!isOpen) return null;
 
@@ -242,7 +251,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Select Plan</label>
                 
                 {/* 1. NATIVE MOBILE PLAN CARDS (Dynamic Play Store Catalog Binding) */}
-                {isNativeApp ? (
+                {isNativeApp || isAndroidPlatform() ? (
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {/* Monthly Plan */}
                     <div
@@ -265,8 +274,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.monthly]} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                           </div>
                         ) : (
-                          <div className="my-1 text-xs sm:text-sm font-extrabold text-cyan-300">
-                            {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
+                          <div className="my-1 flex items-center space-x-1">
+                            <span className="inline-block w-14 h-4 bg-slate-700/50 rounded animate-pulse" />
+                            <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                           </div>
                         )}
                         <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
@@ -294,8 +304,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.annual]} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                           </div>
                         ) : (
-                          <div className="my-1 text-xs sm:text-sm font-extrabold text-emerald-300">
-                            {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
+                          <div className="my-1 flex items-center space-x-1">
+                            <span className="inline-block w-16 h-4 bg-slate-700/50 rounded animate-pulse" />
+                            <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                           </div>
                         )}
                         <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
@@ -323,8 +334,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.lifetime]}
                           </div>
                         ) : (
-                          <div className="my-1 text-xs sm:text-sm font-extrabold text-purple-300">
-                            {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'}
+                          <div className="my-1 flex items-center space-x-1">
+                            <span className="inline-block w-16 h-4 bg-slate-700/50 rounded animate-pulse" />
                           </div>
                         )}
                         <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
@@ -505,7 +516,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     )}
                   </div>
                 </div>
-              ) : (
+              ) : !isAndroidPlatform() ? (
                 /* Condition 2: Web Browser Environment (Helcim Web Credit Card / UPI Checkout) */
                 <>
                   {/* Payment Method Selector Tabs */}
@@ -713,20 +724,20 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     </form>
                   )}
                 </>
-              )}
+              ) : null}
             </>
           )}
         </div>
 
         {/* Modal Footer: Hidden on Native Mobile App */}
-        {!isNativeApp && (
+        {!isNativeApp && !isAndroidPlatform() && (
           <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
             <div className="flex items-center space-x-1.5 text-emerald-400 font-medium">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>256-Bit SSL Encrypted Merchant Protection</span>
             </div>
 
-            <span className="text-slate-500 font-mono text-[9px]">Merchant ID: Helcim-ISA-Secure</span>
+            <span className="text-slate-500 font-mono text-[9px]">Merchant ID: ISA-SECURE-PAY</span>
           </div>
         )}
       </div>
