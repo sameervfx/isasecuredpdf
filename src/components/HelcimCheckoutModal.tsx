@@ -211,7 +211,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
                 <span>100% Client-Side Air-Gapped PDF Suite</span>
                 <span>•</span>
-                <span>{isNativeApp ? 'Secure In-App Purchase (v1.6.2 Build 111)' : 'Secure In-App Payment'}</span>
+                <span>{isNativeApp ? 'Secure In-App Purchase (v1.6.2 Build 112)' : 'Secure In-App Payment'}</span>
               </p>
             </div>
           </div>
