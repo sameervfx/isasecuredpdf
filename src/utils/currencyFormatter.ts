@@ -57,29 +57,112 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     country: 'United States & Global',
   },
   CAD: {
-    ...STANDARD_USD_CONFIG,
-    name: 'USD ($) - Canada',
+    code: 'CAD',
+    symbol: 'CA$',
+    name: 'CAD ($) - Canada',
     country: 'Canada',
+    monthly: 'CA$3.99',
+    annual: 'CA$39.99',
+    lifetime: 'CA$129.99',
+    monthlyNum: 3.99,
+    annualNum: 39.99,
+    lifetimeNum: 129.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
+    originalMonthly: 'CA$5.99',
+    originalAnnual: 'CA$49.99',
+    originalLifetime: 'CA$249.99',
+    monthlyDiscountPercent: '33% OFF',
+    annualDiscountPercent: '20% OFF',
+    lifetimeDiscountPercent: '48% OFF',
   },
   EUR: {
-    ...STANDARD_USD_CONFIG,
-    name: 'USD ($) - European Union',
+    code: 'EUR',
+    symbol: '€',
+    name: 'EUR (€) - European Union',
     country: 'European Union',
+    monthly: '€2.99',
+    annual: '€29.99',
+    lifetime: '€89.99',
+    monthlyNum: 2.99,
+    annualNum: 29.99,
+    lifetimeNum: 89.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
+    originalMonthly: '€4.99',
+    originalAnnual: '€39.99',
+    originalLifetime: '€189.99',
+    monthlyDiscountPercent: '40% OFF',
+    annualDiscountPercent: '25% OFF',
+    lifetimeDiscountPercent: '52% OFF',
   },
   GBP: {
-    ...STANDARD_USD_CONFIG,
-    name: 'USD ($) - United Kingdom',
+    code: 'GBP',
+    symbol: '£',
+    name: 'GBP (£) - United Kingdom',
     country: 'United Kingdom',
+    monthly: '£2.49',
+    annual: '£24.99',
+    lifetime: '£79.99',
+    monthlyNum: 2.49,
+    annualNum: 24.99,
+    lifetimeNum: 79.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
+    originalMonthly: '£3.99',
+    originalAnnual: '£32.99',
+    originalLifetime: '£159.99',
+    monthlyDiscountPercent: '38% OFF',
+    annualDiscountPercent: '24% OFF',
+    lifetimeDiscountPercent: '50% OFF',
   },
   AUD: {
-    ...STANDARD_USD_CONFIG,
-    name: 'USD ($) - Australia',
+    code: 'AUD',
+    symbol: 'A$',
+    name: 'AUD ($) - Australia',
     country: 'Australia & New Zealand',
+    monthly: 'A$4.49',
+    annual: 'A$44.99',
+    lifetime: 'A$149.99',
+    monthlyNum: 4.49,
+    annualNum: 44.99,
+    lifetimeNum: 149.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
   },
   INR: {
-    ...STANDARD_USD_CONFIG,
-    name: 'USD ($) - India',
+    code: 'INR',
+    symbol: '₹',
+    name: 'INR (₹) - India',
     country: 'India',
+    monthly: '₹249',
+    annual: '₹2,499',
+    lifetime: '₹7,999',
+    monthlyNum: 249,
+    annualNum: 2499,
+    lifetimeNum: 7999,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
   },
   JPY: {
     ...STANDARD_USD_CONFIG,
@@ -104,11 +187,70 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
 };
 
 /**
- * Automatically detects the user's local currency based on browser language and timezone,
- * or retrieves saved currency preference from localStorage.
+ * Automatically detects the user's local currency based on device locale,
+ * browser languages, and timezone (e.g., Canadian timezones -> CAD).
  */
 export function detectUserCurrency(): string {
-  // Enforce USD globally to comply with Google Play Subscriptions Policy (display price must match cart price)
+  if (typeof window === 'undefined') return 'USD';
+
+  try {
+    const saved = localStorage.getItem('isa_user_currency');
+    if (saved && SUPPORTED_CURRENCIES[saved]) {
+      return saved;
+    }
+
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const languages = window.navigator.languages || [window.navigator.language || ''];
+    const langStr = languages.join(',').toUpperCase();
+
+    // Canada detection (timezones and language tags)
+    if (
+      timeZone.includes('Toronto') ||
+      timeZone.includes('Vancouver') ||
+      timeZone.includes('Montreal') ||
+      timeZone.includes('Edmonton') ||
+      timeZone.includes('Calgary') ||
+      timeZone.includes('Winnipeg') ||
+      timeZone.includes('Halifax') ||
+      timeZone.includes('St_Johns') ||
+      timeZone.includes('Canada') ||
+      timeZone.includes('Regina') ||
+      langStr.includes('-CA')
+    ) {
+      return 'CAD';
+    }
+
+    // UK detection
+    if (timeZone.includes('London') || langStr.includes('-GB')) {
+      return 'GBP';
+    }
+
+    // India detection
+    if (timeZone.includes('Calcutta') || timeZone.includes('Kolkata') || langStr.includes('-IN')) {
+      return 'INR';
+    }
+
+    // Australia detection
+    if (timeZone.includes('Sydney') || timeZone.includes('Melbourne') || timeZone.includes('Brisbane') || timeZone.includes('Perth') || langStr.includes('-AU')) {
+      return 'AUD';
+    }
+
+    // Eurozone detection
+    if (
+      timeZone.includes('Paris') ||
+      timeZone.includes('Berlin') ||
+      timeZone.includes('Rome') ||
+      timeZone.includes('Madrid') ||
+      timeZone.includes('Amsterdam') ||
+      timeZone.includes('Brussels') ||
+      timeZone.includes('Vienna')
+    ) {
+      return 'EUR';
+    }
+  } catch (e) {
+    // fallback to USD
+  }
+
   return 'USD';
 }
 
@@ -117,7 +259,7 @@ export function detectUserCurrency(): string {
  */
 export function saveUserCurrency(currencyCode: string): void {
   if (SUPPORTED_CURRENCIES[currencyCode]) {
-    localStorage.setItem('isa_user_currency', 'USD');
+    localStorage.setItem('isa_user_currency', currencyCode);
   }
 }
 
@@ -125,7 +267,7 @@ export function saveUserCurrency(currencyCode: string): void {
  * Gets pricing details for a given plan and currency code
  */
 export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', currencyCode: string = 'USD') {
-  const currency = SUPPORTED_CURRENCIES.USD;
+  const currency = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
   const planKey = plan.charAt(0).toUpperCase() + plan.slice(1);
   return {
     formatted: currency[plan],
@@ -134,7 +276,7 @@ export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', cur
     amountNum: currency[`${plan}Num` as keyof CurrencyConfig] as number,
     usdAmountNum: currency[`usd${planKey}Num` as keyof CurrencyConfig] as number,
     usdFormatted: currency[`usd${planKey}Formatted` as keyof CurrencyConfig] as string,
-    originalFormatted: undefined,
-    discountPercent: undefined,
+    originalFormatted: currency[`original${planKey}` as keyof CurrencyConfig] as string | undefined,
+    discountPercent: currency[`${plan}DiscountPercent` as keyof CurrencyConfig] as string | undefined,
   };
 }

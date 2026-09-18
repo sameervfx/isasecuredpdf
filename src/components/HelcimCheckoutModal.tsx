@@ -261,8 +261,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.monthly]} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                           </div>
                         ) : (
-                          <div className="my-1.5 text-xs font-bold text-slate-400 animate-pulse">
-                            $ --.-- <span className="text-[9px] font-normal text-slate-500">/ mo</span>
+                          <div className="my-1.5 text-xs sm:text-sm font-extrabold text-cyan-300">
+                            {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                           </div>
                         )}
                         <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
@@ -290,8 +290,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.annual]} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                           </div>
                         ) : (
-                          <div className="my-1.5 text-xs font-bold text-slate-400 animate-pulse">
-                            $ --.-- <span className="text-[9px] font-normal text-slate-500">/ yr</span>
+                          <div className="my-1.5 text-xs sm:text-sm font-extrabold text-emerald-300">
+                            {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                           </div>
                         )}
                         <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
@@ -319,8 +319,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.lifetime]}
                           </div>
                         ) : (
-                          <div className="my-1.5 text-xs font-bold text-slate-400 animate-pulse">
-                            $ --.--
+                          <div className="my-1.5 text-xs sm:text-sm font-extrabold text-purple-300">
+                            {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'}
                           </div>
                         )}
                         <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>

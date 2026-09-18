@@ -603,7 +603,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.monthly]} <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
                           </>
                         ) : (
-                          <span className="animate-pulse text-slate-500 font-bold">$ --.-- <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span></span>
+                          <>
+                            {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                          </>
                         )}
                       </div>
                     ) : (
@@ -642,7 +644,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   }}
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
                 >
-                  Start Monthly Plan {livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : ''}
+                  Start Monthly Plan {livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : `(${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}/mo)`}
                 </button>
               ) : (
                 <a
@@ -680,7 +682,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.annual]} <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
                           </>
                         ) : (
-                          <span className="animate-pulse text-slate-500 font-bold">$ --.-- <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span></span>
+                          <>
+                            {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                          </>
                         )}
                       </div>
                     ) : (
@@ -719,7 +723,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   }}
                   className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
                 >
-                  Get Annual Plan {livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : ''}
+                  Get Annual Plan {livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}/yr)`}
                 </button>
               ) : (
                 <a
@@ -753,7 +757,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             {livePrices[PLAY_PRODUCT_IDS.lifetime]} <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
                           </>
                         ) : (
-                          <span className="animate-pulse text-slate-500 font-bold">$ --.-- <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span></span>
+                          <>
+                            {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                          </>
                         )}
                       </div>
                     ) : (
@@ -790,7 +796,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   }}
                   className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
                 >
-                  Buy Lifetime License {livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : ''}
+                  Buy Lifetime License {livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : `(${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})`}
                 </button>
               ) : (
                 <a
