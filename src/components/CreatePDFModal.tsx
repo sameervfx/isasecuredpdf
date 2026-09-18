@@ -113,13 +113,19 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
       onClose();
     } else {
       setPendingProTemplate(tplId);
-      setIsCheckoutOpen(true);
+      if (onOpenCheckout) {
+        onClose();
+        onOpenCheckout('annual');
+      } else {
+        setIsCheckoutOpen(true);
+      }
     }
   };
 
   const handleTriggerCheckout = (plan: 'monthly' | 'annual' | 'lifetime') => {
     setIsCheckoutOpen(false);
     if (onOpenCheckout) {
+      onClose();
       onOpenCheckout(plan);
     } else {
       const baseTokens = {
@@ -142,7 +148,12 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
     e.preventDefault();
     if (templateType.startsWith('pro_') && !isProActive) {
       setPendingProTemplate(templateType);
-      setIsCheckoutOpen(true);
+      if (onOpenCheckout) {
+        onClose();
+        onOpenCheckout('annual');
+      } else {
+        setIsCheckoutOpen(true);
+      }
       return;
     }
     onCreatePDF({ pageSize, orientation, pageCount, templateType, jurisdiction });
