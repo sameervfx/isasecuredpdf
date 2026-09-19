@@ -862,7 +862,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="p-1.5 bg-cyan-500/10 text-cyan-500 rounded-lg">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>ISASecuredPDF © 2026 • v1.6.7 (Build 117)</span>
+            <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>ISASecuredPDF © 2026 • v1.6.8 (Build 118)</span>
           </div>
 
           <div className={`flex flex-wrap items-center justify-center gap-6 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
