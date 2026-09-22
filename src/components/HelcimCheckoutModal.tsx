@@ -189,15 +189,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     }, 1000);
   };
 
-  // Dynamic Google Play Subtext based on selected plan
+  // Dynamic In-App Billing Subtext based on selected plan and platform
   const getNativeSubtext = () => {
+    const isIOS = isIOSPlatform();
+    const storeName = isIOS ? 'App Store' : 'Google Play';
+    const accountName = isIOS ? 'Apple ID account' : 'Google Play account';
+
     if (selectedPlan === 'monthly') {
-      return 'Billed monthly through your Google Play account. Local pricing and currency will be confirmed on Google Play.';
+      return `Billed monthly through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
     }
     if (selectedPlan === 'lifetime') {
-      return 'One-time charge through your Google Play account. Local pricing and currency will be confirmed on Google Play.';
+      return `One-time charge through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
     }
-    return 'Billed annually through your Google Play account. Local pricing and currency will be confirmed on Google Play.';
+    return `Billed annually through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
   };
 
   return (
