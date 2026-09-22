@@ -35,7 +35,7 @@ import {
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, saveUserCurrency } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/platform';
-import { handleNativePurchase, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
+import { handleNativePurchase, restoreNativePurchases, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
 import appLogo from '../assets/app_logo.jpg';
 
@@ -866,6 +866,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <div className={`flex flex-wrap items-center justify-center gap-6 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
+            {isNativeApp && (
+              <button
+                onClick={async () => {
+                  const res = await restoreNativePurchases();
+                  alert(res.message);
+                }}
+                className="hover:text-cyan-500 transition font-semibold underline text-cyan-400"
+              >
+                ↺ Restore Purchases
+              </button>
+            )}
             <button onClick={() => setActiveModal('privacy')} className="hover:text-cyan-600 transition">Privacy Policy</button>
             <button onClick={() => setActiveModal('terms')} className="hover:text-cyan-600 transition">Terms of Service</button>
             <button onClick={() => setActiveModal('refund')} className="hover:text-cyan-600 transition">Refund & Cancellation Policy</button>

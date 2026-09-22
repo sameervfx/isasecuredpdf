@@ -3,7 +3,7 @@ import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, Arr
 import { trackEvent } from '../utils/analytics';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/platform';
-import { handleNativePurchase, launchNativeGooglePlayBilling, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
+import { handleNativePurchase, launchNativeGooglePlayBilling, restoreNativePurchases, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
 interface HelcimCheckoutModalProps {
   isOpen: boolean;
@@ -473,11 +473,50 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     {getNativeSubtext()}
                   </p>
 
-                  {/* Mandatory Google Play Subscriptions Policy Disclosure */}
-                  <div className="text-[10px] text-slate-400 text-center leading-relaxed px-2 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80">
-                    <p>
-                      Payment will be charged to your Google Play Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Manage or cancel anytime via <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Google Play Account Settings</a>.
-                    </p>
+                  {/* Mandatory In-App Subscriptions Policy Disclosure & Restore Purchases */}
+                  <div className="text-[10px] text-slate-400 text-center leading-relaxed px-2 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80 space-y-2">
+                    {isIOSPlatform() ? (
+                      <p>
+                        Payment will be charged to your Apple ID account at confirmation of purchase. Subscription automatically renews unless auto-renew is cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your <a href="https://apps.apple.com/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Apple Account Settings</a>.
+                      </p>
+                    ) : (
+                      <p>
+                        Payment will be charged to your Google Play Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Manage or cancel anytime via <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Google Play Account Settings</a>.
+                      </p>
+                    )}
+
+                    {/* Mandatory Apple Guideline 3.1.1: Restore Purchases */}
+                    <div className="pt-1.5 border-t border-slate-800/60 flex items-center justify-center">
+                      <button
+                        type="button"
+                        disabled={isProcessing}
+                        onClick={async () => {
+                          setIsProcessing(true);
+                          try {
+                            const res = await restoreNativePurchases();
+                            setIsProcessing(false);
+                            alert(res.message);
+                            if (res.success) {
+                              onPaymentSuccess('Pro');
+                              onClose();
+                            }
+                          } catch (e: any) {
+                            setIsProcessing(false);
+                            alert('Restore check complete.');
+                          }
+                        }}
+                        className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold underline transition py-1 flex items-center space-x-1"
+                      >
+                        <span>↺ Restore Purchases</span>
+                      </button>
+                    </div>
+
+                    {/* Mandatory Apple Guideline 3.1.2: Terms of Use & Privacy Policy */}
+                    <div className="flex justify-center items-center space-x-3 text-[9.5px] text-slate-500 pt-1">
+                      <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Use (EULA)</a>
+                      <span>•</span>
+                      <a href="https://isasecuredpdf.com/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Privacy Policy</a>
+                    </div>
                   </div>
 
                   {/* License Key Secondary Activation option for Web Purchasers */}

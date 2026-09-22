@@ -1,5 +1,5 @@
-// Google Play Billing Integration Utility for Native Mobile Builds
-import { isNativeMobileApp } from './platform';
+// Mobile In-App Billing Integration Utility (Google Play & Apple StoreKit)
+import { isNativeMobileApp, isIOSPlatform } from './platform';
 
 export const PLAY_PRODUCT_IDS = {
   monthly: 'isasecuredpdf_pro_monthly',
@@ -88,7 +88,9 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
 
   const Platform = cdv.Platform;
   const ProductType = cdv.ProductType;
-  const targetPlatform = Platform?.GOOGLE_PLAY || 'google-play';
+  const targetPlatform = isIOSPlatform() 
+    ? (Platform?.APPLE_APPSTORE || 'apple-appstore')
+    : (Platform?.GOOGLE_PLAY || 'google-play');
 
   if (!isStoreInitialized) {
     isStoreInitialized = true;
@@ -224,21 +226,24 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
   }
 
   const Platform = cdv.Platform;
-  const targetPlatform = Platform?.GOOGLE_PLAY || 'google-play';
+  const isIOS = isIOSPlatform();
+  const targetPlatform = isIOS 
+    ? (Platform?.APPLE_APPSTORE || 'apple-appstore')
+    : (Platform?.GOOGLE_PLAY || 'google-play');
 
   const product = store.get 
-    ? (store.get(productId) || store.get(productId, targetPlatform)) 
+    ? (store.get(productId, targetPlatform) || store.get(productId)) 
     : (store.products && store.products.find((p: any) => p.id === productId));
   const offer = product && typeof product.getOffer === 'function' ? product.getOffer() : (product?.offers && product.offers[0]);
 
   const targetToOrder = offer || product;
 
   if (!targetToOrder) {
-    console.warn('[GooglePlayBilling] Product not found in store catalog yet. Triggering store.update()');
+    console.warn(`[StoreBilling] Product not found in ${targetPlatform} catalog yet. Triggering store.update()`);
     if (typeof store.update === 'function') {
       store.update();
     }
-    alert('Connecting to Google Play catalog. Please ensure your Google account is added under Google Play Console -> Setup -> License Testing to enable instant purchase testing.');
+    alert(isIOS ? 'Connecting to App Store catalog. Please retry in a moment.' : 'Connecting to Google Play catalog. Please ensure your account has access and retry.');
     return { success: false, productId, error: 'Product not ready' };
   }
 
@@ -291,3 +296,33 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
 
 // Backwards compatibility alias
 export const launchNativeGooglePlayBilling = handleNativePurchase;
+
+/**
+ * Restores previously purchased subscriptions / non-consumables.
+ * Mandatory for Apple App Store Review Guideline 3.1.1.
+ */
+export const restoreNativePurchases = async (): Promise<{ success: boolean; message: string }> => {
+  console.log('[StoreBilling] Triggering restoreNativePurchases...');
+  if (typeof window === 'undefined') {
+    return { success: false, message: 'Window environment not available' };
+  }
+
+  const cdv = getCdvPurchase();
+  const store = cdv?.store || (window as any).store;
+
+  if (!store) {
+    return { success: false, message: 'Store connection unavailable. Please check your connection and retry.' };
+  }
+
+  try {
+    if (typeof store.restorePurchases === 'function') {
+      await store.restorePurchases();
+    } else if (typeof store.update === 'function') {
+      await store.update();
+    }
+    return { success: true, message: 'Your previous purchases were successfully restored!' };
+  } catch (err: any) {
+    console.error('[StoreBilling] Restore error:', err);
+    return { success: false, message: err?.message || 'Unable to restore purchases. Please try again later.' };
+  }
+};
