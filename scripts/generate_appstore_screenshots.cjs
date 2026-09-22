@@ -2,8 +2,8 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const OUTPUT_DIR_IPHONE = 'C:/Users/samee/Desktop/ISASecured_Apple_AppStore_Assets/iPhone_6.7_Screenshots';
-const OUTPUT_DIR_IPAD = 'C:/Users/samee/Desktop/ISASecured_Apple_AppStore_Assets/iPad_13_Screenshots';
+const OUTPUT_DIR_IPHONE = 'C:/work/ISA_SECURE_PDF/STORE_ASSETS/Apple_AppStore/iPhone_6.7_Screenshots';
+const OUTPUT_DIR_IPAD = 'C:/work/ISA_SECURE_PDF/STORE_ASSETS/Apple_AppStore/iPad_13_Screenshots';
 
 fs.mkdirSync(OUTPUT_DIR_IPHONE, { recursive: true });
 fs.mkdirSync(OUTPUT_DIR_IPAD, { recursive: true });
@@ -142,14 +142,27 @@ function buildHtml(screen, isIpad = false) {
   <div class="w-full flex items-center justify-between text-slate-300 px-6 pt-4 font-semibold text-2xl z-20">
     <div class="tracking-tight text-white font-bold">9:41</div>
     <!-- Clean Dynamic Island / Speaker cutout simulation -->
-    <div class="w-36 h-9 bg-black/80 rounded-full border border-slate-800/80 flex items-center justify-end px-3">
-      <div class="w-3 h-3 rounded-full bg-cyan-400/80 mr-1"></div>
+    <div class="w-36 h-9 bg-black/90 rounded-full border border-slate-800 flex items-center justify-end px-3">
+      <div class="w-3 h-3 rounded-full bg-slate-900 border border-slate-800 mr-1"></div>
     </div>
-    <div class="flex items-center space-x-3 text-white">
-      <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.35 19.58 10.63 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
-      <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24"><path d="M2 17h20v2H2zm1.15-4.05L4 11.85c3.8-3.08 8.2-4.85 13-4.85 2.14 0 4.22.35 6.17 1l-.7 1.88C20.73 9.28 18.89 9 17 9c-4.32 0-8.28 1.58-11.7 4.35l-2.15-2.4z"/></svg>
-      <div class="w-8 h-4 border-2 border-white rounded-md p-0.5 flex items-center">
-        <div class="w-full h-full bg-emerald-400 rounded-sm"></div>
+    <div class="flex items-center space-x-3.5 text-white">
+      <!-- Apple Cellular Signal (4 Vertical Staircase Bars) -->
+      <svg class="w-6 h-4.5" viewBox="0 0 18 13" fill="currentColor">
+        <rect x="0" y="9.5" width="3" height="3.5" rx="0.8"/>
+        <rect x="5" y="6.5" width="3" height="6.5" rx="0.8"/>
+        <rect x="10" y="3.5" width="3" height="9.5" rx="0.8"/>
+        <rect x="15" y="0" width="3" height="13" rx="0.8"/>
+      </svg>
+      <!-- Apple Wi-Fi Fan -->
+      <svg class="w-6 h-4.5" viewBox="0 0 20 15" fill="currentColor">
+        <path d="M10 11.5a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4zm-4.5-3a6.4 6.4 0 0 1 9 0 .9.9 0 0 1-1.3 1.3 4.6 4.6 0 0 0-6.4 0 .9.9 0 0 1-1.3-1.3zm-3.8-3.4a11.8 11.8 0 0 1 16.6 0 .9.9 0 0 1-1.3 1.3 10 10 0 0 0-14 0 .9.9 0 0 1-1.3-1.3z"/>
+      </svg>
+      <!-- Apple Battery Capsule -->
+      <div class="flex items-center">
+        <div class="w-7 h-3.5 border-2 border-white rounded-[5px] p-0.5 flex items-center">
+          <div class="w-full h-full bg-emerald-400 rounded-[2px]"></div>
+        </div>
+        <div class="w-0.5 h-1.5 bg-white rounded-r-[1.5px] ml-[0.5px]"></div>
       </div>
     </div>
   </div>
