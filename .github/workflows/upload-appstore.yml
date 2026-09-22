@@ -33,7 +33,7 @@ jobs:
           const fs = require('fs');
           const pbx = 'ios/App/App.xcodeproj/project.pbxproj';
           let content = fs.readFileSync(pbx, 'utf8');
-          const runNum = (110 + parseInt(process.env.GITHUB_RUN_NUMBER || '8')).toString();
+          const runNum = (265 + parseInt(process.env.GITHUB_RUN_NUMBER || '1')).toString();
           content = content.replace(/CURRENT_PROJECT_VERSION = \d+/g, 'CURRENT_PROJECT_VERSION = ' + runNum);
           content = content.replace(/MARKETING_VERSION = [0-9.]+/g, 'MARKETING_VERSION = 1.6.8');
           fs.writeFileSync(pbx, content);
