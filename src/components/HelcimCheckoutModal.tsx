@@ -273,16 +273,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             Standard
                           </span>
                         </div>
-                        {livePrices[PLAY_PRODUCT_IDS.monthly] ? (
-                          <div className="my-1 text-xs sm:text-sm font-extrabold text-cyan-300">
-                            {livePrices[PLAY_PRODUCT_IDS.monthly]} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
-                          </div>
-                        ) : (
-                          <div className="my-1 flex items-center space-x-1">
-                            <span className="inline-block w-14 h-4 bg-slate-700/50 rounded animate-pulse" />
-                            <span className="text-[9px] font-normal text-slate-400">/ mo</span>
-                          </div>
-                        )}
+                        <div className="my-1 text-xs sm:text-sm font-extrabold text-cyan-300">
+                          {livePrices[PLAY_PRODUCT_IDS.monthly] || '$2.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
+                        </div>
                         <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
                       </div>
                     </div>
@@ -303,16 +296,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             Best Value
                           </span>
                         </div>
-                        {livePrices[PLAY_PRODUCT_IDS.annual] ? (
-                          <div className="my-1 text-xs sm:text-sm font-extrabold text-emerald-300">
-                            {livePrices[PLAY_PRODUCT_IDS.annual]} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
-                          </div>
-                        ) : (
-                          <div className="my-1 flex items-center space-x-1">
-                            <span className="inline-block w-16 h-4 bg-slate-700/50 rounded animate-pulse" />
-                            <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
-                          </div>
-                        )}
+                        <div className="my-1 text-xs sm:text-sm font-extrabold text-emerald-300">
+                          {livePrices[PLAY_PRODUCT_IDS.annual] || '$29.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
+                        </div>
                         <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
                       </div>
                     </div>
@@ -333,15 +319,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             VIP Access
                           </span>
                         </div>
-                        {livePrices[PLAY_PRODUCT_IDS.lifetime] ? (
-                          <div className="my-1 text-xs sm:text-sm font-extrabold text-purple-300">
-                            {livePrices[PLAY_PRODUCT_IDS.lifetime]}
-                          </div>
-                        ) : (
-                          <div className="my-1 flex items-center space-x-1">
-                            <span className="inline-block w-16 h-4 bg-slate-700/50 rounded animate-pulse" />
-                          </div>
-                        )}
+                        <div className="my-1 text-xs sm:text-sm font-extrabold text-purple-300">
+                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || '$99.99'}
+                        </div>
                         <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
                       </div>
                     </div>

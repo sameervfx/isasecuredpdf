@@ -64,7 +64,7 @@ server.listen(4189, async () => {
 
     await page.waitForTimeout(1200);
 
-    const out = 'C:/Users/samee/Desktop/Subscription_Paywall_Review_Screenshot.png';
+    const out = 'C:/work/ISA_SECURE_PDF/STORE_ASSETS/Apple_AppStore/InAppPurchases_Review/Subscription_Paywall_Review_Screenshot.png';
     await page.screenshot({ path: out });
     console.log('✓ Successfully captured NATIVE iOS paywall screenshot:', out);
     await browser.close();
