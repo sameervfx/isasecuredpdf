@@ -325,15 +325,20 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       <div>
                         <div className="flex flex-col gap-1 mb-1">
                           <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight">Annual Pass</h4>
-                          <span className="self-start bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded">
-                            Best Value
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="self-start bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded shadow-sm">
+                              Best Value
+                            </span>
+                            <span className="self-start bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded">
+                              {currentPricing.annualDiscountPercent || '58% OFF'}
+                            </span>
+                          </div>
                         </div>
                         <div className="my-1 text-sm sm:text-base font-extrabold text-emerald-300">
                           {currentPricing.annual}
                         </div>
                         <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || '$35.88'}</span>
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || '$71.88'}</span>
                           <span className="text-emerald-400 font-semibold text-[10px]">{currentPricing.code}/yr</span>
                         </div>
                       </div>
@@ -533,7 +538,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     <>
                       {/* Pro Feature Checklist */}
                       <div className="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2">
-                        <h5 className="font-bold text-white text-xs mb-1.5">Pro License Includes:</h5>
+                        <h5 className="font-bold text-white text-xs mb-1.5">
+                          {selectedPlan === 'monthly' ? 'Monthly Pass Includes:' : selectedPlan === 'annual' ? 'Annual Pass Includes:' : 'Lifetime VIP Includes:'}
+                        </h5>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
                           <div className="flex items-center space-x-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
@@ -559,10 +566,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                             <span>Unlimited PDF Exports & Conversions</span>
                           </div>
-                          <div className="flex items-center space-x-2 sm:col-span-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                            <span>Windows & Mac Offline Desktop Apps</span>
-                          </div>
+                          {selectedPlan === 'monthly' ? (
+                            <div className="flex items-center space-x-2 sm:col-span-2 text-slate-400 pt-0.5">
+                              <span className="text-[10.5px] text-amber-300/90 font-medium flex items-center space-x-1.5">
+                                <span>🔒</span>
+                                <span>Windows & Mac Offline Desktop Apps (Annual & Lifetime Pass only)</span>
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2 sm:col-span-2 pt-0.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                              <span className="font-bold text-emerald-300">Windows & Mac Offline Desktop Apps Included</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 

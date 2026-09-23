@@ -621,9 +621,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <>
                         {SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly && (
                           <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                            <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly}</span>
+                            <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly || '$5.99'}</span>
                             <span className="text-[10px] font-extrabold text-cyan-300 bg-cyan-500/20 border border-cyan-500/40 px-1.5 py-0.5 rounded">
-                              {SUPPORTED_CURRENCIES[currencyCode]?.monthlyDiscountPercent || '33% OFF'}
+                              {SUPPORTED_CURRENCIES[currencyCode]?.monthlyDiscountPercent || '50% OFF'}
                             </span>
                           </div>
                         )}
@@ -690,9 +690,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <>
                         {SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual && (
                           <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                            <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual}</span>
+                            <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual || '$71.88'}</span>
                             <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 rounded">
-                              {SUPPORTED_CURRENCIES[currencyCode]?.annualDiscountPercent || '16% OFF'}
+                              {SUPPORTED_CURRENCIES[currencyCode]?.annualDiscountPercent || '58% OFF'}
                             </span>
                           </div>
                         )}
@@ -706,7 +706,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <ul className={`space-y-3 text-xs ${cardDescClass}`}>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Everything in Monthly Plan</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Full Offline Standalone / PWA Execution</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Air-Gapped Offline Execution</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Windows & Mac Offline Desktop Apps Included</span></li>
                   </ul>
                 </div>
               </div>
