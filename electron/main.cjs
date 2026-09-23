@@ -19,8 +19,10 @@ let pendingPdfPayload = null;
 function parsePdfPathFromArgs(argv) {
   if (!argv || !Array.isArray(argv)) return null;
   for (let i = 1; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg && !arg.startsWith('-') && arg.toLowerCase().endsWith('.pdf')) {
+    let arg = argv[i];
+    if (!arg) continue;
+    arg = arg.trim().replace(/^["']|["']$/g, '');
+    if (!arg.startsWith('-') && arg.toLowerCase().endsWith('.pdf')) {
       if (fs.existsSync(arg)) return arg;
     }
   }
@@ -28,7 +30,9 @@ function parsePdfPathFromArgs(argv) {
 }
 
 function handleOpenedPdfFile(filePath) {
-  if (!filePath || !fs.existsSync(filePath)) return;
+  if (!filePath) return;
+  filePath = filePath.trim().replace(/^["']|["']$/g, '');
+  if (!fs.existsSync(filePath)) return;
   try {
     const fileBytes = fs.readFileSync(filePath);
     const payload = {
@@ -245,9 +249,9 @@ function buildMenu() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'About Isa Secure PDF Suite',
-              message: 'Isa Secure PDF Suite v1.0.0',
+              message: 'ISASecuredPDF Suite v1.6.8',
               detail:
-                '100% client-side PDF editing.\nNo data is ever transmitted to any server.\n\nBuilt with Electron + React + pdf-lib + pdfjs-dist.',
+                '100% client-side PDF editing.\nNo data is ever transmitted to any server.\n\nBuilt with Electron + React + pdf-lib + pdfjs-dist + MuPDF.',
               buttons: ['OK'],
               icon: path.join(__dirname, 'icon.png'),
             });

@@ -958,6 +958,7 @@ export const App: React.FC = () => {
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
+        setCurrentView('editor');
         loadPDFData(bytes, payload.fileName);
       } catch (err) {
         console.error('Failed to parse system opened PDF payload:', err);
