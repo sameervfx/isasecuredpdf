@@ -154,13 +154,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <CreditCard className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight flex items-center space-x-2">
-                <span>Unlock ISA Secure PDF Pro</span>
-                {!isNativeApp && (
-                  <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold px-2 py-0.5 rounded-md">
-                    Helcim Secure
-                  </span>
-                )}
+              <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
+                Unlock ISA Secure PDF Pro
               </h3>
               <p className="text-[11px] text-slate-400 leading-tight mt-1">
                 100% Client-Side Air-Gapped PDF Suite
@@ -542,17 +537,29 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
                           <div className="flex items-center space-x-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Apply Watermark</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Add Password Protection</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Export to Word, Excel, PowerPoint</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Upload JPG / PNG Signature</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Unlimited Redact, Overwrite & AcroForm Fill</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                             <span>Unlimited PDF Exports & Conversions</span>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                            <span>Straight Line Text Highlighter 📏</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                            <span>Redact, Overwrite & AcroForm Fill</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2 sm:col-span-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                             <span>Windows & Mac Offline Desktop Apps</span>
                           </div>
