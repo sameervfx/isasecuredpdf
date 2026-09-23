@@ -627,17 +627,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             </span>
                           </div>
                         )}
-                        <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                          {SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                        <div className={`text-2xl xl:text-3xl font-extrabold ${cardTitleClass} flex items-baseline flex-wrap gap-x-1`}>
+                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}</span>
+                          <span className="whitespace-nowrap text-xs font-normal">
+                            <span className="text-sm font-bold text-cyan-400 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span>
+                            <span className={`${cardDescClass} whitespace-nowrap`}>/ month</span>
+                          </span>
                         </div>
                       </>
                     )}
                   </div>
 
-                  <ul className={`space-y-3 text-xs ${cardDescClass}`}>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited In-Browser Compressions & Passwords</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>High-DPI 4K Vector Supersampling</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Custom Image Seals & Unlimited Watermarks</span></li>
+                  <ul className={`space-y-2.5 text-xs ${cardDescClass}`}>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Export to Word, Excel, PowerPoint</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Upload JPG / PNG Signature & Seals</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited Redact, Overwrite & AcroForm Fill</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Apply Custom Watermarks & Passwords</span></li>
                   </ul>
                 </div>
               </div>
@@ -677,12 +682,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
                         {livePrices[PLAY_PRODUCT_IDS.annual] ? (
                           <>
-                            {livePrices[PLAY_PRODUCT_IDS.annual]} <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                            {livePrices[PLAY_PRODUCT_IDS.annual]} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/ year</span>
                           </>
                         ) : (
                           <div className="flex items-center space-x-2">
                             <span className="inline-block w-32 h-8 bg-slate-700/50 rounded-lg animate-pulse" />
-                            <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                            <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/ year</span>
                           </div>
                         )}
                       </div>
@@ -696,17 +701,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             </span>
                           </div>
                         )}
-                        <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                          {SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} <span className="text-sm font-bold text-cyan-400">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ year</span>
+                        <div className={`text-2xl xl:text-3xl font-extrabold ${cardTitleClass} flex items-baseline flex-wrap gap-x-1`}>
+                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}</span>
+                          <span className="whitespace-nowrap text-xs font-normal">
+                            <span className="text-sm font-bold text-cyan-400 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span>
+                            <span className={`${cardDescClass} whitespace-nowrap`}>/ year</span>
+                          </span>
                         </div>
                       </>
                     )}
                   </div>
 
-                  <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                  <ul className={`space-y-2.5 text-xs ${cardDescClass}`}>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Everything in Monthly Plan</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Full Offline Standalone / PWA Execution</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Windows & Mac Offline Desktop Apps Included</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited PDF Exports & Conversions</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Full Offline Standalone / PWA Execution</span></li>
                   </ul>
                 </div>
               </div>
@@ -742,12 +752,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
                         {livePrices[PLAY_PRODUCT_IDS.lifetime] ? (
                           <>
-                            {livePrices[PLAY_PRODUCT_IDS.lifetime]} <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                            {livePrices[PLAY_PRODUCT_IDS.lifetime]} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
                           </>
                         ) : (
                           <div className="flex items-center space-x-2">
                             <span className="inline-block w-32 h-8 bg-slate-700/50 rounded-lg animate-pulse" />
-                            <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                            <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
                           </div>
                         )}
                       </div>
@@ -759,8 +769,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             {SUPPORTED_CURRENCIES[currencyCode]?.lifetimeDiscountPercent || '50% OFF'}
                           </span>
                         </div>
-                        <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                          {SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} <span className="text-sm font-bold text-purple-300">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span> <span className={`text-xs ${cardDescClass} font-normal`}>/ one-time</span>
+                        <div className={`text-2xl xl:text-3xl font-extrabold ${cardTitleClass} flex items-baseline flex-wrap gap-x-1`}>
+                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'}</span>
+                          <span className="whitespace-nowrap text-xs font-normal">
+                            <span className="text-sm font-bold text-purple-300 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span>
+                            <span className={`${cardDescClass} whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
+                          </span>
                         </div>
                       </>
                     )}
