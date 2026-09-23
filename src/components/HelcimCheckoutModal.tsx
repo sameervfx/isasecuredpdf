@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Globe, Smartphone, Check } from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Globe, Check, ExternalLink } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
-import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing } from '../utils/currencyFormatter';
+import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing, saveUserCurrency } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/platform';
 import { handleNativePurchase, launchNativeGooglePlayBilling, restoreNativePurchases, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
@@ -19,21 +19,10 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   initialPlan = 'annual',
 }) => {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>(initialPlan);
-  const [paymentTab, setPaymentTab] = useState<'card' | 'upi' | 'key'>('card');
+  const [paymentTab, setPaymentTab] = useState<'helcim' | 'key'>('helcim');
   
   // Dynamic Live Google Play Store Prices State
   const [livePrices, setLivePrices] = useState<Record<string, string>>({});
-
-  // Card Form State
-  const [cardholderName, setCardholderName] = useState<string>('');
-  const [cardNumber, setCardNumber] = useState<string>('');
-  const [cardExpiry, setCardExpiry] = useState<string>('');
-  const [cardCvv, setCardCvv] = useState<string>('');
-  const [cardError, setCardError] = useState<string | null>(null);
-  
-  // UPI State
-  const [upiId, setUpiId] = useState<string>('');
-  const [upiError, setUpiError] = useState<string | null>(null);
 
   // License Key State
   const [licenseKeyInput, setLicenseKeyInput] = useState<string>('');
@@ -74,85 +63,32 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     }
   }, [isNativeApp]);
 
-
   if (!isOpen) return null;
 
   const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
 
-  // Format Card Number (adds spaces every 4 digits)
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '').slice(0, 16);
-    const formatted = raw.replace(/(.{4})/g, '$1 ').trim();
-    setCardNumber(formatted);
+  // Dynamic Helcim URL Builder passing exact localized USD equivalent amount
+  const getDynamicPayUrl = (plan: 'monthly' | 'annual' | 'lifetime', currency: string) => {
+    if (isNativeApp) return '';
+    const priceInfo = getLocalizedPricing(plan, currency);
+    const baseTokens: Record<string, string> = {
+      monthly: '8cab3b693d79e2929b76f9',
+      annual: '7c45c83a1f97e5346967ea',
+      lifetime: '6deee5a8794d0282a8c3b2',
+    };
+    const token = baseTokens[plan];
+    return `https://isasecuredpdf.myhelcim.com/hosted/?token=${token}&amount=${priceInfo.usdAmountNum}`;
   };
 
-  // Format Expiry Date (MM/YY)
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, '').slice(0, 4);
-    if (raw.length >= 3) {
-      setCardExpiry(`${raw.slice(0, 2)}/${raw.slice(2)}`);
-    } else {
-      setCardExpiry(raw);
+  const handleHelcimCheckout = () => {
+    trackEvent('pricing_checkout_clicked', `helcim_${selectedPlan}_${currencyCode}`);
+    const payUrl = getDynamicPayUrl(selectedPlan, currencyCode);
+    if (payUrl) {
+      const opened = window.open(payUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        window.location.href = payUrl;
+      }
     }
-  };
-
-  // Process Card Payment
-  const handleCardPayment = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCardError(null);
-
-    const cleanNumber = cardNumber.replace(/\s/g, '');
-    if (!cardholderName.trim()) {
-      setCardError('Please enter the cardholder name.');
-      return;
-    }
-    if (cleanNumber.length < 15) {
-      setCardError('Please enter a valid 16-digit card number.');
-      return;
-    }
-    if (cardExpiry.length < 5) {
-      setCardError('Please enter a valid expiration date (MM/YY).');
-      return;
-    }
-    if (cardCvv.length < 3) {
-      setCardError('Please enter a valid CVV.');
-      return;
-    }
-
-    setIsProcessing(true);
-    trackEvent('pricing_checkout_clicked', `card_${selectedPlan}_${currencyCode}`);
-
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsSuccess(true);
-      setTimeout(() => {
-        onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
-        onClose();
-      }, 1200);
-    }, 1500);
-  };
-
-  // Process UPI Payment
-  const handleUpiPayment = (e: React.FormEvent) => {
-    e.preventDefault();
-    setUpiError(null);
-
-    if (!upiId.trim() || !upiId.includes('@')) {
-      setUpiError('Please enter a valid UPI ID (e.g. user@upi, name@okaxis).');
-      return;
-    }
-
-    setIsProcessing(true);
-    trackEvent('pricing_checkout_clicked', `upi_${selectedPlan}_INR`);
-
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsSuccess(true);
-      setTimeout(() => {
-        onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
-        onClose();
-      }, 1200);
-    }, 1500);
   };
 
   // Verify License Key
@@ -180,7 +116,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
       ) {
         setIsSuccess(true);
         setTimeout(() => {
-          onPaymentSuccess('Lifetime VIP');
+          onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
           onClose();
         }, 1000);
       } else {
@@ -218,24 +154,51 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <CreditCard className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
-                Unlock ISA Secure PDF Pro
+              <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight flex items-center space-x-2">
+                <span>Unlock ISA Secure PDF Pro</span>
+                {!isNativeApp && (
+                  <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold px-2 py-0.5 rounded-md">
+                    Helcim Secure
+                  </span>
+                )}
               </h3>
               <p className="text-[11px] text-slate-400 leading-tight mt-1">
                 100% Client-Side Air-Gapped PDF Suite
               </p>
               <p className="text-[10.5px] font-semibold text-emerald-400 leading-tight mt-0.5">
-                {isNativeApp ? 'Secure In-App Purchase' : 'Secure In-App Payment'}
+                {isNativeApp ? 'Secure In-App Purchase' : 'Official Helcim Merchant Gateway'}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition shrink-0"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2 shrink-0">
+            {!isNativeApp && (
+              <div className="flex items-center space-x-1 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700">
+                <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                <select
+                  value={currencyCode}
+                  onChange={(e) => {
+                    setCurrencyCode(e.target.value);
+                    saveUserCurrency(e.target.value);
+                  }}
+                  className="bg-transparent text-white text-[11px] font-semibold focus:outline-none cursor-pointer"
+                  title="Select Currency"
+                >
+                  {Object.values(SUPPORTED_CURRENCIES).map((c) => (
+                    <option key={c.code} value={c.code} className="bg-slate-900 text-white">
+                      {c.code} ({c.symbol})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
@@ -507,11 +470,11 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   <div className="pt-2 border-t border-slate-800/80">
                     <button
                       type="button"
-                      onClick={() => setPaymentTab(paymentTab === 'key' ? 'card' : 'key')}
+                      onClick={() => setPaymentTab(paymentTab === 'key' ? 'helcim' : 'key')}
                       className="w-full text-center text-xs text-purple-300 hover:text-purple-200 font-semibold py-1 transition flex items-center justify-center space-x-1.5"
                     >
                       <Key className="w-3.5 h-3.5 text-yellow-400" />
-                      <span>{paymentTab === 'key' ? 'Back to Google Play Purchase' : 'Already bought on web? Redeem License Key →'}</span>
+                      <span>{paymentTab === 'key' ? 'Back to Store Purchase' : 'Already bought on web? Redeem License Key →'}</span>
                     </button>
 
                     {paymentTab === 'key' && (
@@ -540,184 +503,95 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   </div>
                 </div>
               ) : !isAndroidPlatform() ? (
-                /* Condition 2: Web Browser Environment (Helcim Web Credit Card / UPI Checkout) */
-                <>
+                /* Condition 2: Web Browser Environment (Official Helcim Hosted Gateway Checkout) */
+                <div className="space-y-4 my-3">
                   {/* Payment Method Selector Tabs */}
-                  <div className="flex items-center space-x-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold my-3">
+                  <div className="flex items-center space-x-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold">
                     <button
                       type="button"
-                      onClick={() => setPaymentTab('card')}
+                      onClick={() => setPaymentTab('helcim')}
                       className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
-                        paymentTab === 'card'
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                        paymentTab === 'helcim'
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold shadow-md'
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
                       }`}
                     >
                       <CreditCard className="w-3.5 h-3.5" />
-                      <span>Credit / Debit Card</span>
+                      <span>Helcim Secure Checkout</span>
                     </button>
-
-                    {currencyCode === 'INR' && (
-                      <button
-                        type="button"
-                        onClick={() => setPaymentTab('upi')}
-                        className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
-                          paymentTab === 'upi'
-                            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md'
-                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                        }`}
-                      >
-                        <Smartphone className="w-3.5 h-3.5" />
-                        <span>UPI App</span>
-                      </button>
-                    )}
 
                     <button
                       type="button"
                       onClick={() => setPaymentTab('key')}
                       className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
                         paymentTab === 'key'
-                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md'
+                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
                       }`}
                     >
                       <Key className="w-3.5 h-3.5" />
-                      <span>License Key</span>
+                      <span>Redeem License Key</span>
                     </button>
                   </div>
 
-                  {/* Form Tab 1: Credit / Debit Card Embedded Sheet */}
-                  {paymentTab === 'card' && (
-                    <form onSubmit={handleCardPayment} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
-                      <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
-                        <span className="flex items-center space-x-1.5">
-                          <CreditCard className="w-4 h-4 text-emerald-400" />
-                          <span>Card Details</span>
+                  {paymentTab === 'helcim' ? (
+                    <>
+                      {/* Pro Feature Checklist */}
+                      <div className="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                        <h5 className="font-bold text-white text-xs mb-1.5">Pro License Includes:</h5>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Unlimited PDF Exports & Conversions</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Straight Line Text Highlighter 📏</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Redact, Overwrite & AcroForm Fill</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                            <span>Windows & Mac Offline Desktop Apps</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Helcim Hosted Gateway Notice */}
+                      <div className="p-3 bg-slate-950/90 border border-slate-800 rounded-xl text-[10.5px] text-slate-400 space-y-1">
+                        <p className="font-semibold text-slate-300 flex items-center space-x-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Official Helcim Hosted Payment Gateway:</span>
+                        </p>
+                        <p>
+                          You will be redirected to our verified 256-bit SSL encrypted Helcim merchant gateway to complete your payment securely. Subscriptions renew at the end of each billing cycle ({selectedPlan === 'monthly' ? currentPricing.monthly + ' ' + currentPricing.code + '/month' : selectedPlan === 'annual' ? currentPricing.annual + ' ' + currentPricing.code + '/year' : currentPricing.lifetime + ' ' + currentPricing.code + ' one-time'}). All major credit & debit cards accepted.
+                        </p>
+                      </div>
+
+                      {/* Helcim Pay Action Button */}
+                      <button
+                        type="button"
+                        onClick={handleHelcimCheckout}
+                        className="w-full py-4 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2"
+                      >
+                        <Lock className="w-4 h-4 text-slate-950" />
+                        <span>
+                          Proceed to Helcim Secure Checkout ({selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} {currentPricing.code})
                         </span>
-                        <span className="text-[10px] text-slate-400 font-normal">Visa • MasterCard • Amex</span>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter the name on Card</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. John Doe"
-                          value={cardholderName}
-                          onChange={(e) => setCardholderName(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your card number</label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            placeholder="XXXX XXXX XXXX XXXX"
-                            value={cardNumber}
-                            onChange={handleCardNumberChange}
-                            className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition pr-10"
-                          />
-                          <CreditCard className="w-4 h-4 text-slate-500 absolute right-3.5 top-3" />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-400 mb-1">Expiry (Validity)</label>
-                          <input
-                            type="text"
-                            placeholder="MM / YY"
-                            value={cardExpiry}
-                            onChange={handleExpiryChange}
-                            className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-slate-400 mb-1">CVV</label>
-                          <input
-                            type="password"
-                            placeholder="CVV"
-                            maxLength={4}
-                            value={cardCvv}
-                            onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                            className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition text-center"
-                          />
-                        </div>
-                      </div>
-
-                      {cardError && <p className="text-[11px] text-rose-400 font-medium">{cardError}</p>}
-
-                      <button
-                        type="submit"
-                        disabled={isProcessing}
-                        className="mt-2 w-full py-3.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-slate-950 font-extrabold text-sm rounded-2xl shadow-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
-                      >
-                        {isProcessing ? (
-                          <span className="flex items-center space-x-2 text-white">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Processing Secure Payment...</span>
-                          </span>
-                        ) : (
-                          <>
-                            <Lock className="w-4 h-4 text-slate-950" />
-                            <span>Pay {selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} {currentPricing.code}</span>
-                          </>
-                        )}
+                        <ExternalLink className="w-4 h-4 text-slate-950" />
                       </button>
-                    </form>
-                  )}
-
-                  {/* Form Tab 2: UPI Payment Sheet */}
-                  {paymentTab === 'upi' && (
-                    <form onSubmit={handleUpiPayment} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-slate-800">
-                      <div className="flex items-center space-x-2 text-xs font-bold text-white mb-1">
-                        <Smartphone className="w-4 h-4 text-cyan-400" />
-                        <span>Pay by any UPI app (Google Pay, PhonePe, Paytm)</span>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-semibold text-slate-400 mb-1">Enter your UPI ID</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. mobileNumber@upi or name@okaxis"
-                          value={upiId}
-                          onChange={(e) => setUpiId(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 focus:border-cyan-400 text-white text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition"
-                        />
-                      </div>
-
-                      {upiError && <p className="text-[11px] text-rose-400 font-medium">{upiError}</p>}
-
-                      <button
-                        type="submit"
-                        disabled={isProcessing}
-                        className="mt-2 w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-sm rounded-2xl shadow-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
-                      >
-                        {isProcessing ? (
-                          <span className="flex items-center space-x-2">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Connecting to UPI App...</span>
-                          </span>
-                        ) : (
-                          <>
-                            <Zap className="w-4 h-4 text-yellow-300" />
-                            <span>Pay {selectedPlan === 'monthly' ? currentPricing.monthly : selectedPlan === 'annual' ? currentPricing.annual : currentPricing.lifetime} (via UPI)</span>
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  )}
-
-                  {/* Form Tab 3: License Key Activation */}
-                  {paymentTab === 'key' && (
+                    </>
+                  ) : (
+                    /* License Key Activation Form */
                     <form onSubmit={handleVerifyLicenseKey} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-purple-500/30">
                       <div className="flex items-center space-x-2 text-purple-300 font-bold text-xs">
                         <Key className="w-4 h-4 text-yellow-400" />
                         <span>Activate Purchased License Key</span>
                       </div>
                       <p className="text-[11px] text-slate-400">
-                        Enter the License Key sent to your email after purchasing on www.isasecuredpdf.com or promo code.
+                        Enter the License Key sent to your email after purchasing on www.isasecuredpdf.com or your promo code.
                       </p>
 
                       <input
@@ -746,7 +620,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       </button>
                     </form>
                   )}
-                </>
+                </div>
               ) : null}
             </>
           )}
@@ -757,10 +631,10 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
           <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
             <div className="flex items-center space-x-1.5 text-emerald-400 font-medium">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>256-Bit SSL Encrypted Merchant Protection</span>
+              <span>256-Bit SSL Encrypted Helcim Merchant Protection</span>
             </div>
 
-            <span className="text-slate-500 font-mono text-[9px]">Merchant ID: ISA-SECURE-PAY</span>
+            <span className="text-slate-500 font-mono text-[9px]">Merchant ID: Helcim-ISA-Secure</span>
           </div>
         )}
       </div>
