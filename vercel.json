@@ -1,9 +1,19 @@
 {
   "framework": "vite",
-  "installCommand": "npm install",
+  "installCommand": "npm install --no-audit",
   "buildCommand": "npx vite build",
   "outputDirectory": "dist",
+  "ignoreCommand": "bash -c 'if [ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]; then exit 0; else exit 1; fi'",
   "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

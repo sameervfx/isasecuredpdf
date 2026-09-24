@@ -1,15 +1,32 @@
 # Vercel Build Ignore File
-# Prevents uploading heavy non-web assets to Vercel build storage
+# Prevents uploading heavy mobile, desktop, and marketing assets to Vercel build storage
 
 android/
 ios/
 electron/
 scripts/
 scratch/
-public/google_play_feature_graphic*
-public/3d_logo_showcase*
-public/google_play_app_icon*
+temp_videos/
+release/
+dist_packages/
+STORE_ASSETS/
+Marketing_Collateral/
+Advirtisment/
+
+# Binary & media artifacts
 *.ps1
 *.apk
 *.aab
 *.exe
+*.zip
+*.tar.gz
+*.dmg
+*.log
+*.webm
+*.mp4
+*.pdf
+
+# Large store promotional artwork not used on web
+public/google_play_feature_graphic*
+public/3d_logo_showcase*
+public/google_play_app_icon*

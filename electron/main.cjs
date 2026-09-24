@@ -141,18 +141,23 @@ async function createWindow() {
       sandbox: false,
       webSecurity: true,
     },
-    show: false,
+    show: true,
   });
 
-  // Gracefully show after paint
-  mainWindow.once('ready-to-show', () => {
+  const showAndFocus = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
     mainWindow.show();
-
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
     const initialPath = parsePdfPathFromArgs(process.argv);
     if (initialPath) {
       handleOpenedPdfFile(initialPath);
     }
-  });
+  };
+
+  mainWindow.once('ready-to-show', showAndFocus);
+  mainWindow.webContents.once('did-finish-load', showAndFocus);
+  setTimeout(showAndFocus, 600);
 
   if (isDev && process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:3000').catch(async () => {

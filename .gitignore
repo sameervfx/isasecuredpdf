@@ -28,3 +28,5 @@ scratch/
 test_*.pdf
 test_*.ts
 wrap_test.pdf
+temp_videos/
+*.webm
