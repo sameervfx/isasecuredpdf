@@ -4,6 +4,18 @@
   "buildCommand": "npx vite build",
   "outputDirectory": "dist",
   "ignoreCommand": "bash -c 'if [ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]; then exit 0; else exit 1; fi'",
+  "redirects": [
+    {
+      "source": "/play",
+      "destination": "https://play.google.com/store/apps/details?id=com.isasecuredpdf.app",
+      "permanent": false
+    },
+    {
+      "source": "/android",
+      "destination": "https://play.google.com/store/apps/details?id=com.isasecuredpdf.app",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
