@@ -277,8 +277,12 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       }
     };
 
-    renderAll().finally(() => { renderingRef.current = false; });
+    const debounceTimer = setTimeout(() => {
+      renderAll().finally(() => { renderingRef.current = false; });
+    }, 50);
+
     return () => {
+      clearTimeout(debounceTimer);
       cancelled = true;
       pdfRenderer.cancelAllRenders();
     };

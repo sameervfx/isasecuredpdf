@@ -254,7 +254,7 @@ function buildMenu() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'About Isa Secure PDF Suite',
-              message: 'ISASecuredPDF Suite v1.6.8',
+              message: 'ISASecuredPDF Suite v1.6.9',
               detail:
                 '100% client-side PDF editing.\nNo data is ever transmitted to any server.\n\nBuilt with Electron + React + pdf-lib + pdfjs-dist + MuPDF.',
               buttons: ['OK'],
