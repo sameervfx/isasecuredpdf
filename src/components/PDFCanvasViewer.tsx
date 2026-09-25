@@ -253,26 +253,36 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
       if (cancelled) return;
 
-      const newDims: Record<number, PageDims> = {};
+      // Prioritize rendering the currently visible page first for instant visual feedback
+      const currentIdx = activePages[currentPage - 1];
+      const orderedPages = currentIdx !== undefined
+        ? [currentIdx, ...activePages.filter((idx) => idx !== currentIdx)]
+        : activePages;
 
-      for (const origIdx of activePages) {
+      for (const origIdx of orderedPages) {
         if (cancelled) break;
         const canvas = canvasRefs.current.get(origIdx);
         if (!canvas) continue;
         try {
           const rot = state.pageRotations[origIdx] || 0;
           const dims = await pdfRenderer.renderPageToCanvas(origIdx, canvas, zoom, rot, state.fileBytes);
-          if (!cancelled) newDims[origIdx] = dims;
-        } catch (err) {
-          console.error(`Error rendering page ${origIdx}:`, err);
+          if (!cancelled) {
+            setPageDims((prev) => ({ ...prev, [origIdx]: dims }));
+          }
+        } catch (err: any) {
+          if (err?.name !== 'RenderingCancelledException') {
+            console.error(`Error rendering page ${origIdx}:`, err);
+          }
         }
       }
-      if (!cancelled) setPageDims(newDims);
     };
 
     renderAll().finally(() => { renderingRef.current = false; });
-    return () => { cancelled = true; };
-  }, [state.fileBytes, state.pageOrder, state.deletedPages, state.pageRotations, zoom]);
+    return () => {
+      cancelled = true;
+      pdfRenderer.cancelAllRenders();
+    };
+  }, [state.fileBytes, state.pageOrder, state.deletedPages, state.pageRotations, zoom, currentPage]);
 
   // Scroll to page when currentPage changes
   useEffect(() => {
@@ -435,22 +445,22 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         const baseH = pageObj?.height || 792;
         const origW = dims?.originalWidth ?? (isSwapped ? baseH : baseW);
         const origH = dims?.originalHeight ?? (isSwapped ? baseW : baseH);
-        const w = dims?.width ?? (origW * zoom);
-        const h = dims?.height ?? (origH * zoom);
+        // Dynamic zoom sizing: prevents container from lagging behind canvas resolution
+        const w = Math.round(origW * zoom);
+        const h = Math.round(origH * zoom);
 
         return (
           <div
             key={origIdx}
-            className="pdf-document-page relative bg-white shadow-2xl transition-all duration-150 my-4 flex-shrink-0"
-            style={{ width: `${w}px`, height: `${h}px`, maxHeight: `${h}px` }}
+            className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0"
+            style={{ width: `${w}px`, height: `${h}px` }}
           >
             <canvas
               ref={(el) => {
                 if (el) canvasRefs.current.set(origIdx, el);
                 else canvasRefs.current.delete(origIdx);
               }}
-              className="block max-w-none"
-              style={{ width: `${w}px`, height: `${h}px` }}
+              className="block w-full h-full"
             />
 
             {dims && (

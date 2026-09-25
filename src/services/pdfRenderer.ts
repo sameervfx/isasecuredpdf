@@ -4,6 +4,7 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 export class PDFRendererService {
   private pdfDoc: PDFDocumentProxy | null = null;
   private workerReady = false;
+  private activeRenderTasks: Map<HTMLCanvasElement, any> = new Map();
 
   private ensureWorker() {
     if (!this.workerReady) {
@@ -17,8 +18,28 @@ export class PDFRendererService {
     }
   }
 
+  cancelRender(canvas: HTMLCanvasElement) {
+    const task = this.activeRenderTasks.get(canvas);
+    if (task) {
+      try {
+        task.cancel();
+      } catch (e) {}
+      this.activeRenderTasks.delete(canvas);
+    }
+  }
+
+  cancelAllRenders() {
+    for (const [, task] of this.activeRenderTasks.entries()) {
+      try {
+        task.cancel();
+      } catch (e) {}
+    }
+    this.activeRenderTasks.clear();
+  }
+
   async loadDocument(data: Uint8Array, password?: string): Promise<PDFDocumentProxy> {
     this.ensureWorker();
+    this.cancelAllRenders();
     const copyData = data.slice(0);
     const loadingTask = getDocument({ data: copyData, password });
     this.pdfDoc = await loadingTask.promise;
@@ -41,28 +62,70 @@ export class PDFRendererService {
     }
     if (!this.pdfDoc) throw new Error('PDF document not loaded');
 
+    // Cancel any previous in-flight render task for this specific canvas
+    this.cancelRender(canvas);
+
     const page = await this.pdfDoc.getPage(pageIndex + 1);
     const totalRotation = (page.rotate + rotationAngle) % 360;
     const viewport = page.getViewport({ scale, rotation: totalRotation });
-    const dpr = Math.max(window.devicePixelRatio || 1, 2.0);
+
+    // Balanced DPR calculation: high-DPI crispness without massive memory bloat
+    const deviceDPR = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    // When scale is already large (>= 1.5), vector coordinates are magnified, so DPR can be capped to 1.5
+    const dpr = scale >= 1.5 ? Math.min(deviceDPR, 1.5) : Math.min(deviceDPR, 2.0);
     const scaledViewport = page.getViewport({ scale: scale * dpr, rotation: totalRotation });
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Could not get 2d canvas context');
+    const targetWidth = Math.max(1, Math.floor(scaledViewport.width));
+    const targetHeight = Math.max(1, Math.floor(scaledViewport.height));
 
-    canvas.width = Math.floor(scaledViewport.width);
-    canvas.height = Math.floor(scaledViewport.height);
-    canvas.style.width = `${Math.floor(viewport.width)}px`;
-    canvas.style.height = `${Math.floor(viewport.height)}px`;
+    // DOUBLE BUFFERING: Render into an offscreen scratch canvas first!
+    // The currently displayed canvas on the screen remains completely intact and visible.
+    // It NEVER goes blank white while rendering is in progress.
+    const offscreen = document.createElement('canvas');
+    offscreen.width = targetWidth;
+    offscreen.height = targetHeight;
+    const offscreenCtx = offscreen.getContext('2d', { alpha: false });
+    if (!offscreenCtx) throw new Error('Could not get 2d canvas context');
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    offscreenCtx.fillStyle = '#ffffff';
+    offscreenCtx.fillRect(0, 0, targetWidth, targetHeight);
 
-    await page.render({
-      canvasContext: ctx,
+    const renderTask = page.render({
+      canvasContext: offscreenCtx,
       viewport: scaledViewport,
       annotationMode: AnnotationMode.DISABLE,
-    }).promise;
+    });
+
+    this.activeRenderTasks.set(canvas, renderTask);
+
+    try {
+      await renderTask.promise;
+    } catch (err: any) {
+      if (err?.name === 'RenderingCancelledException') {
+        const unscaledViewport = page.getViewport({ scale: 1.0, rotation: totalRotation });
+        return {
+          width: viewport.width,
+          height: viewport.height,
+          originalWidth: unscaledViewport.width,
+          originalHeight: unscaledViewport.height,
+        };
+      }
+      throw err;
+    } finally {
+      if (this.activeRenderTasks.get(canvas) === renderTask) {
+        this.activeRenderTasks.delete(canvas);
+      }
+    }
+
+    // ATOMIC BLIT: Transfer the newly rendered image from offscreen to DOM canvas in a single instant paint
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+      }
+      ctx.drawImage(offscreen, 0, 0);
+    }
 
     const unscaledViewport = page.getViewport({ scale: 1.0, rotation: totalRotation });
     return {
