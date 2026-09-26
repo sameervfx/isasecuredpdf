@@ -38,6 +38,7 @@
       "package.json"
     ],
     "icon": "electron/icon.png",
+    "afterPack": "scripts/afterPack.cjs",
     "win": {
       "icon": "electron/icon.ico",
       "forceCodeSigning": false,

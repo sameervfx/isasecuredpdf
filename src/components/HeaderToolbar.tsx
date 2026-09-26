@@ -353,16 +353,16 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
     >
       <div className="flex items-center justify-between w-full lg:w-auto">
         {/* Brand & File Menu */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 xl:space-x-3 min-w-0">
+        <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
           <img src={appLogo} alt="ISASecuredPDF Suite Logo" className="w-full h-full object-cover" />
         </div>
         <div>
-          <div className="flex items-center space-x-3 gap-3">
-            <div className="flex flex-col justify-center">
+          <div className="flex items-center space-x-2 xl:space-x-3 gap-2">
+            <div className="flex flex-col justify-center min-w-0">
               <h1
                 onClick={onGoToLandingPage}
-                className={`font-extrabold text-xs sm:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[160px] sm:max-w-none`}
+                className={`font-extrabold text-xs sm:text-sm xl:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[120px] xl:max-w-none`}
                 title="Return to Landing Page"
               >
                 ISASecuredPDF Suite
@@ -370,7 +370,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             </div>
 
             {/* File Menu Dropdown */}
-            <div className="relative ml-3" ref={fileMenuRef}>
+            <div className="relative ml-1.5 xl:ml-3 shrink-0" ref={fileMenuRef}>
               <button
                 onClick={() => toggleDropdown('file', fileMenuRef, 208)}
                 className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center space-x-1 transition shadow-sm"
@@ -650,7 +650,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 <input type="file" ref={imageFileInputRef} onChange={handleImageFileSelect} accept="image/png, image/jpeg, image/jpg" className="hidden" />
                 <button
                   onClick={onGoToLandingPage}
-                  className="hidden sm:inline-block px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                  className="hidden 2xl:inline-block px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition shrink-0"
                   title="Return to Landing Page"
                 >
                   Home
@@ -658,12 +658,12 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               </>
             )}
 
-            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="hidden 2xl:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
               <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
               100% Offline
             </span>
           </div>
-          <p className="hidden xl:block text-xs text-slate-400">Zero Server Data Transmission Guarantee</p>
+          <p className="hidden 2xl:block text-xs text-slate-400 truncate">Zero Server Data Transmission Guarantee</p>
         </div>
 
         {/* Mobile-Only Action Buttons in Row 1 */}
@@ -693,15 +693,16 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
       </div>
       </div>
 
-      {/* Center Toolbar Tool Modes: Dedicated 2nd Row on Mobile, Center on Desktop */}
+      {/* Center Toolbar Tool Modes: Dedicated 2nd Row on Mobile, Fluid Centered Flex Item on Desktop */}
       {hasDocument && (
-        <div className="bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:w-auto overflow-hidden lg:overflow-visible whitespace-nowrap lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:top-1/2 lg:-translate-y-1/2 z-20">
-          <div className="flex items-center space-x-1 sm:space-x-1.5 flex-nowrap max-lg:overflow-x-auto lg:overflow-visible touch-pan-x scrollbar-none w-full max-w-full py-0.5 px-2 justify-start lg:justify-center">
+        <div className="w-full lg:w-auto lg:flex-1 lg:flex lg:justify-center min-w-0 z-20">
+          <div className="bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:w-auto overflow-hidden lg:overflow-visible whitespace-nowrap shrink-0">
+            <div className="flex items-center space-x-1 sm:space-x-1.5 flex-nowrap max-lg:overflow-x-auto lg:overflow-visible touch-pan-x scrollbar-none w-full max-w-full py-0.5 px-2 justify-start lg:justify-center">
             {/* Select Mode */}
             <button
               onClick={() => handleToolSelect('select')}
               title="Select & Navigate (S)"
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
                 toolMode === 'select'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -719,7 +720,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   toggleDropdown('text', textDropdownRef, 208);
                 }}
                 title="Add Text & Type on PDF (T) - Click for text formatting options"
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   toolMode === 'text' || (isTextDropdownOpen && popoverPos.name === 'text')
                     ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -865,7 +866,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <button
               onClick={() => toggleDropdown('annotate', annotateDropdownRef, 256)}
               title="Annotations, Markups, Vector Shapes, Stamps & Forms"
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isAnnotateActive || (isAnnotateDropdownOpen && popoverPos.name === 'annotate')
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -1121,7 +1122,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <button
               onClick={() => toggleDropdown('sign', dropdownRef, 224)}
               title="Signature Options & Saved Signatures"
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 toolMode === 'sign' || (isSignDropdownOpen && popoverPos.name === 'sign')
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -1216,7 +1217,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <button
               onClick={() => toggleDropdown('security', securityDropdownRef, 288)}
               title="Protect PDF (AES-256 Password) & Unlock PDF (Remove Password)"
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isSecurityDropdownOpen && popoverPos.name === 'security'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -1302,7 +1303,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <button
               onClick={() => toggleDropdown('tools', moreToolsRef, 280)}
               title="More Feature Modules (Compress, Watermark, Split, Templates)"
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 isMoreToolsOpen && popoverPos.name === 'tools'
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -1532,11 +1533,12 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           </button>
           </div>
         </div>
+        </div>
       )}
 
       {/* Right Header Action Buttons: Rotate, Pages, Undo/Redo, Print & Export PDF (Web Desktop Only) */}
       {hasDocument && (
-        <div className="hidden lg:flex items-center space-x-1.5 sm:space-x-2 shrink-0 ml-auto z-20">
+        <div className="hidden lg:flex items-center space-x-1 sm:space-x-1.5 shrink-0 ml-auto z-20">
           {/* Rotate Current Page */}
           <button
             onClick={() => {
@@ -1545,61 +1547,61 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               }
             }}
             title="Rotate Current Page 90° Clockwise"
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+            className="flex items-center space-x-1.5 p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all shrink-0"
           >
             <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Rotate ↻</span>
+            <span className="hidden 2xl:inline">Rotate ↻</span>
           </button>
 
           {/* Manage Pages / Reorder */}
           <button
             onClick={onOpenPageManager}
             title="Manage, Split & Reorder Pages"
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+            className="flex items-center space-x-1.5 p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all shrink-0"
           >
             <Grid className="w-3.5 h-3.5 text-purple-400" />
-            <span className="hidden sm:inline">Pages</span>
+            <span className="hidden 2xl:inline">Pages</span>
           </button>
 
           {/* Undo & Redo Controls */}
-          <div className="flex items-center space-x-0.5 border-l border-slate-800 pl-1">
+          <div className="hidden xl:flex items-center space-x-0.5 border-l border-slate-800 pl-1 shrink-0">
             <button
               disabled={!canUndo}
               onClick={onUndo}
               title="Undo Action (Ctrl+Z)"
-              className="flex items-center space-x-1 px-1.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent"
+              className="flex items-center space-x-1 p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
             >
               <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden xl:inline">Undo</span>
+              <span className="hidden 2xl:inline">Undo</span>
             </button>
             <button
               disabled={!canRedo}
               onClick={onRedo}
               title="Redo Action (Ctrl+Y / Ctrl+Shift+Z)"
-              className="flex items-center space-x-1 px-1.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent"
+              className="flex items-center space-x-1 p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
             >
               <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden xl:inline">Redo</span>
+              <span className="hidden 2xl:inline">Redo</span>
             </button>
           </div>
 
           {/* Right-Side Action Group: Print & Export PDF */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2 border-l border-slate-800 pl-1.5 sm:pl-2">
+          <div className="flex items-center space-x-1.5 border-l border-slate-800 pl-1.5 shrink-0">
             <button
               onClick={onPrintPDF}
               disabled={isPrinting}
               title="Print Document or Open Print Preview (Ctrl+P)"
-              className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-lg sm:rounded-xl border border-slate-700 transition active:scale-95 disabled:opacity-50"
+              className="hidden xl:flex items-center space-x-1 p-1.5 2xl:px-2.5 2xl:py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition active:scale-95 disabled:opacity-50 shrink-0"
             >
               <Printer className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden sm:inline">{isPrinting ? 'Preparing...' : 'Print'}</span>
+              <span className="hidden 2xl:inline">{isPrinting ? 'Preparing...' : 'Print'}</span>
             </button>
 
             <button
               onClick={onExportPDF}
               disabled={isExporting}
               title="Export & Download PDF File"
-              className="flex items-center space-x-1 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg sm:rounded-xl shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50"
+              className="flex items-center space-x-1 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg sm:rounded-xl shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50 shrink-0"
             >
               <Download className="w-3.5 h-3.5" />
               <span>{isExporting ? 'Exporting...' : 'Export'}</span>
@@ -1609,10 +1611,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               <button
                 onClick={onOpenReviewModal}
                 title="Rate ISASecured PDF 5-Stars on Google Play Store"
-                className="flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-extrabold rounded-lg sm:rounded-xl border border-amber-500/40 transition active:scale-95"
+                className="hidden 2xl:flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-extrabold rounded-lg sm:rounded-xl border border-amber-500/40 transition active:scale-95 shrink-0"
               >
                 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span className="hidden sm:inline">Rate 5★</span>
+                <span>Rate 5★</span>
               </button>
             )}
           </div>

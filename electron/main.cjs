@@ -131,7 +131,7 @@ async function createWindow() {
     minWidth: 1024,
     minHeight: 600,
     title: 'ISASecuredPDF Suite',
-    icon: path.join(__dirname, 'icon.png'),
+    icon: process.platform === 'win32' ? path.join(__dirname, 'icon.ico') : path.join(__dirname, 'icon.png'),
     backgroundColor: '#020617', // slate-950
     titleBarStyle: 'default',
     webPreferences: {
