@@ -2,7 +2,7 @@
   "name": "isasecuredpdf-suite",
   "productName": "ISASecuredPDF Suite",
   "private": true,
-  "version": "1.6.9",
+  "version": "1.7.0",
   "description": "ISASecuredPDF Suite - 100% client-side secure PDF Editor & Camera Scanner.",
   "author": "ISASecuredPDF Inc.",
   "type": "module",
@@ -59,9 +59,13 @@
       "installerIcon": "electron/icon.ico",
       "uninstallerIcon": "electron/icon.ico",
       "installerHeaderIcon": "electron/icon.ico",
+      "installerSidebar": "electron/installerSidebar.bmp",
+      "uninstallerSidebar": "electron/uninstallerSidebar.bmp",
+      "installerHeader": "electron/installerHeader.bmp",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Isa Secure PDF"
+      "shortcutName": "Isa Secure PDF",
+      "include": "electron/installer.nsh"
     }
   },
   "dependencies": {
