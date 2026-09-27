@@ -472,7 +472,13 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       className="w-full text-center text-xs text-purple-300 hover:text-purple-200 font-semibold py-1 transition flex items-center justify-center space-x-1.5"
                     >
                       <Key className="w-3.5 h-3.5 text-yellow-400" />
-                      <span>{paymentTab === 'key' ? 'Back to Store Purchase' : 'Already bought on web? Redeem License Key →'}</span>
+                      <span>
+                        {paymentTab === 'key'
+                          ? 'Back to Store Purchase'
+                          : isIOSPlatform()
+                          ? 'Have a License Key? Redeem Here →'
+                          : 'Already bought on web? Redeem License Key →'}
+                      </span>
                     </button>
 
                     {paymentTab === 'key' && (
