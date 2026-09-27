@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { pdfRenderer } from '../services/pdfRenderer';
 import { PDFDocumentState, ToolMode, TextAnnotation, SignatureAnnotation, StampAnnotation, StrikeoutAnnotation, FreehandDrawing } from '../types/pdf';
 import { AcroFormOverlay } from './AcroFormOverlay';
@@ -8,7 +8,7 @@ import { DrawingCanvasOverlay } from './DrawingCanvasOverlay';
 import { ShapeOverlay } from './ShapeOverlay';
 import { ImageStampOverlay } from './ImageStampOverlay';
 import { ShapeAnnotation, ImageStampAnnotation } from '../types/pdf';
-import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, RotateCcw, XCircle, X, Camera } from 'lucide-react';
+import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, XCircle, X, Camera } from 'lucide-react';
 import appLogo from '../assets/app_logo.jpg';
 
 interface PDFCanvasViewerProps {
@@ -57,6 +57,8 @@ interface PDFCanvasViewerProps {
   onFitToWidth?: () => void;
   onOpenSignatureModal?: (tab?: 'draw' | 'type' | 'upload') => void;
   activeTheme?: any;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 interface PageDims {
@@ -111,6 +113,8 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   onFocusFormField,
   onOpenSignatureModal,
   activeTheme,
+  isFullscreen = false,
+  onToggleFullscreen,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -119,6 +123,8 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const renderingRef = useRef(false);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const inViewRef = useRef<Set<number>>(new Set());
+  const [visibleTrigger, setVisibleTrigger] = useState<number>(0);
 
   // Mouse tracking when in signature placement mode
   useEffect(() => {
@@ -137,7 +143,66 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   const deletedPages = state?.deletedPages || new Set<number>();
   const activePages = pageOrder.filter((idx) => !deletedPages.has(idx));
 
-  // Ctrl/Cmd + Mouse Wheel Zooming directly on document canvas
+  // True Fit to Screen: calculates actual viewport bounds subtracting headers/paddings
+  const handleFitToScreen = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || activePages.length === 0) return;
+
+    const currentIdx = activePages[currentPage - 1] ?? activePages[0];
+    const pageObj = state.pages[currentIdx];
+    const baseW = pageObj?.width || 612;
+    const baseH = pageObj?.height || 792;
+    const rot = state.pageRotations[currentIdx] || 0;
+    const isSwapped = rot % 180 !== 0;
+    const origW = isSwapped ? baseH : baseW;
+    const origH = isSwapped ? baseW : baseH;
+
+    const padX = window.innerWidth < 640 ? 16 : 48;
+    const padY = window.innerWidth < 640 ? 80 : 120;
+    const availW = Math.max(100, container.clientWidth - padX);
+    const availH = Math.max(100, container.clientHeight - padY);
+
+    const fitScale = Math.min(availW / origW, availH / origH);
+    const targetZoom = Math.max(0.15, Math.min(5.0, Math.floor(fitScale * 100) / 100));
+    onZoomChange(targetZoom);
+  }, [state.pages, state.pageRotations, activePages, currentPage, onZoomChange]);
+
+  // Double-tap and double-click zoom reset / toggle
+  const lastTapRef = useRef<number>(0);
+  const handlePageTouchEnd = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      if (Math.abs(zoom - 1.0) < 0.05) {
+        handleFitToScreen();
+      } else {
+        onZoomChange(1.0);
+      }
+      lastTapRef.current = 0;
+    } else {
+      lastTapRef.current = now;
+    }
+  };
+
+  const handlePageDoubleClick = () => {
+    if (Math.abs(zoom - 1.0) < 0.05) {
+      handleFitToScreen();
+    } else {
+      onZoomChange(1.0);
+    }
+  };
+
+  // Fullscreen Escape key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen && onToggleFullscreen) {
+        onToggleFullscreen();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen, onToggleFullscreen]);
+
+  // Ctrl/Cmd + Mouse Wheel Zooming directly on document canvas (clamped to 15% - 250%)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -146,7 +211,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const delta = e.deltaY < 0 ? 0.15 : -0.15;
-        const newZoom = Math.max(0.4, Math.min(2.5, zoom + delta));
+        const newZoom = Math.max(0.15, Math.min(5.0, zoom + delta));
         onZoomChange(Math.round(newZoom * 100) / 100);
       }
     };
@@ -161,7 +226,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     zoomRef.current = zoom;
   }, [zoom]);
 
-  // Touch Pinch-to-Zoom & 1-Finger Drag Panning for Touchscreens
+  // Touch Pinch-to-Zoom & 1-Finger Drag Panning with clamped 15% floor
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -202,7 +267,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         const currentDist = getTouchDist(e);
         if (currentDist > 0) {
           const scaleRatio = currentDist / initialTouchDist;
-          const newZoom = Math.max(0.35, Math.min(2.5, Math.round(initialZoom * scaleRatio * 100) / 100));
+          const newZoom = Math.max(0.15, Math.min(5.0, Math.round(initialZoom * scaleRatio * 100) / 100));
           onZoomChange(newZoom);
         }
       } else if (isPanning && e.touches.length === 1 && toolMode === 'select') {
@@ -231,7 +296,47 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     };
   }, [toolMode, onZoomChange]);
 
-  // Render pages when doc/zoom/rotation changes
+  // Track pages currently visible in viewport via IntersectionObserver without React state thrashing
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || activePages.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let hasNewlyVisible = false;
+        for (const entry of entries) {
+          const pageIndexStr = entry.target.getAttribute('data-orig-idx');
+          if (pageIndexStr !== null) {
+            const idx = parseInt(pageIndexStr, 10);
+            if (entry.isIntersecting) {
+              if (!inViewRef.current.has(idx)) {
+                inViewRef.current.add(idx);
+                hasNewlyVisible = true;
+              }
+            } else {
+              inViewRef.current.delete(idx);
+            }
+          }
+        }
+        if (hasNewlyVisible) {
+          setVisibleTrigger((prev) => prev + 1);
+        }
+      },
+      {
+        root: container,
+        rootMargin: '400px 0px 400px 0px',
+        threshold: 0.01,
+      }
+    );
+
+    const pageElements = container.querySelectorAll('.pdf-document-page');
+    pageElements.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [activePages, zoom]);
+
+  // LAZY PAGE RENDERING:
+  // Renders the currently visible page and adjacent pages, prioritizing current page (< 200ms)
   useEffect(() => {
     if (!state.fileBytes || activePages.length === 0) {
       setPageDims({});
@@ -241,23 +346,32 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     let cancelled = false;
     renderingRef.current = true;
 
-    const renderAll = async () => {
-      // Retry for up to 10 frames until DOM canvas elements are attached to refs
-      let retries = 0;
-      while (retries < 10 && !cancelled) {
-        const hasAllCanvases = activePages.every((idx) => Boolean(canvasRefs.current.get(idx)));
-        if (hasAllCanvases) break;
-        await new Promise((r) => setTimeout(r, 40));
-        retries++;
+    // Immediately cancel in-flight render tasks on zoom or document change
+    pdfRenderer.cancelAllRenders();
+
+    const renderVisiblePages = async () => {
+      // 1. Determine active window of pages to render: current page + immediate adjacent pages
+      const currentSeq = Math.max(0, Math.min(activePages.length - 1, currentPage - 1));
+      const targetSeqIndices: number[] = [currentSeq];
+      if (currentSeq + 1 < activePages.length) targetSeqIndices.push(currentSeq + 1);
+      if (currentSeq - 1 >= 0) targetSeqIndices.push(currentSeq - 1);
+
+      const targetOrigIndices = new Set<number>(targetSeqIndices.map((s) => activePages[s]));
+      // Include any page elements detected in-view by IntersectionObserver
+      inViewRef.current.forEach((idx) => targetOrigIndices.add(idx));
+
+      // Cancel tasks for canvases that are NOT in target pages
+      for (const [origIdx, canvas] of canvasRefs.current.entries()) {
+        if (!targetOrigIndices.has(origIdx)) {
+          pdfRenderer.cancelRender(canvas);
+        }
       }
 
-      if (cancelled) return;
-
-      // Prioritize rendering the currently visible page first for instant visual feedback
-      const currentIdx = activePages[currentPage - 1];
+      // Prioritize current page first for instant visual feedback (< 200ms)
+      const currentIdx = activePages[currentSeq];
       const orderedPages = currentIdx !== undefined
-        ? [currentIdx, ...activePages.filter((idx) => idx !== currentIdx)]
-        : activePages;
+        ? [currentIdx, ...Array.from(targetOrigIndices).filter((idx) => idx !== currentIdx)]
+        : Array.from(targetOrigIndices);
 
       for (const origIdx of orderedPages) {
         if (cancelled) break;
@@ -267,7 +381,19 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           const rot = state.pageRotations[origIdx] || 0;
           const dims = await pdfRenderer.renderPageToCanvas(origIdx, canvas, zoom, rot, state.fileBytes);
           if (!cancelled) {
-            setPageDims((prev) => ({ ...prev, [origIdx]: dims }));
+            setPageDims((prev) => {
+              const cur = prev[origIdx];
+              if (
+                cur &&
+                cur.width === dims.width &&
+                cur.height === dims.height &&
+                cur.originalWidth === dims.originalWidth &&
+                cur.originalHeight === dims.originalHeight
+              ) {
+                return prev;
+              }
+              return { ...prev, [origIdx]: dims };
+            });
           }
         } catch (err: any) {
           if (err?.name !== 'RenderingCancelledException') {
@@ -278,15 +404,15 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     };
 
     const debounceTimer = setTimeout(() => {
-      renderAll().finally(() => { renderingRef.current = false; });
-    }, 50);
+      renderVisiblePages().finally(() => { renderingRef.current = false; });
+    }, 20);
 
     return () => {
       clearTimeout(debounceTimer);
       cancelled = true;
       pdfRenderer.cancelAllRenders();
     };
-  }, [state.fileBytes, state.pageOrder, state.deletedPages, state.pageRotations, zoom, currentPage]);
+  }, [state.fileBytes, state.pageOrder, state.deletedPages, state.pageRotations, zoom, currentPage, visibleTrigger]);
 
   // Scroll to page when currentPage changes
   useEffect(() => {
@@ -422,22 +548,98 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   }
 
   return (
-    <main
-      ref={containerRef}
-      tabIndex={0}
-      className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none touch-auto min-w-0 transition-colors duration-500`}
-    >
+    <div className="relative flex-1 h-full w-full overflow-hidden flex flex-col select-none">
+      {/* Floating Close Button: Anchored to page viewer, in line with viewer, strictly below HeaderToolbar */}
       {onCloseDocument && (
-        <div className="sticky top-2 sm:top-4 self-end z-30 mr-2 sm:mr-6 -mb-10 sm:-mb-12">
+        <div className="absolute top-3 sm:top-4 right-3 sm:right-6 z-40 pointer-events-auto">
           <button
             onClick={onCloseDocument}
-            className="p-2 sm:p-2.5 bg-slate-900/90 hover:bg-rose-950/90 text-slate-300 hover:text-rose-200 border border-slate-700 hover:border-rose-700/80 rounded-xl shadow-2xl backdrop-blur-md transition active:scale-95 group"
+            className="p-2 sm:p-2.5 bg-slate-950/20 hover:bg-rose-950/40 text-rose-400/50 hover:text-rose-300 border border-white/10 hover:border-rose-500/30 rounded-xl shadow-2xl backdrop-blur-md transition active:scale-95 group"
             title="Close document"
           >
-            <X className="w-4 h-4 text-rose-400 group-hover:scale-110 transition duration-200" />
+            <X className="w-4 h-4 text-rose-400/50 group-hover:text-rose-300 group-hover:scale-110 transition duration-200" />
           </button>
         </div>
       )}
+
+      {/* Floating Exit Fullscreen pill when reading mode active: 80% transparent backdrop, 50% transparent text & symbols */}
+      {isFullscreen && onToggleFullscreen && (
+        <div className="absolute top-3 sm:top-4 left-1/2 transform -translate-x-1/2 z-40 pointer-events-auto">
+          <button
+            onClick={onToggleFullscreen}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-950/20 hover:bg-slate-900/60 text-white/50 hover:text-white border border-white/10 hover:border-cyan-500/40 rounded-full shadow-2xl backdrop-blur-md transition active:scale-95 text-xs font-bold group"
+            title="Exit Fullscreen (Esc)"
+          >
+            <Minimize2 className="w-3.5 h-3.5 text-white/50 group-hover:text-cyan-300 transition" />
+            <span className="text-white/50 group-hover:text-white transition">Exit Fullscreen</span>
+          </button>
+        </div>
+      )}
+
+      {/* Floating Canvas Zoom Controls: 80% transparent backdrop, 50% transparent text & symbols */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 pointer-events-auto flex items-center space-x-1.5 px-3 py-2 bg-slate-950/20 backdrop-blur-md border border-white/10 rounded-full shadow-2xl text-white/50">
+        <button
+          onClick={() => onZoomChange(Math.max(0.15, Math.round((zoom - 0.15) * 100) / 100))}
+          className="p-1.5 text-white/50 hover:text-white rounded-full hover:bg-white/10 transition"
+          title="Zoom Out (Ctrl + Scroll Down)"
+        >
+          <ZoomOut className="w-4 h-4 text-white/50 hover:text-white transition" />
+        </button>
+
+        <span className="text-xs font-mono font-bold w-12 text-center text-white/50 hover:text-white transition">
+          {Math.round(zoom * 100)}%
+        </span>
+
+        <button
+          onClick={() => onZoomChange(Math.min(5.0, Math.round((zoom + 0.15) * 100) / 100))}
+          className="p-1.5 text-white/50 hover:text-white rounded-full hover:bg-white/10 transition"
+          title="Zoom In (Ctrl + Scroll Up)"
+        >
+          <ZoomIn className="w-4 h-4 text-white/50 hover:text-white transition" />
+        </button>
+
+        <div className="h-4 w-px bg-white/10 my-auto mx-1" />
+
+        <button
+          onClick={() => onZoomChange(1.0)}
+          className="px-2.5 py-1 text-[11px] font-semibold bg-white/5 hover:bg-white/15 text-white/50 hover:text-white border border-white/10 rounded-full transition"
+          title="Reset Zoom to 100%"
+        >
+          100%
+        </button>
+
+        <button
+          onClick={handleFitToScreen}
+          className="px-2.5 py-1 text-[11px] font-bold bg-white/5 hover:bg-cyan-500/20 text-white/50 hover:text-cyan-300 border border-white/10 hover:border-cyan-500/30 rounded-full transition shadow-sm"
+          title="Auto Fit Page to Screen"
+        >
+          Fit Screen
+        </button>
+
+        {onToggleFullscreen && (
+          <>
+            <div className="h-4 w-px bg-white/10 my-auto mx-1" />
+            <button
+              onClick={onToggleFullscreen}
+              className={`p-1.5 rounded-full transition ${
+                isFullscreen
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow'
+                  : 'text-white/50 hover:text-white hover:bg-white/10'
+              }`}
+              title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Fullscreen Reading Mode'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4 text-white/50 hover:text-white" />}
+            </button>
+          </>
+        )}
+      </div>
+
+      <main
+        ref={containerRef}
+        tabIndex={0}
+        style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
+        className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none min-w-0 transition-colors duration-500`}
+      >
 
       {activePages.map((origIdx, seqIdx) => {
         const pageNum = seqIdx + 1;
@@ -456,8 +658,11 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         return (
           <div
             key={origIdx}
-            className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0"
-            style={{ width: `${w}px`, height: `${h}px` }}
+            data-orig-idx={origIdx}
+            onTouchEnd={handlePageTouchEnd}
+            onDoubleClick={handlePageDoubleClick}
+            className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0 cursor-default"
+            style={{ width: `${w}px`, height: `${h}px`, touchAction: 'pan-x pan-y pinch-zoom' }}
           >
             <canvas
               ref={(el) => {
@@ -570,52 +775,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         );
       })}
 
-      {/* Floating Canvas Zoom Controls */}
-      <div className="sticky bottom-6 z-20 flex items-center space-x-1.5 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-full shadow-2xl text-slate-300">
-        <button
-          onClick={() => onZoomChange(Math.max(0.35, Math.round((zoom - 0.15) * 100) / 100))}
-          className="p-1.5 hover:text-white rounded-full hover:bg-slate-800 transition"
-          title="Zoom Out (Ctrl + Scroll Down)"
-        >
-          <ZoomOut className="w-4 h-4 text-slate-400" />
-        </button>
-
-        <span className="text-xs font-mono font-bold w-12 text-center text-cyan-400">
-          {Math.round(zoom * 100)}%
-        </span>
-
-        <button
-          onClick={() => onZoomChange(Math.min(2.5, Math.round((zoom + 0.15) * 100) / 100))}
-          className="p-1.5 hover:text-white rounded-full hover:bg-slate-800 transition"
-          title="Zoom In (Ctrl + Scroll Up)"
-        >
-          <ZoomIn className="w-4 h-4 text-slate-400" />
-        </button>
-
-        <div className="h-4 w-px bg-slate-800 my-auto mx-1" />
-
-        <button
-          onClick={() => onZoomChange(1.0)}
-          className="px-2.5 py-1 text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-full transition"
-          title="Reset Zoom to 100%"
-        >
-          100%
-        </button>
-
-        <button
-          onClick={() => {
-            if (onFitToWidth) {
-              onFitToWidth();
-            } else {
-              onZoomChange(0.65);
-            }
-          }}
-          className="px-2.5 py-1 text-[11px] font-bold bg-cyan-950/70 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/50 rounded-full transition shadow-sm"
-          title="Auto Fit Page to Screen Width"
-        >
-          Fit Screen
-        </button>
-      </div>
       {/* Real-Time Signature Mouse Follower */}
       {toolMode === 'sign' && pendingSignatureDataUrl && mousePos && (
         <div
@@ -629,5 +788,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         </div>
       )}
     </main>
+    </div>
   );
 };

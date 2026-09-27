@@ -84,10 +84,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     trackEvent('pricing_checkout_clicked', `helcim_${selectedPlan}_${currencyCode}`);
     const payUrl = getDynamicPayUrl(selectedPlan, currencyCode);
     if (payUrl) {
-      const opened = window.open(payUrl, '_blank', 'noopener,noreferrer');
-      if (!opened) {
-        window.location.href = payUrl;
-      }
+      // Open exactly one Helcim checkout tab without duplicate window.location navigation
+      window.open(payUrl, '_blank', 'noopener,noreferrer');
     }
   };
 

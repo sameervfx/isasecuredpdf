@@ -9,10 +9,15 @@ export class PDFRendererService {
   private ensureWorker() {
     if (!this.workerReady) {
       try {
-        // Primary bundled worker asset URL with cdnjs fallback for production web servers
-        GlobalWorkerOptions.workerSrc = workerUrl || 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        if (typeof window !== 'undefined') {
+          // Priority 1: Use local bundled / public worker file relative to origin
+          const localWorkerUrl = new URL('pdf.worker.min.js', window.location.href).href;
+          GlobalWorkerOptions.workerSrc = localWorkerUrl || workerUrl;
+        } else {
+          GlobalWorkerOptions.workerSrc = workerUrl || '/pdf.worker.min.js';
+        }
       } catch (e) {
-        GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        GlobalWorkerOptions.workerSrc = workerUrl || '/pdf.worker.min.js';
       }
       this.workerReady = true;
     }
@@ -69,22 +74,21 @@ export class PDFRendererService {
     const totalRotation = (page.rotate + rotationAngle) % 360;
     const viewport = page.getViewport({ scale, rotation: totalRotation });
 
-    // Balanced DPR calculation: high-DPI crispness without massive memory bloat
+    // Retina / High-DPI crystal-clear vector rendering:
+    // Scale canvas pixels by DPR (minimum 2.0 for razor-sharp vector text matching Adobe)
     const deviceDPR = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
-    // When scale is already large (>= 1.5), vector coordinates are magnified, so DPR can be capped to 1.5
-    const dpr = scale >= 1.5 ? Math.min(deviceDPR, 1.5) : Math.min(deviceDPR, 2.0);
+    const dpr = Math.max(deviceDPR, 2.0);
     const scaledViewport = page.getViewport({ scale: scale * dpr, rotation: totalRotation });
 
     const targetWidth = Math.max(1, Math.floor(scaledViewport.width));
     const targetHeight = Math.max(1, Math.floor(scaledViewport.height));
 
     // DOUBLE BUFFERING: Render into an offscreen scratch canvas first!
-    // The currently displayed canvas on the screen remains completely intact and visible.
-    // It NEVER goes blank white while rendering is in progress.
+    // Keeps previous page visible on screen with zero white flash
     const offscreen = document.createElement('canvas');
     offscreen.width = targetWidth;
     offscreen.height = targetHeight;
-    const offscreenCtx = offscreen.getContext('2d', { alpha: false });
+    const offscreenCtx = offscreen.getContext('2d', { alpha: true });
     if (!offscreenCtx) throw new Error('Could not get 2d canvas context');
 
     offscreenCtx.fillStyle = '#ffffff';
@@ -124,6 +128,8 @@ export class PDFRendererService {
         canvas.width = targetWidth;
         canvas.height = targetHeight;
       }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(offscreen, 0, 0);
     }
 

@@ -34,7 +34,6 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "node_modules/**/*",
       "package.json"
     ],
     "icon": "electron/icon.png",
@@ -52,6 +51,14 @@
           ]
         }
       ]
+    },
+    "mac": {
+      "icon": "electron/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "icon": "electron/icon.png",
+      "category": "Office"
     },
     "nsis": {
       "oneClick": false,

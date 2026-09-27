@@ -63,7 +63,7 @@ import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
 import { getRecentFiles, clearRecentFiles, RecentFileItem } from '../utils/recentFiles';
 import { ExportFormatType } from './PremiumExportModal';
-import appLogo from '../assets/app_logo.jpg';
+import appLogo from '../assets/app_logo.png';
 
 interface HeaderToolbarProps {
   onGoToLandingPage?: () => void;
@@ -351,9 +351,9 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
       style={{ paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)' }}
       className={`border-b ${isLight ? 'border-slate-300 bg-white/95 text-slate-900 shadow-md' : 'border-slate-800 bg-slate-900/95 text-slate-100'} backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between px-2 sm:px-4 pb-2 lg:pb-0 lg:h-16 sticky top-0 z-30 select-none gap-2 lg:gap-0 transition-colors duration-500`}
     >
-      <div className="flex items-center justify-between w-full lg:w-auto">
+      <div className="flex items-center justify-between w-full lg:w-auto max-w-full overflow-x-auto no-scrollbar gap-2 shrink-0">
         {/* Brand & File Menu */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2 xl:space-x-3 min-w-0">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 xl:space-x-3 min-w-0 shrink-0">
         <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500/30 flex items-center justify-center bg-slate-900 flex-shrink-0">
           <img src={appLogo} alt="ISASecuredPDF Suite Logo" className="w-full h-full object-cover" />
         </div>
@@ -362,7 +362,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <div className="flex flex-col justify-center min-w-0">
               <h1
                 onClick={onGoToLandingPage}
-                className={`font-extrabold text-xs sm:text-sm xl:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[120px] xl:max-w-none`}
+                className={`font-extrabold text-xs sm:text-sm xl:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[90px] xs:max-w-[120px] xl:max-w-none`}
                 title="Return to Landing Page"
               >
                 ISASecuredPDF Suite
@@ -373,7 +373,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <div className="relative ml-1.5 xl:ml-3 shrink-0" ref={fileMenuRef}>
               <button
                 onClick={() => toggleDropdown('file', fileMenuRef, 208)}
-                className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center space-x-1 transition shadow-sm"
+                className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center space-x-1 transition shadow-sm shrink-0"
               >
                 <span>File</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -695,9 +695,9 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
       {/* Center Toolbar Tool Modes: Dedicated 2nd Row on Mobile, Fluid Centered Flex Item on Desktop */}
       {hasDocument && (
-        <div className="w-full lg:w-auto lg:flex-1 lg:flex lg:justify-center min-w-0 z-20">
-          <div className="bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:w-auto overflow-hidden lg:overflow-visible whitespace-nowrap shrink-0">
-            <div className="flex items-center space-x-1 sm:space-x-1.5 flex-nowrap max-lg:overflow-x-auto lg:overflow-visible touch-pan-x scrollbar-none w-full max-w-full py-0.5 px-2 justify-start lg:justify-center">
+        <div className="w-full lg:w-auto lg:flex-1 lg:flex lg:justify-center min-w-0 z-20 px-1">
+          <div className="bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:max-w-fit overflow-x-auto no-scrollbar whitespace-nowrap">
+            <div className="flex items-center space-x-1 sm:space-x-1.5 flex-nowrap overflow-x-auto no-scrollbar touch-pan-x w-full py-0.5 px-1 justify-start lg:justify-center">
             {/* Select Mode */}
             <button
               onClick={() => handleToolSelect('select')}
@@ -1538,7 +1538,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
       {/* Right Header Action Buttons: Rotate, Pages, Undo/Redo, Print & Export PDF (Web Desktop Only) */}
       {hasDocument && (
-        <div className="hidden lg:flex items-center space-x-1 sm:space-x-1.5 shrink-0 ml-auto z-20">
+        <div className="hidden lg:flex items-center space-x-1 sm:space-x-1.5 shrink-0 ml-auto z-20 pl-2">
           {/* Rotate Current Page */}
           <button
             onClick={() => {

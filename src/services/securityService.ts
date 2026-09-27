@@ -1,6 +1,13 @@
-import * as mupdf from 'mupdf';
 import { PDFDocument } from 'pdf-lib';
 import { pdfRenderer } from './pdfRenderer';
+
+let cachedMuPDF: typeof import('mupdf') | null = null;
+async function getMuPDF() {
+  if (!cachedMuPDF) {
+    cachedMuPDF = await import('mupdf');
+  }
+  return cachedMuPDF;
+}
 
 export interface EncryptOptions {
   userPassword?: string;
@@ -22,6 +29,7 @@ export const securityService = {
    * Encrypts a PDF Uint8Array with AES-256 and custom permissions (100% client-side)
    */
   async encryptPDF(pdfBytes: Uint8Array, options: EncryptOptions): Promise<Uint8Array> {
+    const mupdf = await getMuPDF();
     const userPass = options.userPassword || '';
     const ownerPass = options.ownerPassword || userPass || 'owner123';
 
@@ -52,6 +60,7 @@ export const securityService = {
    * Unlocks an encrypted PDF with user password and returns unencrypted bytes
    */
   async decryptPDF(pdfBytes: Uint8Array, password: string): Promise<Uint8Array> {
+    const mupdf = await getMuPDF();
     const doc = mupdf.PDFDocument.openDocument(pdfBytes, 'pdf').asPDF();
     if (!doc) {
       throw new Error('Invalid or corrupted PDF file.');
@@ -76,6 +85,7 @@ export const securityService = {
    */
   async isPasswordProtected(pdfBytes: Uint8Array): Promise<boolean> {
     try {
+      const mupdf = await getMuPDF();
       const doc = mupdf.PDFDocument.openDocument(pdfBytes, 'pdf').asPDF();
       return doc ? doc.needsPassword() : false;
     } catch (e) {
@@ -96,6 +106,7 @@ export const securityService = {
     // 1. Always perform structural compaction first (mupdf + pdf-lib object stream cleanup)
     let structuralBytes: Uint8Array = pdfBytes;
     try {
+      const mupdf = await getMuPDF();
       const doc = mupdf.PDFDocument.openDocument(pdfBytes, 'pdf').asPDF();
       if (doc) {
         const raw = doc.saveToBuffer('garbage=compact,compress=yes,clean=yes').asUint8Array();
@@ -155,6 +166,7 @@ export const securityService = {
 
       const rawResampled = await newPdfDoc.save({ useObjectStreams: true });
       try {
+        const mupdf = await getMuPDF();
         const doc = mupdf.PDFDocument.openDocument(rawResampled, 'pdf').asPDF();
         if (doc) {
           const raw = doc.saveToBuffer('garbage=compact,compress=yes,clean=yes').asUint8Array();

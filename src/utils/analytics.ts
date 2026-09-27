@@ -4,7 +4,7 @@
  * Never logs or sends file names, form entries, or document buffers.
  */
 export const trackEvent = (
-  eventName: 'pdf_loaded' | 'export_downloaded' | 'pricing_checkout_clicked',
+  eventName: 'pdf_loaded' | 'export_downloaded' | 'pricing_checkout_clicked' | 'export_save_phone' | 'export_shared',
   details?: string
 ) => {
   try {

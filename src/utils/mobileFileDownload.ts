@@ -25,6 +25,102 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /**
+ * Writes the file directly to phone/device local storage (Documents or Downloads directory)
+ */
+export async function saveToPhoneStorage(options: DownloadOptions): Promise<{ success: boolean; message: string }> {
+  const { fileName, blob } = options;
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const base64Data = await blobToBase64(blob);
+      try {
+        await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true,
+        });
+      } catch (docErr) {
+        await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Data,
+          recursive: true,
+        });
+      }
+      return {
+        success: true,
+        message: "Saved to your phone's storage",
+      };
+    } catch (err: any) {
+      console.warn('Native saveToPhoneStorage failed:', err);
+    }
+  }
+
+  // Fallback for Web/Browser
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return {
+    success: true,
+    message: "Saved to your phone's storage",
+  };
+}
+
+/**
+ * Triggers native Share sheet to easily share to WhatsApp, Drive, Gmail, or cloud apps
+ */
+export async function shareToOtherApps(options: DownloadOptions): Promise<void> {
+  const { fileName, blob, mimeType = blob.type || 'application/pdf' } = options;
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const base64Data = await blobToBase64(blob);
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
+      if (await Share.canShare()) {
+        await Share.share({
+          title: fileName,
+          text: `Export ${fileName}`,
+          url: savedFile.uri,
+          dialogTitle: `Share ${fileName} with apps`,
+        });
+        return;
+      }
+    } catch (shareErr) {
+      console.warn('Native share failed:', shareErr);
+    }
+  }
+
+  // Web Share API fallback
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    try {
+      const file = new File([blob], fileName, { type: mimeType });
+      if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: fileName,
+          text: `Share ${fileName}`,
+        });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+    }
+  }
+
+  // Fallback to regular download if share is unsupported
+  await downloadFile(options);
+}
+
+/**
  * Robust file downloader that works seamlessly on desktop, iOS, Android WebViews, and mobile PWA.
  * On native Android/iOS (Capacitor), uses Filesystem + Share API so native save/share sheets open instantly.
  */

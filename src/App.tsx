@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { CheckCircle2, Zap } from 'lucide-react';
+import { CheckCircle2, Zap, Save, Download, Sparkles, X } from 'lucide-react';
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { Sidebar } from './components/Sidebar';
 import { ThemePreset, getActiveTheme } from './utils/themeManager';
@@ -9,7 +9,7 @@ import { createBlankPDF, CreatePDFOptions } from './utils/blankPdf';
 import { saveSignatureToStorage } from './utils/savedSignatures';
 import { addRecentFile, RecentFileItem } from './utils/recentFiles';
 import { trackEvent } from './utils/analytics';
-import { downloadFile, printPdfBlob } from './utils/mobileFileDownload';
+import { downloadFile, printPdfBlob, saveToPhoneStorage, shareToOtherApps } from './utils/mobileFileDownload';
 import { WatermarkOptions } from './components/WatermarkModal';
 import { ExportFormatType } from './components/PremiumExportModal';
 
@@ -102,6 +102,11 @@ export const App: React.FC = () => {
   const [isCompressModalOpen, setIsCompressModalOpen] = useState<boolean>(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
   const [isAppDownloadModalOpen, setIsAppDownloadModalOpen] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isMobileExportDialogOpen, setIsMobileExportDialogOpen] = useState<boolean>(false);
+  const [mobileExportData, setMobileExportData] = useState<{ fileName: string; blob: Blob } | null>(null);
+  const [storageToastMessage, setStorageToastMessage] = useState<string | null>(null);
+  const [showFeedbackPrompt, setShowFeedbackPrompt] = useState<boolean>(false);
   const [isProActive, setIsProActive] = useState<boolean>(
     () => localStorage.getItem('isa_pro_active') === 'true'
   );
@@ -419,23 +424,14 @@ export const App: React.FC = () => {
 
       const numPages = pdfjsDoc.numPages;
 
-      // Load into pdf-lib editor
-      let rawFields: PDFDocumentState['formFields'] = [];
-      try {
-        const pdfLibDoc = await PDFDocument.load(data.slice(0), { ignoreEncryption: true });
-        rawFields = await pdfEngine.extractFormFields(pdfLibDoc);
-      } catch (formErr) {
-        console.warn('Form field extraction failed (non-fatal):', formErr);
-      }
-
-      const pages: PageInfo[] = [];
-      const pageOrder: number[] = [];
-      for (let i = 0; i < numPages; i++) {
+      // Concurrently load all page viewports in parallel
+      const pagePromises = Array.from({ length: numPages }, async (_, i) => {
         const page = await pdfjsDoc.getPage(i + 1);
         const vp = page.getViewport({ scale: 1.0 });
-        pages.push({ pageNumber: i + 1, pageIndex: i, width: vp.width, height: vp.height, rotation: page.rotate });
-        pageOrder.push(i);
-      }
+        return { pageNumber: i + 1, pageIndex: i, width: vp.width, height: vp.height, rotation: page.rotate };
+      });
+      const pages = await Promise.all(pagePromises);
+      const pageOrder = pages.map((_, i) => i);
 
       // Calculate smart auto-fit zoom for mobile, tablet, and desktop viewports
       const screenW = window.innerWidth;
@@ -478,20 +474,38 @@ export const App: React.FC = () => {
         imageStamps: [],
         strikeouts: [],
         drawings: [],
-        formFields: rawFields,
+        formFields: [],
       });
       setCurrentPage(1);
       setCurrentView('editor');
+      setIsLoading(false);
       trackEvent('pdf_loaded');
 
-      // Generate thumbnails in background
-      const thumbs: string[] = [];
-      const { pdfRenderer: renderer } = await import('./services/pdfRenderer');
-      for (let i = 0; i < numPages; i++) {
-        const t = await renderer.getPageThumbnail(i, 160);
-        thumbs.push(t);
-      }
-      setThumbnails(thumbs);
+      // Asynchronously extract form fields in background without blocking opening
+      setTimeout(async () => {
+        try {
+          const { PDFDocument } = await import('pdf-lib');
+          const { pdfEngine } = await import('./services/pdfEngine');
+          const pdfLibDoc = await PDFDocument.load(data.slice(0), { ignoreEncryption: true });
+          const rawFields = await pdfEngine.extractFormFields(pdfLibDoc);
+          if (rawFields && rawFields.length > 0) {
+            setDocState((prev) => ({ ...prev, formFields: rawFields }));
+          }
+        } catch (e) {}
+      }, 300);
+
+      // Generate thumbnails asynchronously after primary page render has completed
+      setTimeout(async () => {
+        try {
+          const thumbs: string[] = [];
+          const { pdfRenderer: renderer } = await import('./services/pdfRenderer');
+          for (let i = 0; i < numPages; i++) {
+            const t = await renderer.getPageThumbnail(i, 160);
+            thumbs.push(t);
+            setThumbnails([...thumbs]);
+          }
+        } catch (e) {}
+      }, 700);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('Error loading PDF:', err);
@@ -500,8 +514,6 @@ export const App: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
-
-
 
   const handleOpenFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -525,6 +537,8 @@ export const App: React.FC = () => {
   const handleCloseDocument = () => {
     setDocState(EMPTY_STATE);
     setCurrentPage(1);
+    setZoom(1.0); // Reset zoom state to default whenever a document is closed and re-opened
+    setIsFullscreen(false); // Reset fullscreen mode
     setToolMode('select');
     setPendingSignatureDataUrl(null);
     setThumbnails([]);
@@ -852,6 +866,7 @@ export const App: React.FC = () => {
       const { pdfEngine } = await import('./services/pdfEngine');
       const modifiedPdfBytes = await pdfEngine.exportDocument(docState);
       const defaultName = `Edited_${docState.fileName || 'document.pdf'}`;
+      const blob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
 
       if (IS_ELECTRON && window.electronAPI) {
         const result = await window.electronAPI.showSaveDialog(defaultName);
@@ -859,13 +874,21 @@ export const App: React.FC = () => {
           const base64 = convertBytesToBase64(modifiedPdfBytes);
           const writeResult = await window.electronAPI.writeFile(result.filePath, base64);
           if (!writeResult.success) throw new Error(writeResult.error);
+          trackEvent('export_downloaded');
+          setShowFeedbackPrompt(true);
         }
       } else {
-        const blob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
-        await downloadFile({ fileName: defaultName, blob, mimeType: 'application/pdf' });
+        const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+        if (isMobileDevice) {
+          // Open dual-export options modal on mobile (Save to Phone or Share / Other Apps)
+          setMobileExportData({ fileName: defaultName, blob });
+          setIsMobileExportDialogOpen(true);
+        } else {
+          await downloadFile({ fileName: defaultName, blob, mimeType: 'application/pdf' });
+          trackEvent('export_downloaded');
+          setShowFeedbackPrompt(true);
+        }
       }
-      trackEvent('export_downloaded');
-      handleTriggerExportReview();
     } catch (err) {
       console.error('Export error:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -874,6 +897,40 @@ export const App: React.FC = () => {
       setIsExporting(false);
     }
   }, [docState]);
+
+  const handleSaveToPhone = async () => {
+    if (!mobileExportData) return;
+    setIsMobileExportDialogOpen(false);
+    try {
+      const res = await saveToPhoneStorage({
+        fileName: mobileExportData.fileName,
+        blob: mobileExportData.blob,
+        mimeType: 'application/pdf',
+      });
+      setStorageToastMessage(res.message);
+      setTimeout(() => setStorageToastMessage(null), 4000);
+      trackEvent('export_save_phone');
+      setShowFeedbackPrompt(true);
+    } catch (e: any) {
+      alert(`Save to phone failed: ${e?.message || e}`);
+    }
+  };
+
+  const handleShareToApps = async () => {
+    if (!mobileExportData) return;
+    setIsMobileExportDialogOpen(false);
+    try {
+      await shareToOtherApps({
+        fileName: mobileExportData.fileName,
+        blob: mobileExportData.blob,
+        mimeType: 'application/pdf',
+      });
+      trackEvent('export_shared');
+      setShowFeedbackPrompt(true);
+    } catch (e: any) {
+      alert(`Share failed: ${e?.message || e}`);
+    }
+  };
 
   const handleSavePDF = useCallback(async () => {
     if (!docState.fileBytes) return;
@@ -1087,72 +1144,74 @@ export const App: React.FC = () => {
   return (
     <Suspense fallback={null}>
       <div className={`flex flex-col h-screen w-screen ${activeTheme?.bgClass || 'bg-slate-950'} ${isLight ? 'text-slate-900' : 'text-slate-100'} overflow-hidden font-sans transition-colors duration-500`}>
-      <HeaderToolbar
-        activeTheme={activeTheme}
-        onGoToLandingPage={() => setCurrentView('landing')}
-        onCloseDocument={handleCloseDocument}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        toolMode={toolMode}
-        setToolMode={setToolMode}
-        currentPage={currentPage}
-        totalPages={activePagesCount}
-        onPageChange={setCurrentPage}
-        zoom={zoom}
-        onZoomChange={setZoom}
-        onFitToWidth={handleFitToWidth}
-        onOpenFile={handleOpenFile}
-        onLoadSample={handleLoadSample}
-        onOpenSignatureModal={handleOpenSignatureModal}
-        onOpenWatermarkModal={() => setIsWatermarkModalOpen(true)}
-        onOpenPageManager={() => setIsPageManagerOpen(true)}
-        onOpenCreateModal={() => setIsCreateModalOpen(true)}
-        onOpenMergeModal={() => setIsMergeModalOpen(true)}
-        onOpenSaveMultipleModal={() => setIsSaveMultipleModalOpen(true)}
-        onOpenPremiumExportModal={handleOpenPremiumExportModal}
-        onOpenReviewModal={() => setIsReviewModalOpen(true)}
-        onOpenRecentFile={handleOpenRecentFile}
-        onSelectSavedSignature={handleSelectSavedSignature}
-        onRotatePage={handleRotatePage}
-        onSavePDF={handleSavePDF}
-        onExportPDF={handleExportPDF}
-        onPrintPDF={handlePrintPDF}
-        isSaving={isSaving}
-        isExporting={isExporting}
-        isPrinting={isPrinting}
-        hasDocument={hasDocument}
-        textFontSize={textFontSize}
-        setTextFontSize={handleSetTextFontSize}
-        textFontFamily={textFontFamily}
-        setTextFontFamily={handleSetTextFontFamily}
-        textColor={textColor}
-        setTextColor={handleSetTextColor}
-        textIsRedact={textIsRedact}
-        setTextIsRedact={handleSetTextIsRedact}
-        textIsUnderline={textIsUnderline}
-        setTextIsUnderline={setTextIsUnderline}
-        shapeStrokeColor={shapeStrokeColor}
-        setShapeStrokeColor={setShapeStrokeColor}
-        shapeFillColor={shapeFillColor}
-        setShapeFillColor={setShapeFillColor}
-        shapeStrokeWidth={shapeStrokeWidth}
-        setShapeStrokeWidth={setShapeStrokeWidth}
-        onAddImageStamp={handleAddImageStamp}
-        onOpenPasswordModal={(mode) => {
-          setPasswordModalMode(mode);
-          setIsPasswordModalOpen(true);
-        }}
-        onOpenCompressModal={() => setIsCompressModalOpen(true)}
-        onOpenScanModal={() => setIsScanModalOpen(true)}
-        onOpenDesktopDownloadModal={() => setIsAppDownloadModalOpen(true)}
-        isProActive={isProActive}
-        onOpenCheckout={handleOpenCheckout}
-      />
+      {!isFullscreen && (
+        <HeaderToolbar
+          activeTheme={activeTheme}
+          onGoToLandingPage={() => setCurrentView('landing')}
+          onCloseDocument={handleCloseDocument}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          toolMode={toolMode}
+          setToolMode={setToolMode}
+          currentPage={currentPage}
+          totalPages={activePagesCount}
+          onPageChange={setCurrentPage}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          onFitToWidth={handleFitToWidth}
+          onOpenFile={handleOpenFile}
+          onLoadSample={handleLoadSample}
+          onOpenSignatureModal={handleOpenSignatureModal}
+          onOpenWatermarkModal={() => setIsWatermarkModalOpen(true)}
+          onOpenPageManager={() => setIsPageManagerOpen(true)}
+          onOpenCreateModal={() => setIsCreateModalOpen(true)}
+          onOpenMergeModal={() => setIsMergeModalOpen(true)}
+          onOpenSaveMultipleModal={() => setIsSaveMultipleModalOpen(true)}
+          onOpenPremiumExportModal={handleOpenPremiumExportModal}
+          onOpenReviewModal={() => setIsReviewModalOpen(true)}
+          onOpenRecentFile={handleOpenRecentFile}
+          onSelectSavedSignature={handleSelectSavedSignature}
+          onRotatePage={handleRotatePage}
+          onSavePDF={handleSavePDF}
+          onExportPDF={handleExportPDF}
+          onPrintPDF={handlePrintPDF}
+          isSaving={isSaving}
+          isExporting={isExporting}
+          isPrinting={isPrinting}
+          hasDocument={hasDocument}
+          textFontSize={textFontSize}
+          setTextFontSize={handleSetTextFontSize}
+          textFontFamily={textFontFamily}
+          setTextFontFamily={handleSetTextFontFamily}
+          textColor={textColor}
+          setTextColor={handleSetTextColor}
+          textIsRedact={textIsRedact}
+          setTextIsRedact={handleSetTextIsRedact}
+          textIsUnderline={textIsUnderline}
+          setTextIsUnderline={setTextIsUnderline}
+          shapeStrokeColor={shapeStrokeColor}
+          setShapeStrokeColor={setShapeStrokeColor}
+          shapeFillColor={shapeFillColor}
+          setShapeFillColor={setShapeFillColor}
+          shapeStrokeWidth={shapeStrokeWidth}
+          setShapeStrokeWidth={setShapeStrokeWidth}
+          onAddImageStamp={handleAddImageStamp}
+          onOpenPasswordModal={(mode) => {
+            setPasswordModalMode(mode);
+            setIsPasswordModalOpen(true);
+          }}
+          onOpenCompressModal={() => setIsCompressModalOpen(true)}
+          onOpenScanModal={() => setIsScanModalOpen(true)}
+          onOpenDesktopDownloadModal={() => setIsAppDownloadModalOpen(true)}
+          isProActive={isProActive}
+          onOpenCheckout={handleOpenCheckout}
+        />
+      )}
 
       <div className="flex flex-1 overflow-hidden relative">
-        {hasDocument && (
+        {hasDocument && !isFullscreen && (
           <Sidebar
             state={docState}
             thumbnails={thumbnails}
@@ -1226,8 +1285,113 @@ export const App: React.FC = () => {
           shapeFillColor={shapeFillColor}
           shapeStrokeWidth={shapeStrokeWidth}
           activeTheme={activeTheme}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
         />
       </div>
+
+      {/* Dual Export Modal for Mobile (Save to Phone + Share / Cloud) */}
+      {isMobileExportDialogOpen && mobileExportData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => setIsMobileExportDialogOpen(false)}
+              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-full bg-slate-800/80 transition"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-3 bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 text-cyan-400 rounded-2xl border border-cyan-500/30">
+                <Download className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">Export PDF</h3>
+                <p className="text-xs text-slate-400 truncate max-w-[200px]">{mobileExportData.fileName}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 mb-5 leading-relaxed">
+              Choose how you want to save or share your secured document:
+            </p>
+
+            <div className="space-y-3">
+              {/* Option 1: Save to Phone */}
+              <button
+                onClick={handleSaveToPhone}
+                className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-2xl shadow-lg shadow-cyan-500/25 transition active:scale-98 group"
+              >
+                <div className="flex items-center space-x-3 text-left">
+                  <div className="p-2 bg-white/10 rounded-xl">
+                    <Save className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold">Save to Phone</div>
+                    <div className="text-[10px] text-cyan-100">Downloads & Documents folder</div>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-white/80 group-hover:translate-x-0.5 transition">→</span>
+              </button>
+
+              {/* Option 2: Share / Other Apps */}
+              <button
+                onClick={handleShareToApps}
+                className="w-full flex items-center justify-between p-3.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-2xl border border-slate-700 transition active:scale-98 group"
+              >
+                <div className="flex items-center space-x-3 text-left">
+                  <div className="p-2 bg-purple-500/20 text-purple-400 rounded-xl">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold">Share / Other Apps</div>
+                    <div className="text-[10px] text-slate-400">WhatsApp, Drive, Gmail, Cloud</div>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-slate-400 group-hover:translate-x-0.5 transition">→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Storage Toast Alert */}
+      {storageToastMessage && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-emerald-950/95 border border-emerald-500/60 text-emerald-100 px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-bold animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{storageToastMessage}</span>
+        </div>
+      )}
+
+      {/* Non-Intrusive Feedback Prompt after Export */}
+      {showFeedbackPrompt && (
+        <div className="fixed bottom-6 right-4 sm:right-6 max-w-sm bg-slate-900/95 border border-cyan-500/40 text-slate-100 rounded-2xl shadow-2xl p-4 z-50 flex items-start space-x-3 backdrop-blur-xl animate-fadeIn">
+          <div className="p-2 bg-cyan-500/10 rounded-xl text-cyan-400 shrink-0">
+            <Sparkles className="w-5 h-5 text-cyan-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-slate-200 leading-relaxed">
+              Enjoying ISA Secure PDF? It's 100% free and private.{' '}
+              <button
+                onClick={() => {
+                  setShowFeedbackPrompt(false);
+                  setIsReviewModalOpen(true);
+                }}
+                className="text-cyan-400 font-bold underline hover:text-cyan-300"
+              >
+                Tap here if you'd like to leave quick feedback!
+              </button>
+            </p>
+          </div>
+          <button
+            onClick={() => setShowFeedbackPrompt(false)}
+            className="p-1 text-slate-400 hover:text-white rounded-lg transition"
+            title="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Signature Modal */}
       <SignatureModal
