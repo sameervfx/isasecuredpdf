@@ -118,13 +118,14 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
       const extractPrices = () => {
         const newPrices: Record<string, string> = {};
         [PLAY_PRODUCT_IDS.monthly, PLAY_PRODUCT_IDS.annual, PLAY_PRODUCT_IDS.lifetime].forEach((id) => {
-          const prod = store.get ? store.get(id, targetPlatform) : null;
+          const prod = store.get ? (store.get(id, targetPlatform) || store.get(id)) : null;
           if (prod) {
             const offer = typeof prod.getOffer === 'function' ? prod.getOffer() : (prod.offers && prod.offers[0]);
             const priceVal =
               offer?.pricingPhases?.[0]?.price ||
               prod?.pricing?.price ||
-              prod?.price;
+              prod?.price ||
+              (prod?.pricing && typeof prod.pricing === 'string' ? prod.pricing : null);
             if (priceVal) {
               newPrices[id] = priceVal;
             }
@@ -132,7 +133,7 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
         });
 
         if (Object.keys(newPrices).length > 0) {
-          console.log('[GooglePlayBilling] Extracted Play Store prices:', newPrices);
+          console.log('[StoreKit/PlayBilling] Extracted live prices:', newPrices);
           livePricesMap = { ...livePricesMap, ...newPrices };
           notifyPriceListeners();
         }
@@ -141,7 +142,7 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
       // Transaction approval handler
       if (typeof store.when === 'function') {
         store.when().approved((transaction: any) => {
-          console.log('[GooglePlayBilling] Transaction approved:', transaction);
+          console.log('[StoreKit/PlayBilling] Transaction approved:', transaction);
           if (typeof transaction.finish === 'function') {
             transaction.finish();
           }
@@ -149,7 +150,21 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
 
         // Listen for product updates and extract pricing
         store.when().updated(() => {
-          console.log('[GooglePlayBilling] store.when().updated event triggered');
+          console.log('[StoreKit/PlayBilling] store.when().updated event triggered');
+          extractPrices();
+        });
+
+        if (typeof store.when().productUpdated === 'function') {
+          store.when().productUpdated(() => {
+            console.log('[StoreKit/PlayBilling] productUpdated event triggered');
+            extractPrices();
+          });
+        }
+      }
+
+      if (typeof store.ready === 'function') {
+        store.ready(() => {
+          console.log('[StoreKit/PlayBilling] store.ready() fired');
           extractPrices();
         });
       }
@@ -161,17 +176,17 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
 
       initPromise
         .then(() => {
-          console.log('[GooglePlayBilling] Store initialize completed. Executing store.update()');
+          console.log('[StoreKit/PlayBilling] Store initialize completed. Executing store.update()');
           if (typeof store.update === 'function') {
             store.update();
           }
           extractPrices();
         })
         .catch((err: any) => {
-          console.error('[GooglePlayBilling] Store init error:', err);
+          console.error('[StoreKit/PlayBilling] Store init error:', err);
         });
     } catch (err) {
-      console.error('[GooglePlayBilling] Error during store setup:', err);
+      console.error('[StoreKit/PlayBilling] Error during store setup:', err);
     }
   } else {
     if (typeof store.update === 'function') {

@@ -606,9 +606,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="min-h-[64px] flex flex-col justify-end mb-6">
                     {isNativeApp ? (
                       <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                        {livePrices[PLAY_PRODUCT_IDS.monthly] ? (
+                        {livePrices[PLAY_PRODUCT_IDS.monthly] || SUPPORTED_CURRENCIES[currencyCode]?.monthly ? (
                           <>
-                            {livePrices[PLAY_PRODUCT_IDS.monthly]} <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
+                            {livePrices[PLAY_PRODUCT_IDS.monthly] || SUPPORTED_CURRENCIES[currencyCode]?.monthly} <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
                           </>
                         ) : (
                           <div className="flex items-center space-x-2">
@@ -680,9 +680,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="min-h-[64px] flex flex-col justify-end mb-6">
                     {isNativeApp ? (
                       <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                        {livePrices[PLAY_PRODUCT_IDS.annual] ? (
+                        {livePrices[PLAY_PRODUCT_IDS.annual] || SUPPORTED_CURRENCIES[currencyCode]?.annual ? (
                           <>
-                            {livePrices[PLAY_PRODUCT_IDS.annual]} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/ year</span>
+                            {livePrices[PLAY_PRODUCT_IDS.annual] || SUPPORTED_CURRENCIES[currencyCode]?.annual} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/ year</span>
                           </>
                         ) : (
                           <div className="flex items-center space-x-2">
@@ -750,9 +750,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="min-h-[64px] flex flex-col justify-end mb-6">
                     {isNativeApp ? (
                       <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                        {livePrices[PLAY_PRODUCT_IDS.lifetime] ? (
+                        {livePrices[PLAY_PRODUCT_IDS.lifetime] || SUPPORTED_CURRENCIES[currencyCode]?.lifetime ? (
                           <>
-                            {livePrices[PLAY_PRODUCT_IDS.lifetime]} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
+                            {livePrices[PLAY_PRODUCT_IDS.lifetime] || SUPPORTED_CURRENCIES[currencyCode]?.lifetime} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
                           </>
                         ) : (
                           <div className="flex items-center space-x-2">
