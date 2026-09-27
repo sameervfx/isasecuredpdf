@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Lock, Unlock, ShieldCheck, Printer, Copy, AlertCircle, KeyRound, Download } from 'lucide-react';
+import { X, Lock, Unlock, ShieldCheck, Printer, Copy, AlertCircle, KeyRound, Download, CheckCircle2 } from 'lucide-react';
 import { securityService, EncryptOptions } from '../services/securityService';
+import { ExportSaveModal } from './ExportSaveModal';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -30,6 +31,12 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [preventPrinting, setPreventPrinting] = useState(false);
   const [preventCopying, setPreventCopying] = useState(false);
+
+  // Dual Export Modal State
+  const [isExportSaveModalOpen, setIsExportSaveModalOpen] = useState(false);
+  const [exportBlob, setExportBlob] = useState<Blob | null>(null);
+  const [exportName, setExportName] = useState('');
+  const [passwordToast, setPasswordToast] = useState<string | null>(null);
 
   // Unlock tab state
   const [unlockPassword, setUnlockPassword] = useState('');
@@ -82,28 +89,23 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
       const encryptedBytes = await securityService.encryptPDF(pdfBytes, encryptOpts);
 
       if (shouldDownload) {
-        // Download encrypted PDF
+        // Prepare encrypted PDF for Save / Share
         const blob = new Blob([new Uint8Array(encryptedBytes)], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
         const baseName = fileName ? fileName.replace(/\.pdf$/i, '') : 'document';
-        link.download = `${baseName}_protected.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
-        setSuccessMessage('PDF password protected and downloaded successfully!');
+        setExportBlob(blob);
+        setExportName(`${baseName}_protected.pdf`);
+        setIsExportSaveModalOpen(true);
       } else {
         // Apply locked PDF directly to current session
         onApplyDecryptedPDF(encryptedBytes);
         setSuccessMessage('PDF locked with password successfully!');
+        setTimeout(() => {
+          onClose();
+          setPassword('');
+          setConfirmPassword('');
+          setSuccessMessage('');
+        }, 1500);
       }
-
-      setTimeout(() => {
-        onClose();
-        setPassword('');
-        setConfirmPassword('');
-        setSuccessMessage('');
-      }, 1500);
     } catch (err: any) {
       setErrorMessage(err?.message || 'Failed to encrypt PDF.');
     } finally {
@@ -369,6 +371,33 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Universal Export Save Modal with Editable File Name (Save to Phone vs Share / Cloud Drive) */}
+      <ExportSaveModal
+        isOpen={isExportSaveModalOpen}
+        onClose={() => {
+          setIsExportSaveModalOpen(false);
+          onClose();
+          setPassword('');
+          setConfirmPassword('');
+        }}
+        initialFileName={exportName || 'document_protected.pdf'}
+        blob={exportBlob}
+        mimeType="application/pdf"
+        title="Save Password-Protected PDF"
+        onSaveSuccess={(msg) => {
+          setPasswordToast(msg);
+          setTimeout(() => setPasswordToast(null), 4000);
+        }}
+      />
+
+      {/* Storage Toast Alert */}
+      {passwordToast && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[110] bg-emerald-950/95 border border-emerald-500/60 text-emerald-100 px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-bold animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{passwordToast}</span>
+        </div>
+      )}
     </div>
   );
 };

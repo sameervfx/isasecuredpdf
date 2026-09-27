@@ -17,6 +17,7 @@ import { pdfRenderer } from '../services/pdfRenderer';
 import { pdfEngine } from '../services/pdfEngine';
 import { createZipBundle, ZipFileEntry } from '../utils/zipBuilder';
 import { downloadFile } from '../utils/mobileFileDownload';
+import { ExportSaveModal } from './ExportSaveModal';
 
 export type ExportFormatType = 'docx' | 'xlsx' | 'jpg' | 'png' | 'tiff' | 'pptx';
 
@@ -46,11 +47,26 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
   const initialName = (state.fileName || 'Scanned_Document').replace(/\.[^/.]+$/, '');
   const [customExportName, setCustomExportName] = useState<string>(initialName);
 
+  // Dual Export Modal State
+  const [isExportSaveModalOpen, setIsExportSaveModalOpen] = useState(false);
+  const [exportBlob, setExportBlob] = useState<Blob | null>(null);
+  const [exportName, setExportName] = useState('');
+  const [exportMime, setExportMime] = useState('');
+  const [exportToast, setExportToast] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   const pdfDoc = pdfRenderer.getDoc();
   const totalPages = pdfDoc?.numPages || state.pages.length || 1;
   const fileNameWithoutExt = (customExportName.trim() || initialName).replace(/\.[^/.]+$/, '');
+
+  const finishExport = () => {
+    setProgress(100);
+    setTimeout(() => {
+      setIsProcessing(false);
+      onClose();
+    }, 300);
+  };
 
   const handleExport = async () => {
     if (!isProActive && selectedFormat !== 'jpg') {
@@ -59,14 +75,6 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
     }
     setIsProcessing(true);
     setProgress(10);
-
-    const finishExport = () => {
-      setProgress(100);
-      setTimeout(() => {
-        setIsProcessing(false);
-        onClose();
-      }, 300);
-    };
 
     try {
       if (selectedFormat === 'jpg' || selectedFormat === 'png' || selectedFormat === 'tiff') {
@@ -105,16 +113,20 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
         if (zipEntries.length === 1) {
           const single = zipEntries[0];
           const blob = new Blob([single.data as any], { type: mimeType });
-          await downloadFile({ fileName: single.name, blob, mimeType });
-          finishExport();
+          setExportBlob(blob);
+          setExportName(single.name);
+          setExportMime(mimeType);
+          setIsExportSaveModalOpen(true);
           return;
         } else {
           // Multiple pages: package into ZIP file
           const zipBuffer = createZipBundle(zipEntries);
           const blob = new Blob([zipBuffer as any], { type: 'application/zip' });
           const zipName = `${fileNameWithoutExt}_${selectedFormat.toUpperCase()}_Images.zip`;
-          await downloadFile({ fileName: zipName, blob, mimeType: 'application/zip' });
-          finishExport();
+          setExportBlob(blob);
+          setExportName(zipName);
+          setExportMime('application/zip');
+          setIsExportSaveModalOpen(true);
           return;
         }
       } else {
@@ -145,8 +157,10 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
 
         const blob = new Blob([contentStr], { type: blobType });
         const convertedName = `${fileNameWithoutExt}_Converted.${ext}`;
-        await downloadFile({ fileName: convertedName, blob, mimeType: blobType });
-        finishExport();
+        setExportBlob(blob);
+        setExportName(convertedName);
+        setExportMime(blobType);
+        setIsExportSaveModalOpen(true);
       }
     } catch (err) {
       console.error('Export failed:', err);
@@ -352,6 +366,31 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Universal Export Save Modal with Editable File Name (Save to Phone vs Share / Cloud Drive) */}
+      <ExportSaveModal
+        isOpen={isExportSaveModalOpen}
+        onClose={() => {
+          setIsExportSaveModalOpen(false);
+          finishExport();
+        }}
+        initialFileName={exportName || `Converted_Document.${selectedFormat}`}
+        blob={exportBlob}
+        mimeType={exportMime}
+        title={`Export to ${selectedFormat.toUpperCase()}`}
+        onSaveSuccess={(msg) => {
+          setExportToast(msg);
+          setTimeout(() => setExportToast(null), 4000);
+        }}
+      />
+
+      {/* Storage Toast Alert */}
+      {exportToast && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[110] bg-emerald-950/95 border border-emerald-500/60 text-emerald-100 px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-bold animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{exportToast}</span>
+        </div>
+      )}
     </div>
   );
 };

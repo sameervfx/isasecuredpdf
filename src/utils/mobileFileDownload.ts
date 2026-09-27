@@ -24,6 +24,19 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+async function ensureStoragePermissions(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const status = await Filesystem.checkPermissions();
+      if (status.publicStorage !== 'granted') {
+        await Filesystem.requestPermissions();
+      }
+    } catch (e) {
+      // Permission check/request not required or supported on this version
+    }
+  }
+}
+
 /**
  * Writes the file directly to phone/device local storage (Documents or Downloads directory)
  */
@@ -31,6 +44,7 @@ export async function saveToPhoneStorage(options: DownloadOptions): Promise<{ su
   const { fileName, blob } = options;
   if (Capacitor.isNativePlatform()) {
     try {
+      await ensureStoragePermissions();
       const base64Data = await blobToBase64(blob);
       try {
         await Filesystem.writeFile({
@@ -49,7 +63,7 @@ export async function saveToPhoneStorage(options: DownloadOptions): Promise<{ su
       }
       return {
         success: true,
-        message: "Saved to your phone's storage",
+        message: `Saved ${fileName} to phone storage`,
       };
     } catch (err: any) {
       console.warn('Native saveToPhoneStorage failed:', err);
@@ -68,7 +82,62 @@ export async function saveToPhoneStorage(options: DownloadOptions): Promise<{ su
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   return {
     success: true,
-    message: "Saved to your phone's storage",
+    message: `Saved ${fileName}`,
+  };
+}
+
+/**
+ * Writes multiple files directly to phone/device local storage
+ */
+export async function saveMultipleToPhoneStorage(
+  files: DownloadOptions[]
+): Promise<{ success: boolean; message: string }> {
+  if (files.length === 0) return { success: false, message: 'No files to save' };
+
+  if (Capacitor.isNativePlatform()) {
+    await ensureStoragePermissions();
+    for (const f of files) {
+      const base64Data = await blobToBase64(f.blob);
+      try {
+        await Filesystem.writeFile({
+          path: f.fileName,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true,
+        });
+      } catch (err) {
+        await Filesystem.writeFile({
+          path: f.fileName,
+          data: base64Data,
+          directory: Directory.Data,
+          recursive: true,
+        });
+      }
+    }
+    return {
+      success: true,
+      message:
+        files.length === 1
+          ? `Saved ${files[0].fileName} to phone`
+          : `Saved ${files.length} files to phone storage`,
+    };
+  }
+
+  // Fallback for Web/Browser
+  for (const f of files) {
+    const url = URL.createObjectURL(f.blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = f.fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+  return {
+    success: true,
+    message: files.length === 1 ? `Saved ${files[0].fileName}` : `Saved ${files.length} files`,
   };
 }
 
@@ -118,6 +187,62 @@ export async function shareToOtherApps(options: DownloadOptions): Promise<void> 
 
   // Fallback to regular download if share is unsupported
   await downloadFile(options);
+}
+
+/**
+ * Shares multiple files to other apps (Google Drive, WhatsApp, etc.)
+ */
+export async function shareMultipleToOtherApps(
+  files: DownloadOptions[],
+  title: string = 'Export Files'
+): Promise<void> {
+  if (files.length === 0) return;
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const uris: string[] = [];
+      for (const f of files) {
+        const base64Data = await blobToBase64(f.blob);
+        const saved = await Filesystem.writeFile({
+          path: f.fileName,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+        uris.push(saved.uri);
+      }
+      if (await Share.canShare()) {
+        await Share.share({
+          title,
+          text: `Share ${files.length} file${files.length > 1 ? 's' : ''}`,
+          files: uris,
+          dialogTitle: `Share ${title} with apps`,
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn('Native multi-share failed:', err);
+    }
+  }
+
+  // Web Share API fallback
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    try {
+      const navFiles = files.map((f) => new File([f.blob], f.fileName, { type: f.mimeType || f.blob.type }));
+      if (!navigator.canShare || navigator.canShare({ files: navFiles })) {
+        await navigator.share({
+          files: navFiles,
+          title,
+          text: `Share ${files.length} file${files.length > 1 ? 's' : ''}`,
+        });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+    }
+  }
+
+  // Fallback: save to phone storage
+  await saveMultipleToPhoneStorage(files);
 }
 
 /**

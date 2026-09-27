@@ -12,6 +12,7 @@ import { trackEvent } from './utils/analytics';
 import { downloadFile, printPdfBlob, saveToPhoneStorage, shareToOtherApps } from './utils/mobileFileDownload';
 import { WatermarkOptions } from './components/WatermarkModal';
 import { ExportFormatType } from './components/PremiumExportModal';
+import { ExportSaveModal } from './components/ExportSaveModal';
 
 // Code-split heavy editor modals and canvas viewer so LandingPage loads instantly in < 5ms
 const PDFCanvasViewer = React.lazy(() => import('./components/PDFCanvasViewer').then(m => ({ default: m.PDFCanvasViewer })));
@@ -104,7 +105,12 @@ export const App: React.FC = () => {
   const [isAppDownloadModalOpen, setIsAppDownloadModalOpen] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isMobileExportDialogOpen, setIsMobileExportDialogOpen] = useState<boolean>(false);
-  const [mobileExportData, setMobileExportData] = useState<{ fileName: string; blob: Blob } | null>(null);
+  const [mobileExportData, setMobileExportData] = useState<{
+    fileName: string;
+    blob: Blob;
+    mimeType?: string;
+    title?: string;
+  } | null>(null);
   const [storageToastMessage, setStorageToastMessage] = useState<string | null>(null);
   const [showFeedbackPrompt, setShowFeedbackPrompt] = useState<boolean>(false);
   const [isProActive, setIsProActive] = useState<boolean>(
@@ -878,16 +884,9 @@ export const App: React.FC = () => {
           setShowFeedbackPrompt(true);
         }
       } else {
-        const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-        if (isMobileDevice) {
-          // Open dual-export options modal on mobile (Save to Phone or Share / Other Apps)
-          setMobileExportData({ fileName: defaultName, blob });
-          setIsMobileExportDialogOpen(true);
-        } else {
-          await downloadFile({ fileName: defaultName, blob, mimeType: 'application/pdf' });
-          trackEvent('export_downloaded');
-          setShowFeedbackPrompt(true);
-        }
+        // Universal Export Dialog with editable filename (Save to Phone vs Share / Cloud Drive)
+        setMobileExportData({ fileName: defaultName, blob, mimeType: 'application/pdf', title: 'Export PDF' });
+        setIsMobileExportDialogOpen(true);
       }
     } catch (err) {
       console.error('Export error:', err);
@@ -897,40 +896,6 @@ export const App: React.FC = () => {
       setIsExporting(false);
     }
   }, [docState]);
-
-  const handleSaveToPhone = async () => {
-    if (!mobileExportData) return;
-    setIsMobileExportDialogOpen(false);
-    try {
-      const res = await saveToPhoneStorage({
-        fileName: mobileExportData.fileName,
-        blob: mobileExportData.blob,
-        mimeType: 'application/pdf',
-      });
-      setStorageToastMessage(res.message);
-      setTimeout(() => setStorageToastMessage(null), 4000);
-      trackEvent('export_save_phone');
-      setShowFeedbackPrompt(true);
-    } catch (e: any) {
-      alert(`Save to phone failed: ${e?.message || e}`);
-    }
-  };
-
-  const handleShareToApps = async () => {
-    if (!mobileExportData) return;
-    setIsMobileExportDialogOpen(false);
-    try {
-      await shareToOtherApps({
-        fileName: mobileExportData.fileName,
-        blob: mobileExportData.blob,
-        mimeType: 'application/pdf',
-      });
-      trackEvent('export_shared');
-      setShowFeedbackPrompt(true);
-    } catch (e: any) {
-      alert(`Share failed: ${e?.message || e}`);
-    }
-  };
 
   const handleSavePDF = useCallback(async () => {
     if (!docState.fileBytes) return;
@@ -949,7 +914,8 @@ export const App: React.FC = () => {
         }
       } else {
         const blob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
-        await downloadFile({ fileName: saveName, blob, mimeType: 'application/pdf' });
+        setMobileExportData({ fileName: saveName, blob, mimeType: 'application/pdf', title: 'Save Document' });
+        setIsMobileExportDialogOpen(true);
       }
     } catch (err) {
       console.error('Save error:', err);
@@ -994,7 +960,8 @@ export const App: React.FC = () => {
           }
         } else {
           const blob = new Blob([result.data.buffer as ArrayBuffer], { type: 'application/zip' });
-          await downloadFile({ fileName: result.fileName, blob, mimeType: 'application/zip' });
+          setMobileExportData({ fileName: result.fileName, blob, mimeType: 'application/zip', title: 'Export Split PDFs (ZIP)' });
+          setIsMobileExportDialogOpen(true);
         }
       } catch (err) {
         console.error('Export multiple PDFs error:', err);
@@ -1290,70 +1257,20 @@ export const App: React.FC = () => {
         />
       </div>
 
-      {/* Dual Export Modal for Mobile (Save to Phone + Share / Cloud) */}
-      {isMobileExportDialogOpen && mobileExportData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative">
-            <button
-              onClick={() => setIsMobileExportDialogOpen(false)}
-              className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-full bg-slate-800/80 transition"
-              title="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-3 bg-gradient-to-tr from-cyan-500/20 to-blue-500/20 text-cyan-400 rounded-2xl border border-cyan-500/30">
-                <Download className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-extrabold text-white">Export PDF</h3>
-                <p className="text-xs text-slate-400 truncate max-w-[200px]">{mobileExportData.fileName}</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-300 mb-5 leading-relaxed">
-              Choose how you want to save or share your secured document:
-            </p>
-
-            <div className="space-y-3">
-              {/* Option 1: Save to Phone */}
-              <button
-                onClick={handleSaveToPhone}
-                className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-2xl shadow-lg shadow-cyan-500/25 transition active:scale-98 group"
-              >
-                <div className="flex items-center space-x-3 text-left">
-                  <div className="p-2 bg-white/10 rounded-xl">
-                    <Save className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold">Save to Phone</div>
-                    <div className="text-[10px] text-cyan-100">Downloads & Documents folder</div>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-white/80 group-hover:translate-x-0.5 transition">→</span>
-              </button>
-
-              {/* Option 2: Share / Other Apps */}
-              <button
-                onClick={handleShareToApps}
-                className="w-full flex items-center justify-between p-3.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-2xl border border-slate-700 transition active:scale-98 group"
-              >
-                <div className="flex items-center space-x-3 text-left">
-                  <div className="p-2 bg-purple-500/20 text-purple-400 rounded-xl">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold">Share / Other Apps</div>
-                    <div className="text-[10px] text-slate-400">WhatsApp, Drive, Gmail, Cloud</div>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-slate-400 group-hover:translate-x-0.5 transition">→</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Universal Export Save Modal with Editable File Name (Save to Phone vs Share / Cloud Drive) */}
+      <ExportSaveModal
+        isOpen={isMobileExportDialogOpen && !!mobileExportData}
+        onClose={() => setIsMobileExportDialogOpen(false)}
+        initialFileName={mobileExportData?.fileName || 'document.pdf'}
+        blob={mobileExportData?.blob}
+        mimeType={mobileExportData?.mimeType || 'application/pdf'}
+        title={mobileExportData?.title || 'Export PDF'}
+        onSaveSuccess={(msg) => {
+          setStorageToastMessage(msg);
+          setTimeout(() => setStorageToastMessage(null), 4000);
+          setShowFeedbackPrompt(true);
+        }}
+      />
 
       {/* Storage Toast Alert */}
       {storageToastMessage && (

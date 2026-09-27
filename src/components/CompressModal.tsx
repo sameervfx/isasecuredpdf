@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Zap, ArrowRight, ShieldCheck, Download, AlertCircle, Sparkles } from 'lucide-react';
+import { X, Zap, ArrowRight, ShieldCheck, Download, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
 import { securityService, CompressionResult } from '../services/securityService';
 import { downloadFile } from '../utils/mobileFileDownload';
+import { ExportSaveModal } from './ExportSaveModal';
 
 interface CompressModalProps {
   isOpen: boolean;
@@ -20,6 +21,12 @@ export const CompressModal: React.FC<CompressModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [result, setResult] = useState<CompressionResult | null>(null);
+
+  // Dual Export Modal State
+  const [isExportSaveModalOpen, setIsExportSaveModalOpen] = useState(false);
+  const [exportBlob, setExportBlob] = useState<Blob | null>(null);
+  const [exportName, setExportName] = useState('');
+  const [compressToast, setCompressToast] = useState<string | null>(null);
 
   // Reset compression result and error state whenever the modal opens or a new document is loaded
   useEffect(() => {
@@ -63,12 +70,14 @@ export const CompressModal: React.FC<CompressModalProps> = ({
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     if (!result) return;
     const baseName = fileName ? fileName.replace(/\.pdf$/i, '') : 'document';
     const compressedName = `${baseName}_compressed.pdf`;
     const blob = new Blob([new Uint8Array(result.compressedBytes)], { type: 'application/pdf' });
-    await downloadFile({ fileName: compressedName, blob, mimeType: 'application/pdf' });
+    setExportBlob(blob);
+    setExportName(compressedName);
+    setIsExportSaveModalOpen(true);
   };
 
   return (
@@ -255,6 +264,28 @@ export const CompressModal: React.FC<CompressModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Universal Export Save Modal with Editable File Name (Save to Phone vs Share / Cloud Drive) */}
+      <ExportSaveModal
+        isOpen={isExportSaveModalOpen}
+        onClose={() => setIsExportSaveModalOpen(false)}
+        initialFileName={exportName || 'document_compressed.pdf'}
+        blob={exportBlob}
+        mimeType="application/pdf"
+        title="Save Compressed PDF"
+        onSaveSuccess={(msg) => {
+          setCompressToast(msg);
+          setTimeout(() => setCompressToast(null), 4000);
+        }}
+      />
+
+      {/* Storage Toast Alert */}
+      {compressToast && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[110] bg-emerald-950/95 border border-emerald-500/60 text-emerald-100 px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-bold animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{compressToast}</span>
+        </div>
+      )}
     </div>
   );
 };

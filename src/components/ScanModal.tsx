@@ -3,10 +3,11 @@ import {
   X, Camera, RefreshCw, Trash2, Check, Download, Image as ImageIcon, Sparkles, Sliders, 
   ShieldCheck, ArrowRight, RotateCw, QrCode, Smartphone, Crop, Scissors, Wand2, Maximize2, 
   RotateCcw, FileText, Eye, Sun, Contrast as ContrastIcon, SlidersHorizontal, Plus, ArrowLeft,
-  Timer, Focus, Crosshair
+  Timer, Focus, Crosshair, CheckCircle2, Save
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { downloadFile } from '../utils/mobileFileDownload';
+import { ExportSaveModal, ExportItem } from './ExportSaveModal';
 
 interface ScanModalProps {
   isOpen: boolean;
@@ -102,6 +103,14 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const [exportFileName, setExportFileName] = useState<string>(
     `Scanned_Document_${new Date().toISOString().slice(0, 10)}`
   );
+
+  // Dual Export Modal State (Save to Phone vs Share / Cloud Drive)
+  const [exportModalOpen, setExportModalOpen] = useState<boolean>(false);
+  const [exportModalFiles, setExportModalFiles] = useState<ExportItem[]>([]);
+  const [exportModalFileName, setExportModalFileName] = useState<string>('');
+  const [exportModalMimeType, setExportModalMimeType] = useState<string>('');
+  const [exportModalTitle, setExportModalTitle] = useState<string>('');
+  const [scannerToast, setScannerToast] = useState<string | null>(null);
 
   // Focus & Steady Capture State
   const [focusRingPos, setFocusRingPos] = useState<{ x: number; y: number } | null>(null);
@@ -757,17 +766,18 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     );
   };
 
-  // Export Images as JPG or PNG
+  // Export Images as JPG or PNG with user-friendly naming & Save to Phone vs Share / Cloud Drive
   const handleDownloadImages = async (format: 'jpg' | 'png') => {
     if (pages.length === 0) return;
     const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
-    const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'Scanned_Document';
+    const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
 
+    const items: ExportItem[] = [];
     for (let idx = 0; idx < pages.length; idx++) {
       const p = pages[idx];
       const img = new Image();
       await new Promise<void>((resolve) => {
-        img.onload = async () => {
+        img.onload = () => {
           const canvas = document.createElement('canvas');
           canvas.width = img.width;
           canvas.height = img.height;
@@ -779,19 +789,77 @@ export const ScanModal: React.FC<ScanModalProps> = ({
             }
             ctx.drawImage(img, 0, 0);
           }
-          canvas.toBlob(async (blob) => {
+          canvas.toBlob((blob) => {
             if (blob) {
               const fileName =
                 pages.length === 1
                   ? `${cleanBaseName}.${format}`
                   : `${cleanBaseName}_Page_${idx + 1}.${format}`;
-              await downloadFile({ fileName, blob, mimeType });
+              items.push({ fileName, blob, mimeType });
             }
             resolve();
           }, mimeType, 0.95);
         };
         img.src = p.dataUrl;
       });
+    }
+
+    if (items.length > 0) {
+      setExportModalFiles(items);
+      setExportModalFileName(`${cleanBaseName}.${format}`);
+      setExportModalMimeType(mimeType);
+      setExportModalTitle(`Export Scanned ${format.toUpperCase()}`);
+      setExportModalOpen(true);
+    }
+  };
+
+  // Assemble Scanned PDF & Open Export Save Modal (Save to Phone or Cloud)
+  const handleExportScannedPDF = async () => {
+    if (pages.length === 0) return;
+    setIsAssembling(true);
+
+    try {
+      const pdfDoc = await PDFDocument.create();
+
+      for (const pageItem of pages) {
+        const imageBytes = await fetch(pageItem.dataUrl).then((res) => res.arrayBuffer());
+        const isPng = pageItem.dataUrl.startsWith('data:image/png');
+        const imageEmbed = isPng
+          ? await pdfDoc.embedPng(imageBytes)
+          : await pdfDoc.embedJpg(imageBytes);
+
+        const stdWidth = 612;
+        const aspectRatio = imageEmbed.height / imageEmbed.width;
+        const stdHeight = stdWidth * aspectRatio;
+
+        const page = pdfDoc.addPage([stdWidth, stdHeight]);
+        page.drawImage(imageEmbed, {
+          x: 0,
+          y: 0,
+          width: stdWidth,
+          height: stdHeight,
+        });
+
+        if (pageItem.rotation !== 0) {
+          page.setRotation({ type: 'degrees', angle: pageItem.rotation } as any);
+        }
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
+      const fileName = `${cleanBaseName}.pdf`;
+      const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+
+      setExportModalFiles([{ fileName, blob, mimeType: 'application/pdf' }]);
+      setExportModalFileName(fileName);
+      setExportModalMimeType('application/pdf');
+      setExportModalTitle('Export Scanned PDF');
+      setExportModalOpen(true);
+    } catch (err: any) {
+      console.error('Failed to generate scanned PDF:', err);
+      alert('Failed to generate PDF from scanned images. Please try again.');
+    } finally {
+      setIsAssembling(false);
     }
   };
 
@@ -828,7 +896,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       }
 
       const pdfBytes = await pdfDoc.save();
-      const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_-]/g, '_') || 'Scanned_Document';
+      const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
       const fileName = `${cleanBaseName}.pdf`;
 
       onScanComplete(pdfBytes, fileName);
@@ -1612,11 +1680,12 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               <span>Snap More Pages</span>
             </button>
 
-            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 onClick={() => handleDownloadImages('jpg')}
                 disabled={pages.length === 0}
-                className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold rounded-xl border border-slate-700 transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold rounded-xl border border-slate-700 transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                title="Save as JPG images (Save to Phone or Cloud)"
               >
                 <Download className="w-3.5 h-3.5 text-yellow-400" />
                 <span>Download JPG</span>
@@ -1625,24 +1694,36 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               <button
                 onClick={() => handleDownloadImages('png')}
                 disabled={pages.length === 0}
-                className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold rounded-xl border border-slate-700 transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold rounded-xl border border-slate-700 transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                title="Save as PNG images (Save to Phone or Cloud)"
               >
                 <Download className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Download PNG</span>
+              </button>
+
+              <button
+                onClick={handleExportScannedPDF}
+                disabled={pages.length === 0 || isAssembling}
+                className="flex-1 sm:flex-none px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold rounded-xl shadow-md transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                title="Save PDF to Phone Storage or Cloud Drive"
+              >
+                <Save className="w-3.5 h-3.5 text-white" />
+                <span>Save PDF</span>
               </button>
 
               <div className="relative group p-[1.5px] rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 shadow-lg hover:shadow-cyan-500/40 transition-all duration-300 flex-1 sm:flex-none">
                 <button
                   onClick={handleAssemblePDF}
                   disabled={pages.length === 0 || isAssembling}
-                  className="w-full px-4 py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-extrabold rounded-[10px] transition transform active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                  className="w-full px-3.5 py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-extrabold rounded-[10px] transition transform active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                  title="Open scanned document directly in PDF Editor Workspace"
                 >
                   {isAssembling ? (
-                    <span>Exporting PDF...</span>
+                    <span>Opening Editor...</span>
                   ) : (
                     <>
                       <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Export as PDF</span>
+                      <span>Open in Editor</span>
                       <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
                     </>
                   )}
@@ -1650,6 +1731,28 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Universal Export Save Modal (Save to Phone vs Share / Cloud Drive) */}
+      <ExportSaveModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        initialFileName={exportModalFileName}
+        files={exportModalFiles}
+        mimeType={exportModalMimeType}
+        title={exportModalTitle}
+        onSaveSuccess={(msg) => {
+          setScannerToast(msg);
+          setTimeout(() => setScannerToast(null), 4000);
+        }}
+      />
+
+      {/* Scanner Storage Toast Alert */}
+      {scannerToast && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[110] bg-emerald-950/95 border border-emerald-500/60 text-emerald-100 px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-bold animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{scannerToast}</span>
         </div>
       )}
       {/* Hidden Native Phone Camera 4K Launcher Input */}
