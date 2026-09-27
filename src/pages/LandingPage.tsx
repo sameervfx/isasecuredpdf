@@ -29,11 +29,10 @@ import {
   BookOpen,
   Camera,
   Menu,
-  Globe,
   Star
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
-import { SUPPORTED_CURRENCIES, detectUserCurrency, saveUserCurrency } from '../utils/currencyFormatter';
+import { SUPPORTED_CURRENCIES, detectUserCurrency } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/platform';
 import { handleNativePurchase, restoreNativePurchases, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
@@ -70,7 +69,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isProAnnualModalOpen, setIsProAnnualModalOpen] = useState(false);
   const [isLifetimeModalOpen, setIsLifetimeModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currencyCode, setCurrencyCode] = useState<string>(() => detectUserCurrency());
+  const [currencyCode, setCurrencyCode] = useState<string>('CAD');
 
   // Dynamic Google Play Catalog State for Mobile Native App
   const [livePrices, setLivePrices] = useState<Record<string, string>>({});
@@ -557,26 +556,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500 mb-3">Flexible Plans</h2>
             <p className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass}`}>Simple, Transparent Pricing</p>
             <p className={`text-sm ${cardDescClass} mt-3 mb-4`}>No hidden fees. 14-Day Money-Back Guarantee (less processing fees).</p>
-            
-            {/* Currency Selector Pill */}
-            <div className="inline-flex items-center space-x-2 bg-slate-900/80 border border-slate-700/80 px-3.5 py-1.5 rounded-full shadow-lg backdrop-blur-md">
-              <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-[11px] text-slate-400 font-semibold">Currency:</span>
-              <select
-                value={currencyCode}
-                onChange={(e) => {
-                  setCurrencyCode(e.target.value);
-                  saveUserCurrency(e.target.value);
-                }}
-                className="bg-transparent text-cyan-300 font-bold text-xs focus:outline-none cursor-pointer"
-              >
-                {Object.values(SUPPORTED_CURRENCIES).map((c) => (
-                  <option key={c.code} value={c.code} className="bg-slate-900 text-white font-normal">
-                    {c.code} ({c.symbol}) - {c.country}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
@@ -626,31 +605,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="min-h-[64px] flex flex-col justify-end mb-6">
                     {isNativeApp ? (
                       <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                        {livePrices[PLAY_PRODUCT_IDS.monthly] || SUPPORTED_CURRENCIES[currencyCode]?.monthly ? (
-                          <>
-                            {livePrices[PLAY_PRODUCT_IDS.monthly] || SUPPORTED_CURRENCIES[currencyCode]?.monthly} <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
-                          </>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <span className="inline-block w-28 h-8 bg-slate-700/50 rounded-lg animate-pulse" />
-                            <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
-                          </div>
-                        )}
+                        {livePrices[PLAY_PRODUCT_IDS.monthly] || SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$3.99'} <span className={`text-xs ${cardDescClass} font-normal`}>/ month</span>
                       </div>
                     ) : (
                       <>
                         {SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly && (
                           <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                            <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly || '$5.99'}</span>
+                            <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalMonthly || '$7.99'}</span>
                             <span className="text-[10px] font-extrabold text-cyan-300 bg-cyan-500/20 border border-cyan-500/40 px-1.5 py-0.5 rounded">
                               {SUPPORTED_CURRENCIES[currencyCode]?.monthlyDiscountPercent || '50% OFF'}
                             </span>
                           </div>
                         )}
                         <div className={`text-2xl xl:text-3xl font-extrabold ${cardTitleClass} flex items-baseline flex-wrap gap-x-1`}>
-                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'}</span>
+                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$3.99'}</span>
                           <span className="whitespace-nowrap text-xs font-normal">
-                            <span className="text-sm font-bold text-cyan-400 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span>
+                            <span className="text-sm font-bold text-cyan-400 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'}</span>
                             <span className={`${cardDescClass} whitespace-nowrap`}>/ month</span>
                           </span>
                         </div>
@@ -677,7 +647,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 }}
                 className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'} text-xs font-bold rounded-xl border hover:border-cyan-500/50 transition text-center block`}
               >
-                Start Monthly Plan {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/mo)`}
+                Start Monthly Plan {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : '($3.99/mo)') : `(${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$3.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'}/mo)`}
               </button>
             </div>
 
@@ -700,31 +670,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="min-h-[64px] flex flex-col justify-end mb-6">
                     {isNativeApp ? (
                       <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                        {livePrices[PLAY_PRODUCT_IDS.annual] || SUPPORTED_CURRENCIES[currencyCode]?.annual ? (
-                          <>
-                            {livePrices[PLAY_PRODUCT_IDS.annual] || SUPPORTED_CURRENCIES[currencyCode]?.annual} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/ year</span>
-                          </>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <span className="inline-block w-32 h-8 bg-slate-700/50 rounded-lg animate-pulse" />
-                            <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/ year</span>
-                          </div>
-                        )}
+                        {livePrices[PLAY_PRODUCT_IDS.annual] || SUPPORTED_CURRENCIES[currencyCode]?.annual || '$39.99'} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/ year</span>
                       </div>
                     ) : (
                       <>
                         {SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual && (
                           <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                            <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual || '$71.88'}</span>
+                            <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalAnnual || '$95.88'}</span>
                             <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 rounded">
                               {SUPPORTED_CURRENCIES[currencyCode]?.annualDiscountPercent || '58% OFF'}
                             </span>
                           </div>
                         )}
                         <div className={`text-2xl xl:text-3xl font-extrabold ${cardTitleClass} flex items-baseline flex-wrap gap-x-1`}>
-                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'}</span>
+                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.annual || '$39.99'}</span>
                           <span className="whitespace-nowrap text-xs font-normal">
-                            <span className="text-sm font-bold text-cyan-400 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span>
+                            <span className="text-sm font-bold text-cyan-400 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'}</span>
                             <span className={`${cardDescClass} whitespace-nowrap`}>/ year</span>
                           </span>
                         </div>
@@ -751,7 +712,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 }}
                 className="mt-8 w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
               >
-                Get Annual Plan {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)`}
+                Get Annual Plan {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '($39.99/yr)') : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$39.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'}/yr)`}
               </button>
             </div>
 
@@ -770,29 +731,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="min-h-[64px] flex flex-col justify-end mb-6">
                     {isNativeApp ? (
                       <div className={`text-3xl font-extrabold ${cardTitleClass}`}>
-                        {livePrices[PLAY_PRODUCT_IDS.lifetime] || SUPPORTED_CURRENCIES[currencyCode]?.lifetime ? (
-                          <>
-                            {livePrices[PLAY_PRODUCT_IDS.lifetime] || SUPPORTED_CURRENCIES[currencyCode]?.lifetime} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
-                          </>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <span className="inline-block w-32 h-8 bg-slate-700/50 rounded-lg animate-pulse" />
-                            <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
-                          </div>
-                        )}
+                        {livePrices[PLAY_PRODUCT_IDS.lifetime] || SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$129.99'} <span className={`text-xs ${cardDescClass} font-normal whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
                       </div>
                     ) : (
                       <>
                         <div className="flex items-center space-x-2 mb-0.5 text-xs">
-                          <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime || '$199.99'}</span>
+                          <span className="line-through text-slate-400 font-semibold">{SUPPORTED_CURRENCIES[currencyCode]?.originalLifetime || '$249.99'}</span>
                           <span className="text-[10px] font-extrabold text-purple-300 bg-purple-500/20 border border-purple-500/40 px-1.5 py-0.5 rounded">
-                            {SUPPORTED_CURRENCIES[currencyCode]?.lifetimeDiscountPercent || '50% OFF'}
+                            {SUPPORTED_CURRENCIES[currencyCode]?.lifetimeDiscountPercent || '48% OFF'}
                           </span>
                         </div>
                         <div className={`text-2xl xl:text-3xl font-extrabold ${cardTitleClass} flex items-baseline flex-wrap gap-x-1`}>
-                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'}</span>
+                          <span>{SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$129.99'}</span>
                           <span className="whitespace-nowrap text-xs font-normal">
-                            <span className="text-sm font-bold text-purple-300 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}</span>
+                            <span className="text-sm font-bold text-purple-300 mr-1">{SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'}</span>
                             <span className={`${cardDescClass} whitespace-nowrap`}>/&nbsp;one&#8209;time</span>
                           </span>
                         </div>
@@ -818,7 +770,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 }}
                 className={`mt-8 w-full py-3 ${isLight ? 'bg-purple-100 hover:bg-purple-200 text-purple-900 border-purple-300' : 'bg-slate-800 hover:bg-purple-950/80 text-purple-300 hover:text-white border-slate-700'} text-xs font-bold rounded-xl border hover:border-purple-500/60 transition text-center block`}
               >
-                Buy Lifetime License {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})`}
+                Buy Lifetime License {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : '($129.99)') : `(${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$129.99'})`}
               </button>
             </div>
           </div>
@@ -1131,7 +1083,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <p className="text-xs text-cyan-400 font-semibold">
                   {isNativeApp
                     ? livePrices[PLAY_PRODUCT_IDS.monthly] ? `${livePrices[PLAY_PRODUCT_IDS.monthly]} / month • Cancel Anytime` : 'Billed Monthly • Cancel Anytime'
-                    : `${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'} / month • Cancel Anytime`}
+                    : `${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$3.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'} / month • Cancel Anytime`}
                 </p>
               </div>
             </div>
@@ -1174,7 +1126,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   }}
                   className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
                 >
-                  💳 Unlock Pro Access {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$2.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/month)`}
+                  💳 Unlock Pro Access {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : '($3.99/mo)') : `(${SUPPORTED_CURRENCIES[currencyCode]?.monthly || '$3.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'}/month)`}
                 </button>
               </div>
             </div>
@@ -1197,7 +1149,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white">
-                  Pro Annual Plan {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)`}
+                  Pro Annual Plan {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '($39.99/yr)') : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$39.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'}/yr)`}
                 </h3>
                 <p className="text-xs text-emerald-400 font-bold">Best Value • Web & Desktop Access</p>
               </div>
@@ -1226,7 +1178,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 }}
                 className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
               >
-                💳 Unlock Annual Pro {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$29.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'}/yr)`} →
+                💳 Unlock Annual Pro {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '($39.99/yr)') : `(${SUPPORTED_CURRENCIES[currencyCode]?.annual || '$39.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'}/yr)`} →
               </button>
             </div>
           </div>
@@ -1251,7 +1203,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <p className="text-xs text-purple-400 font-bold">
                   {isNativeApp
                     ? livePrices[PLAY_PRODUCT_IDS.lifetime] ? `${livePrices[PLAY_PRODUCT_IDS.lifetime]} One-Time • Own Forever` : 'One-Time Payment • Own Forever'
-                    : `${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'USD'} One-Time • Own Forever`}
+                    : `${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$129.99'} ${SUPPORTED_CURRENCIES[currencyCode]?.code || 'CAD'} One-Time • Own Forever`}
                 </p>
               </div>
             </div>
@@ -1277,7 +1229,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 }}
                 className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
               >
-                💎 Unlock Lifetime VIP Access {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : '') : `(${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$99.99'})`} →
+                💎 Unlock Lifetime VIP Access {isNativeApp ? (livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : '($129.99)') : `(${SUPPORTED_CURRENCIES[currencyCode]?.lifetime || '$129.99'})`} →
               </button>
             </div>
           </div>

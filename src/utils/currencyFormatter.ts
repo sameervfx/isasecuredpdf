@@ -58,12 +58,12 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
   },
   CAD: {
     code: 'CAD',
-    symbol: 'CA$',
+    symbol: '$',
     name: 'CAD ($) - Canada',
     country: 'Canada',
-    monthly: 'CA$3.99',
-    annual: 'CA$39.99',
-    lifetime: 'CA$129.99',
+    monthly: '$3.99',
+    annual: '$39.99',
+    lifetime: '$129.99',
     monthlyNum: 3.99,
     annualNum: 39.99,
     lifetimeNum: 129.99,
@@ -73,9 +73,9 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     usdMonthlyFormatted: '$2.99 USD',
     usdAnnualFormatted: '$29.99 USD',
     usdLifetimeFormatted: '$99.99 USD',
-    originalMonthly: 'CA$7.99',
-    originalAnnual: 'CA$95.88',
-    originalLifetime: 'CA$249.99',
+    originalMonthly: '$7.99',
+    originalAnnual: '$95.88',
+    originalLifetime: '$249.99',
     monthlyDiscountPercent: '50% OFF',
     annualDiscountPercent: '58% OFF',
     lifetimeDiscountPercent: '48% OFF',
@@ -199,92 +199,37 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
 };
 
 /**
- * Automatically detects the user's local currency based on device locale,
- * browser languages, and timezone (e.g., Canadian timezones -> CAD).
+ * Returns user currency - defaults cleanly to CAD for North American / Canadian App Store alignment.
  */
 export function detectUserCurrency(): string {
-  if (typeof window === 'undefined') return 'USD';
-
-  try {
-    const saved = localStorage.getItem('isa_user_currency');
-    if (saved && SUPPORTED_CURRENCIES[saved]) {
-      return saved;
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('isa_user_currency', 'CAD');
+    } catch (e) {
+      // Ignore localStorage access restrictions
     }
-
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    const resolvedLocale = (Intl.DateTimeFormat().resolvedOptions().locale || '').toUpperCase();
-    const numberLocale = (new Intl.NumberFormat().resolvedOptions().locale || '').toUpperCase();
-    const languages = window.navigator.languages || [window.navigator.language || ''];
-    const langStr = languages.join(',').toUpperCase();
-    const allHints = `${timeZone} ${resolvedLocale} ${numberLocale} ${langStr}`.toUpperCase();
-
-    // Canada detection (timezones, locales, and language tags)
-    if (
-      allHints.includes('TORONTO') ||
-      allHints.includes('VANCOUVER') ||
-      allHints.includes('MONTREAL') ||
-      allHints.includes('EDMONTON') ||
-      allHints.includes('CALGARY') ||
-      allHints.includes('WINNIPEG') ||
-      allHints.includes('HALIFAX') ||
-      allHints.includes('ST_JOHNS') ||
-      allHints.includes('CANADA') ||
-      allHints.includes('REGINA') ||
-      allHints.includes('-CA') ||
-      allHints.includes('_CA') ||
-      allHints.includes('/CA')
-    ) {
-      return 'CAD';
-    }
-
-    // UK detection
-    if (timeZone.includes('London') || langStr.includes('-GB')) {
-      return 'GBP';
-    }
-
-    // India detection
-    if (timeZone.includes('Calcutta') || timeZone.includes('Kolkata') || langStr.includes('-IN')) {
-      return 'INR';
-    }
-
-    // Australia detection
-    if (timeZone.includes('Sydney') || timeZone.includes('Melbourne') || timeZone.includes('Brisbane') || timeZone.includes('Perth') || langStr.includes('-AU')) {
-      return 'AUD';
-    }
-
-    // Eurozone detection
-    if (
-      timeZone.includes('Paris') ||
-      timeZone.includes('Berlin') ||
-      timeZone.includes('Rome') ||
-      timeZone.includes('Madrid') ||
-      timeZone.includes('Amsterdam') ||
-      timeZone.includes('Brussels') ||
-      timeZone.includes('Vienna')
-    ) {
-      return 'EUR';
-    }
-  } catch (e) {
-    // fallback to USD
   }
-
-  return 'USD';
+  return 'CAD';
 }
 
 /**
  * Saves user currency choice to localStorage
  */
 export function saveUserCurrency(currencyCode: string): void {
-  if (SUPPORTED_CURRENCIES[currencyCode]) {
-    localStorage.setItem('isa_user_currency', currencyCode);
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('isa_user_currency', currencyCode || 'CAD');
+    } catch (e) {
+      // Ignore
+    }
   }
 }
 
 /**
  * Gets pricing details for a given plan and currency code
  */
-export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', currencyCode: string = 'USD') {
-  const currency = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
+export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', currencyCode: string = 'CAD') {
+  const currency = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.CAD;
   const planKey = plan.charAt(0).toUpperCase() + plan.slice(1);
   return {
     formatted: currency[plan],

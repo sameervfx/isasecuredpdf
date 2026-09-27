@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Globe, Check, ExternalLink } from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, Zap, Lock, CreditCard, Sparkles, Key, ArrowRight, Check, ExternalLink } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
 import { SUPPORTED_CURRENCIES, detectUserCurrency, getLocalizedPricing, saveUserCurrency } from '../utils/currencyFormatter';
 import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/platform';
@@ -31,7 +31,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   // Processing State
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  const [currencyCode, setCurrencyCode] = useState<string>('USD');
+  const [currencyCode, setCurrencyCode] = useState<string>('CAD');
 
   const [isNativeApp, setIsNativeApp] = useState<boolean>(() => isAndroidPlatform() || isNativeMobileApp() || isIOSPlatform());
 
@@ -65,7 +65,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
+  const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.CAD;
 
   // Dynamic Helcim URL Builder passing exact localized USD equivalent amount
   const getDynamicPayUrl = (plan: 'monthly' | 'annual' | 'lifetime', currency: string) => {
@@ -165,27 +165,10 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-2 shrink-0">
-            <div className="flex items-center space-x-1 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700">
-              <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <select
-                value={currencyCode}
-                onChange={(e) => {
-                  setCurrencyCode(e.target.value);
-                  saveUserCurrency(e.target.value);
-                }}
-                className="bg-transparent text-white text-[11px] font-semibold focus:outline-none cursor-pointer"
-                title="Select Currency"
-              >
-                {Object.values(SUPPORTED_CURRENCIES).map((c) => (
-                  <option key={c.code} value={c.code} className="bg-slate-900 text-white">
-                    {c.code} ({c.symbol})
-                  </option>
-                ))}
-              </select>
-            </div>
             <button
               onClick={onClose}
               className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition shrink-0"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
@@ -228,13 +211,13 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-cyan-300">
-                          {livePrices[PLAY_PRODUCT_IDS.monthly] || currentPricing.monthly || '$2.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
+                          {livePrices[PLAY_PRODUCT_IDS.monthly] || currentPricing.monthly || '$3.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
                       </div>
                     </div>
 
-                    {/* Annual Plan (Best Value) */}
+                    {/* Annual Pass (Best Value) */}
                     <div
                       onClick={() => setSelectedPlan('annual')}
                       className={`cursor-pointer p-2.5 sm:p-3 rounded-2xl border transition flex flex-col justify-between relative overflow-hidden ${
@@ -251,7 +234,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-emerald-300">
-                          {livePrices[PLAY_PRODUCT_IDS.annual] || currentPricing.annual || '$29.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
+                          {livePrices[PLAY_PRODUCT_IDS.annual] || currentPricing.annual || '$39.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                         </div>
                         <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
                       </div>
@@ -274,7 +257,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-purple-300">
-                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || currentPricing.lifetime || '$99.99'}
+                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || currentPricing.lifetime || '$129.99'}
                         </div>
                         <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
                       </div>
@@ -334,7 +317,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           {currentPricing.annual}
                         </div>
                         <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || '$71.88'}</span>
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || '$95.88'}</span>
                           <span className="text-emerald-400 font-semibold text-[10px]">{currentPricing.code}/yr</span>
                         </div>
                       </div>
@@ -360,7 +343,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           {currentPricing.lifetime}
                         </div>
                         <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalLifetime || '$199.99'}</span>
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalLifetime || '$249.99'}</span>
                           <span className="text-purple-300 font-semibold text-[10px]">{currentPricing.code}</span>
                         </div>
                       </div>

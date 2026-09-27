@@ -25,7 +25,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
   const [jurisdiction, setJurisdiction] = useState<'US' | 'CA'>('US');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [pendingProTemplate, setPendingProTemplate] = useState<TemplateType | null>(null);
-  const [currencyCode, setCurrencyCode] = useState<string>('USD');
+  const [currencyCode, setCurrencyCode] = useState<string>('CAD');
 
   useEffect(() => {
     setCurrencyCode(detectUserCurrency());
@@ -33,7 +33,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
+  const currentPricing = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.CAD;
 
   const isProActive =
     localStorage.getItem('isasecuredpdf_pro_active') === 'true' ||
@@ -456,7 +456,7 @@ export const CreatePDFModal: React.FC<CreatePDFModalProps> = ({
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400">
                   <span>
-                    {currentPricing.lifetime} {currentPricing.code} <span className="line-through text-slate-500 font-normal">{currentPricing.originalLifetime || '$199.99'}</span> • Pay Once
+                    {currentPricing.lifetime} {currentPricing.code} <span className="line-through text-slate-500 font-normal">{currentPricing.originalLifetime || '$249.99'}</span> • Pay Once
                   </span>
                   <Crown className="w-4 h-4 text-purple-400 group-hover:scale-110 transition shrink-0 ml-1" />
                 </div>
