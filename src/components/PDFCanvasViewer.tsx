@@ -283,12 +283,23 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       isPanning = false;
     };
 
+    const preventSafariGesture = (e: Event) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener('gesturestart', preventSafariGesture, { passive: false });
+    window.addEventListener('gesturechange', preventSafariGesture, { passive: false });
+    window.addEventListener('gestureend', preventSafariGesture, { passive: false });
+
     window.addEventListener('touchstart', handleTouchStart, { passive: false });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
+      window.removeEventListener('gesturestart', preventSafariGesture);
+      window.removeEventListener('gesturechange', preventSafariGesture);
+      window.removeEventListener('gestureend', preventSafariGesture);
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
@@ -576,8 +587,8 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         </div>
       )}
 
-      {/* Floating Canvas Zoom Controls: 80% transparent backdrop, 50% transparent text & symbols */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 pointer-events-auto flex items-center space-x-1.5 px-3 py-2 bg-slate-950/20 backdrop-blur-md border border-white/10 rounded-full shadow-2xl text-white/50">
+      {/* Floating Canvas Zoom Controls: 70% transparent backdrop */}
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 pointer-events-auto flex items-center space-x-1.5 px-3 py-2 bg-slate-950/70 backdrop-blur-md border border-white/10 rounded-full shadow-2xl text-white/50">
         <button
           onClick={() => onZoomChange(Math.max(0.15, Math.round((zoom - 0.15) * 100) / 100))}
           className="p-1.5 text-white/50 hover:text-white rounded-full hover:bg-white/10 transition"
@@ -637,7 +648,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       <main
         ref={containerRef}
         tabIndex={0}
-        style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
+        style={{ touchAction: 'pan-x pan-y' }}
         className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none min-w-0 transition-colors duration-500`}
       >
 
@@ -662,7 +673,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
             onTouchEnd={handlePageTouchEnd}
             onDoubleClick={handlePageDoubleClick}
             className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0 cursor-default"
-            style={{ width: `${w}px`, height: `${h}px`, touchAction: 'pan-x pan-y pinch-zoom' }}
+            style={{ width: `${w}px`, height: `${h}px`, touchAction: 'pan-x pan-y' }}
           >
             <canvas
               ref={(el) => {
@@ -767,8 +778,8 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
               </>
             )}
 
-            {/* Page number badge */}
-            <div className="absolute left-2 sm:-left-14 top-2 bg-slate-900/90 backdrop-blur border border-slate-800 text-cyan-300 sm:text-slate-400 text-[10px] sm:text-[11px] font-mono font-bold px-2 py-0.5 sm:py-1 rounded-full sm:rounded shadow z-30">
+            {/* Page number badge: 50% transparent */}
+            <div className="absolute left-2 sm:-left-14 top-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800/50 text-cyan-300/70 sm:text-slate-400/70 text-[10px] sm:text-[11px] font-mono font-bold px-2 py-0.5 sm:py-1 rounded-full sm:rounded shadow z-30 opacity-50">
               P.{pageNum}
             </div>
           </div>

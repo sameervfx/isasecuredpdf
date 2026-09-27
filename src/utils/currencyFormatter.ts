@@ -212,22 +212,27 @@ export function detectUserCurrency(): string {
     }
 
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const resolvedLocale = (Intl.DateTimeFormat().resolvedOptions().locale || '').toUpperCase();
+    const numberLocale = (new Intl.NumberFormat().resolvedOptions().locale || '').toUpperCase();
     const languages = window.navigator.languages || [window.navigator.language || ''];
     const langStr = languages.join(',').toUpperCase();
+    const allHints = `${timeZone} ${resolvedLocale} ${numberLocale} ${langStr}`.toUpperCase();
 
-    // Canada detection (timezones and language tags)
+    // Canada detection (timezones, locales, and language tags)
     if (
-      timeZone.includes('Toronto') ||
-      timeZone.includes('Vancouver') ||
-      timeZone.includes('Montreal') ||
-      timeZone.includes('Edmonton') ||
-      timeZone.includes('Calgary') ||
-      timeZone.includes('Winnipeg') ||
-      timeZone.includes('Halifax') ||
-      timeZone.includes('St_Johns') ||
-      timeZone.includes('Canada') ||
-      timeZone.includes('Regina') ||
-      langStr.includes('-CA')
+      allHints.includes('TORONTO') ||
+      allHints.includes('VANCOUVER') ||
+      allHints.includes('MONTREAL') ||
+      allHints.includes('EDMONTON') ||
+      allHints.includes('CALGARY') ||
+      allHints.includes('WINNIPEG') ||
+      allHints.includes('HALIFAX') ||
+      allHints.includes('ST_JOHNS') ||
+      allHints.includes('CANADA') ||
+      allHints.includes('REGINA') ||
+      allHints.includes('-CA') ||
+      allHints.includes('_CA') ||
+      allHints.includes('/CA')
     ) {
       return 'CAD';
     }

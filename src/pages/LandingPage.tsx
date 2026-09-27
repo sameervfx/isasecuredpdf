@@ -70,7 +70,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isProAnnualModalOpen, setIsProAnnualModalOpen] = useState(false);
   const [isLifetimeModalOpen, setIsLifetimeModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currencyCode, setCurrencyCode] = useState<string>('USD');
+  const [currencyCode, setCurrencyCode] = useState<string>(() => detectUserCurrency());
 
   // Dynamic Google Play Catalog State for Mobile Native App
   const [livePrices, setLivePrices] = useState<Record<string, string>>({});
@@ -556,7 +556,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500 mb-3">Flexible Plans</h2>
             <p className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass}`}>Simple, Transparent Pricing</p>
-            <p className={`text-sm ${cardDescClass} mt-3 mb-6`}>No hidden fees. 14-Day Money-Back Guarantee (less processing fees).</p>
+            <p className={`text-sm ${cardDescClass} mt-3 mb-4`}>No hidden fees. 14-Day Money-Back Guarantee (less processing fees).</p>
+            
+            {/* Currency Selector Pill */}
+            <div className="inline-flex items-center space-x-2 bg-slate-900/80 border border-slate-700/80 px-3.5 py-1.5 rounded-full shadow-lg backdrop-blur-md">
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-[11px] text-slate-400 font-semibold">Currency:</span>
+              <select
+                value={currencyCode}
+                onChange={(e) => {
+                  setCurrencyCode(e.target.value);
+                  saveUserCurrency(e.target.value);
+                }}
+                className="bg-transparent text-cyan-300 font-bold text-xs focus:outline-none cursor-pointer"
+              >
+                {Object.values(SUPPORTED_CURRENCIES).map((c) => (
+                  <option key={c.code} value={c.code} className="bg-slate-900 text-white font-normal">
+                    {c.code} ({c.symbol}) - {c.country}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">

@@ -165,26 +165,24 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-2 shrink-0">
-            {!isNativeApp && (
-              <div className="flex items-center space-x-1 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700">
-                <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                <select
-                  value={currencyCode}
-                  onChange={(e) => {
-                    setCurrencyCode(e.target.value);
-                    saveUserCurrency(e.target.value);
-                  }}
-                  className="bg-transparent text-white text-[11px] font-semibold focus:outline-none cursor-pointer"
-                  title="Select Currency"
-                >
-                  {Object.values(SUPPORTED_CURRENCIES).map((c) => (
-                    <option key={c.code} value={c.code} className="bg-slate-900 text-white">
-                      {c.code} ({c.symbol})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="flex items-center space-x-1 bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700">
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <select
+                value={currencyCode}
+                onChange={(e) => {
+                  setCurrencyCode(e.target.value);
+                  saveUserCurrency(e.target.value);
+                }}
+                className="bg-transparent text-white text-[11px] font-semibold focus:outline-none cursor-pointer"
+                title="Select Currency"
+              >
+                {Object.values(SUPPORTED_CURRENCIES).map((c) => (
+                  <option key={c.code} value={c.code} className="bg-slate-900 text-white">
+                    {c.code} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={onClose}
               className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition shrink-0"
