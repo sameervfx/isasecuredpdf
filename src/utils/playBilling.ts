@@ -18,13 +18,37 @@ export interface PurchaseResult {
   cancelled?: boolean;
 }
 
-// Global cached prices map (e.g. { isasecuredpdf_pro_monthly: "CA$2.99", ... })
-let livePricesMap: Record<string, string> = {};
+export function normalizePrice(rawPrice: string, currency?: string): string {
+  if (!rawPrice) return rawPrice;
+  const p = rawPrice.trim();
+  // If already formatted with Canadian identifier, keep it
+  if (p.includes('CA$') || p.includes('CAD')) return p;
+
+  // If it starts with a bare $, prefix with CA so it is clearly CA$ and cannot be confused with USD
+  // Google Play returns 'CA$3.99' natively, while Apple StoreKit returns '$3.99' in Canada en_CA.
+  if (p.startsWith('$')) {
+    return 'CA' + p;
+  }
+
+  // If currency is CAD or default, ensure it has CA$
+  if (currency === 'CAD' || !currency) {
+    return `CA$${p}`;
+  }
+
+  return p;
+}
+
+// Global cached prices map with Canadian baseline values (matching Google Play / Apple StoreKit in CAD)
+let livePricesMap: Record<string, string> = {
+  [PLAY_PRODUCT_IDS.monthly]: 'CA$3.99',
+  [PLAY_PRODUCT_IDS.annual]: 'CA$39.99',
+  [PLAY_PRODUCT_IDS.lifetime]: 'CA$129.99',
+};
 let isStoreInitialized = false;
 const priceListeners: Array<(prices: Record<string, string>) => void> = [];
 
 /**
- * Subscribe to live Play Store price updates.
+ * Subscribe to live Play Store / StoreKit price updates.
  * Returns an unsubscribe function.
  */
 export function subscribeToPriceUpdates(listener: (prices: Record<string, string>) => void): () => void {
@@ -78,62 +102,79 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
   if (!cdv || !store) {
     if (retryCount < MAX_RETRIES) {
       retryCount++;
-      console.log(`[GooglePlayBilling] CdvPurchase not ready yet. Scheduling retry ${retryCount}/${MAX_RETRIES}...`);
+      console.log(`[StoreKit/PlayBilling] CdvPurchase not ready yet. Scheduling retry ${retryCount}/${MAX_RETRIES}...`);
       setTimeout(() => initPlayStore(), 300);
     } else {
-      console.warn('[GooglePlayBilling] CdvPurchase failed to attach after max retries.');
+      console.warn('[StoreKit/PlayBilling] CdvPurchase failed to attach after max retries.');
     }
     return;
   }
 
   const Platform = cdv.Platform;
   const ProductType = cdv.ProductType;
-  const targetPlatform = isIOSPlatform() 
-    ? (Platform?.APPLE_APPSTORE || 'apple-appstore')
-    : (Platform?.GOOGLE_PLAY || 'google-play');
+  const applePlatform = (Platform && Platform.APPLE_APPSTORE) || 'ios-appstore';
+  const googlePlatform = (Platform && Platform.GOOGLE_PLAY) || 'android-playstore';
 
   if (!isStoreInitialized) {
     isStoreInitialized = true;
 
     try {
-      console.log('[GooglePlayBilling] CdvPurchase detected! Registering product catalog...');
+      console.log('[StoreKit/PlayBilling] CdvPurchase detected! Registering catalog for iOS & Android...');
       store.register([
         {
           id: PLAY_PRODUCT_IDS.monthly,
           type: ProductType?.PAID_SUBSCRIPTION || 'paid subscription',
-          platform: targetPlatform,
+          platform: applePlatform,
         },
         {
           id: PLAY_PRODUCT_IDS.annual,
           type: ProductType?.PAID_SUBSCRIPTION || 'paid subscription',
-          platform: targetPlatform,
+          platform: applePlatform,
         },
         {
           id: PLAY_PRODUCT_IDS.lifetime,
           type: ProductType?.NON_CONSUMABLE || 'non consumable',
-          platform: targetPlatform,
+          platform: applePlatform,
+        },
+        {
+          id: PLAY_PRODUCT_IDS.monthly,
+          type: ProductType?.PAID_SUBSCRIPTION || 'paid subscription',
+          platform: googlePlatform,
+        },
+        {
+          id: PLAY_PRODUCT_IDS.annual,
+          type: ProductType?.PAID_SUBSCRIPTION || 'paid subscription',
+          platform: googlePlatform,
+        },
+        {
+          id: PLAY_PRODUCT_IDS.lifetime,
+          type: ProductType?.NON_CONSUMABLE || 'non consumable',
+          platform: googlePlatform,
         },
       ]);
 
       const extractPrices = () => {
         const newPrices: Record<string, string> = {};
         [PLAY_PRODUCT_IDS.monthly, PLAY_PRODUCT_IDS.annual, PLAY_PRODUCT_IDS.lifetime].forEach((id) => {
-          const prod = store.get ? (store.get(id, targetPlatform) || store.get(id)) : null;
+          const prod =
+            (store.get && (store.get(id, applePlatform) || store.get(id, googlePlatform) || store.get(id))) ||
+            (store.products && store.products.find((p: any) => p.id === id));
           if (prod) {
             const offer = typeof prod.getOffer === 'function' ? prod.getOffer() : (prod.offers && prod.offers[0]);
+            const currency = offer?.pricingPhases?.[0]?.currency || prod?.pricing?.currency || prod?.currency || 'CAD';
             const priceVal =
               offer?.pricingPhases?.[0]?.price ||
               prod?.pricing?.price ||
               prod?.price ||
               (prod?.pricing && typeof prod.pricing === 'string' ? prod.pricing : null);
             if (priceVal) {
-              newPrices[id] = priceVal;
+              newPrices[id] = normalizePrice(priceVal, currency);
             }
           }
         });
 
         if (Object.keys(newPrices).length > 0) {
-          console.log('[StoreKit/PlayBilling] Extracted live prices:', newPrices);
+          console.log('[StoreKit/PlayBilling] Extracted live normalized prices:', newPrices);
           livePricesMap = { ...livePricesMap, ...newPrices };
           notifyPriceListeners();
         }
@@ -169,9 +210,10 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
         });
       }
 
-      // Initialize store
+      // Initialize store across both Apple App Store and Google Play platforms
+      const platformsToInit = [applePlatform, googlePlatform];
       const initPromise = typeof store.initialize === 'function'
-        ? store.initialize([targetPlatform])
+        ? store.initialize(platformsToInit)
         : Promise.resolve();
 
       initPromise
@@ -242,12 +284,12 @@ export const handleNativePurchase = async (plan: PlanType): Promise<PurchaseResu
 
   const Platform = cdv.Platform;
   const isIOS = isIOSPlatform();
-  const targetPlatform = isIOS 
-    ? (Platform?.APPLE_APPSTORE || 'apple-appstore')
-    : (Platform?.GOOGLE_PLAY || 'google-play');
+  const applePlatform = (Platform && Platform.APPLE_APPSTORE) || 'ios-appstore';
+  const googlePlatform = (Platform && Platform.GOOGLE_PLAY) || 'android-playstore';
+  const targetPlatform = isIOS ? applePlatform : googlePlatform;
 
   const product = store.get 
-    ? (store.get(productId, targetPlatform) || store.get(productId)) 
+    ? (store.get(productId, targetPlatform) || store.get(productId, applePlatform) || store.get(productId, googlePlatform) || store.get(productId)) 
     : (store.products && store.products.find((p: any) => p.id === productId));
   const offer = product && typeof product.getOffer === 'function' ? product.getOffer() : (product?.offers && product.offers[0]);
 

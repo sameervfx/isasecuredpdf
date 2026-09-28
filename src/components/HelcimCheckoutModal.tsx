@@ -211,7 +211,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-cyan-300">
-                          {livePrices[PLAY_PRODUCT_IDS.monthly] || currentPricing.monthly || '$3.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
+                          {livePrices[PLAY_PRODUCT_IDS.monthly] || currentPricing.monthly || 'CA$3.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
                       </div>
@@ -234,7 +234,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-emerald-300">
-                          {livePrices[PLAY_PRODUCT_IDS.annual] || currentPricing.annual || '$39.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
+                          {livePrices[PLAY_PRODUCT_IDS.annual] || currentPricing.annual || 'CA$39.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                         </div>
                         <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
                       </div>
@@ -257,7 +257,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-purple-300">
-                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || currentPricing.lifetime || '$129.99'}
+                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || currentPricing.lifetime || 'CA$129.99'}
                         </div>
                         <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
                       </div>
