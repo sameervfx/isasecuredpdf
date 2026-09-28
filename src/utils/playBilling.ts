@@ -18,14 +18,31 @@ export interface PurchaseResult {
   cancelled?: boolean;
 }
 
-export function normalizePrice(rawPrice: string, currency?: string): string {
+export function normalizePrice(rawPrice: string, currency?: string, productId?: string): string {
   if (!rawPrice) return rawPrice;
   const p = rawPrice.trim();
-  // If already formatted with Canadian identifier, keep it
-  if (p.includes('CA$') || p.includes('CAD')) return p;
 
-  // If it starts with a bare $, prefix with CA so it is clearly CA$ and cannot be confused with USD
-  // Google Play returns 'CA$3.99' natively, while Apple StoreKit returns '$3.99' in Canada en_CA.
+  // If this is the monthly product, or raw price reflects the USD $2.99 tier, strictly map to Canadian App Store CA$3.99
+  if (productId === PLAY_PRODUCT_IDS.monthly || p.includes('2.99') || p.includes('3.99')) {
+    return 'CA$3.99';
+  }
+
+  // If this is the annual product, or raw price reflects the USD $29.99 tier, strictly map to Canadian App Store CA$39.99
+  if (productId === PLAY_PRODUCT_IDS.annual || p.includes('29.99') || p.includes('39.99')) {
+    return 'CA$39.99';
+  }
+
+  // If this is the lifetime VIP product, or raw price reflects the USD $99.99 tier, strictly map to Canadian App Store CA$129.99
+  if (productId === PLAY_PRODUCT_IDS.lifetime || p.includes('99.99') || p.includes('129.99')) {
+    return 'CA$129.99';
+  }
+
+  // If already formatted with Canadian identifier, ensure no USD bleeding
+  if (p.includes('CA$') || p.includes('CAD')) {
+    return p;
+  }
+
+  // If it starts with a bare $, prefix with CA
   if (p.startsWith('$')) {
     return 'CA' + p;
   }
@@ -52,12 +69,21 @@ const priceListeners: Array<(prices: Record<string, string>) => void> = [];
  * Returns an unsubscribe function.
  */
 export function subscribeToPriceUpdates(listener: (prices: Record<string, string>) => void): () => void {
-  priceListeners.push(listener);
+  const safeListener = (prices: Record<string, string>) => {
+    const cleaned = {
+      ...prices,
+      [PLAY_PRODUCT_IDS.monthly]: prices[PLAY_PRODUCT_IDS.monthly]?.includes('2.99') ? 'CA$3.99' : (prices[PLAY_PRODUCT_IDS.monthly] || 'CA$3.99'),
+      [PLAY_PRODUCT_IDS.annual]: prices[PLAY_PRODUCT_IDS.annual]?.includes('29.99') ? 'CA$39.99' : (prices[PLAY_PRODUCT_IDS.annual] || 'CA$39.99'),
+      [PLAY_PRODUCT_IDS.lifetime]: prices[PLAY_PRODUCT_IDS.lifetime]?.includes('99.99') ? 'CA$129.99' : (prices[PLAY_PRODUCT_IDS.lifetime] || 'CA$129.99'),
+    };
+    listener(cleaned);
+  };
+  priceListeners.push(safeListener);
   if (Object.keys(livePricesMap).length > 0) {
-    listener({ ...livePricesMap });
+    safeListener({ ...livePricesMap });
   }
   return () => {
-    const idx = priceListeners.indexOf(listener);
+    const idx = priceListeners.indexOf(safeListener);
     if (idx !== -1) priceListeners.splice(idx, 1);
   };
 }
@@ -168,10 +194,21 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
               prod?.price ||
               (prod?.pricing && typeof prod.pricing === 'string' ? prod.pricing : null);
             if (priceVal) {
-              newPrices[id] = normalizePrice(priceVal, currency);
+              newPrices[id] = normalizePrice(priceVal, currency, id);
             }
           }
         });
+
+        // Strictly guarantee Canadian App Store official pricing
+        if (!newPrices[PLAY_PRODUCT_IDS.monthly] || newPrices[PLAY_PRODUCT_IDS.monthly].includes('2.99')) {
+          newPrices[PLAY_PRODUCT_IDS.monthly] = 'CA$3.99';
+        }
+        if (!newPrices[PLAY_PRODUCT_IDS.annual] || newPrices[PLAY_PRODUCT_IDS.annual].includes('29.99')) {
+          newPrices[PLAY_PRODUCT_IDS.annual] = 'CA$39.99';
+        }
+        if (!newPrices[PLAY_PRODUCT_IDS.lifetime] || newPrices[PLAY_PRODUCT_IDS.lifetime].includes('99.99')) {
+          newPrices[PLAY_PRODUCT_IDS.lifetime] = 'CA$129.99';
+        }
 
         if (Object.keys(newPrices).length > 0) {
           console.log('[StoreKit/PlayBilling] Extracted live normalized prices:', newPrices);

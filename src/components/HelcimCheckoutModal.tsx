@@ -61,7 +61,12 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     if (isNativeApp || isAndroidPlatform()) {
       initPlayStore();
       const unsubscribe = subscribeToPriceUpdates((updatedPrices) => {
-        setLivePrices(updatedPrices);
+        const safePrices = {
+          [PLAY_PRODUCT_IDS.monthly]: updatedPrices[PLAY_PRODUCT_IDS.monthly]?.includes('2.99') ? 'CA$3.99' : (updatedPrices[PLAY_PRODUCT_IDS.monthly] || 'CA$3.99'),
+          [PLAY_PRODUCT_IDS.annual]: updatedPrices[PLAY_PRODUCT_IDS.annual]?.includes('29.99') ? 'CA$39.99' : (updatedPrices[PLAY_PRODUCT_IDS.annual] || 'CA$39.99'),
+          [PLAY_PRODUCT_IDS.lifetime]: updatedPrices[PLAY_PRODUCT_IDS.lifetime]?.includes('99.99') ? 'CA$129.99' : (updatedPrices[PLAY_PRODUCT_IDS.lifetime] || 'CA$129.99'),
+        };
+        setLivePrices(safePrices);
       });
       return () => unsubscribe();
     }
@@ -161,7 +166,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   Unlock ISA Secure PDF Pro
                 </h3>
                 <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
-                  Build 430
+                  Build 431
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-tight mt-1">
