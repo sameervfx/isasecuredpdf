@@ -1,4 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
+import { applyStandardMetadata } from '../utils/pdfMetadata';
 import { pdfRenderer } from './pdfRenderer';
 
 let cachedMuPDF: typeof import('mupdf') | null = null;
@@ -117,6 +118,7 @@ export const securityService = {
     } catch (e) {
       try {
         const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        applyStandardMetadata(pdfDoc);
         structuralBytes = await pdfDoc.save({ useObjectStreams: true });
       } catch (err) {}
     }
@@ -164,6 +166,7 @@ export const securityService = {
         });
       }
 
+      applyStandardMetadata(newPdfDoc);
       const rawResampled = await newPdfDoc.save({ useObjectStreams: true });
       try {
         const mupdf = await getMuPDF();

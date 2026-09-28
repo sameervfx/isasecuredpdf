@@ -41,7 +41,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
   useEffect(() => {
     if (isOpen && activeTab === 'draw' && canvasRef.current) {
       const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (ctx) {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -56,7 +56,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
@@ -74,7 +74,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
     if (!isDrawing) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
@@ -94,7 +94,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
     if (activeTab === 'draw') {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       setHasDrawn(false);

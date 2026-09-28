@@ -6,6 +6,7 @@ import {
   Timer, Focus, Crosshair, CheckCircle2, Save
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
+import { applyStandardMetadata } from '../utils/pdfMetadata';
 import { downloadFile } from '../utils/mobileFileDownload';
 import { ExportSaveModal, ExportItem } from './ExportSaveModal';
 
@@ -45,7 +46,7 @@ const LoupeCanvas: React.FC<{
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
     const img = new Image();
@@ -258,7 +259,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     img.onload = () => {
       const canvas = liveEditCanvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
 
       if (showOriginalComparison) {
@@ -567,7 +568,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext('2d', { alpha: false });
+    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
     if (!ctx) return;
 
     ctx.imageSmoothingEnabled = true;
@@ -659,7 +660,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
 
       const cropX = Math.floor((cropLeft / 100) * img.width);
@@ -781,7 +782,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
           const canvas = document.createElement('canvas');
           canvas.width = img.width;
           canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (ctx) {
             if (format === 'jpg') {
               ctx.fillStyle = '#ffffff';
@@ -845,6 +846,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         }
       }
 
+      applyStandardMetadata(pdfDoc);
       const pdfBytes = await pdfDoc.save();
       const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
       const fileName = `${cleanBaseName}.pdf`;
@@ -895,6 +897,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         }
       }
 
+      applyStandardMetadata(pdfDoc);
       const pdfBytes = await pdfDoc.save();
       const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
       const fileName = `${cleanBaseName}.pdf`;

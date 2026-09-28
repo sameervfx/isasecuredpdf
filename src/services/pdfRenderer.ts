@@ -88,7 +88,7 @@ export class PDFRendererService {
     const offscreen = document.createElement('canvas');
     offscreen.width = targetWidth;
     offscreen.height = targetHeight;
-    const offscreenCtx = offscreen.getContext('2d', { alpha: true });
+    const offscreenCtx = offscreen.getContext('2d', { alpha: true, willReadFrequently: true });
     if (!offscreenCtx) throw new Error('Could not get 2d canvas context');
 
     offscreenCtx.fillStyle = '#ffffff';
@@ -122,7 +122,7 @@ export class PDFRendererService {
     }
 
     // ATOMIC BLIT: Transfer the newly rendered image from offscreen to DOM canvas in a single instant paint
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (ctx) {
       if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
         canvas.width = targetWidth;
@@ -152,7 +152,7 @@ export class PDFRendererService {
       const canvas = document.createElement('canvas');
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return '';
       await page.render({ canvasContext: ctx, viewport, annotationMode: AnnotationMode.DISABLE }).promise;
       return canvas.toDataURL('image/jpeg', 0.8);

@@ -1,4 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { applyStandardMetadata } from './pdfMetadata';
 
 export type TemplateType =
   | 'blank'
@@ -46,6 +47,7 @@ export async function createBlankPDF(options: CreatePDFOptions): Promise<Uint8Ar
     for (let i = 0; i < count; i++) {
       pdfDoc.addPage(dims);
     }
+    applyStandardMetadata(pdfDoc);
     return await pdfDoc.save();
   }
 
@@ -1647,5 +1649,6 @@ export async function createBlankPDF(options: CreatePDFOptions): Promise<Uint8Ar
     addFieldTo(p4, 're_seller_name_line', 370, y4 - 2, 140);
   }
 
+  applyStandardMetadata(pdfDoc);
   return await pdfDoc.save();
 }

@@ -10,6 +10,9 @@ function parseHexColor(hexColor: string) {
   return rgb(r, g, b);
 }
 
+import { applyStandardMetadata } from '../utils/pdfMetadata';
+export { applyStandardMetadata };
+
 export class PDFEngineService {
   async extractFormFields(pdfDoc: PDFDocument): Promise<AcroFormField[]> {
     const fields: AcroFormField[] = [];
@@ -480,9 +483,11 @@ export class PDFEngineService {
         reorderDoc.addPage(page);
       }
 
+      applyStandardMetadata(reorderDoc);
       return await reorderDoc.save({ useObjectStreams: false });
     }
 
+    applyStandardMetadata(pdfDoc);
     return await pdfDoc.save({ useObjectStreams: false });
   }
 
@@ -501,6 +506,7 @@ export class PDFEngineService {
       }
     }
 
+    applyStandardMetadata(mergedDoc);
     return await mergedDoc.save();
   }
 
@@ -520,6 +526,7 @@ export class PDFEngineService {
         const subDoc = await PDFDocument.create();
         const [copiedPage] = await subDoc.copyPages(pdfDoc, [i]);
         subDoc.addPage(copiedPage);
+        applyStandardMetadata(subDoc);
         const subBytes = await subDoc.save();
         filesToZip.push({
           name: `${baseName}_Page_${i + 1}.pdf`,
@@ -547,6 +554,7 @@ export class PDFEngineService {
           const subDoc = await PDFDocument.create();
           const copiedPages = await subDoc.copyPages(pdfDoc, pageIndices);
           copiedPages.forEach((p) => subDoc.addPage(p));
+          applyStandardMetadata(subDoc);
           const subBytes = await subDoc.save();
           const label = groupStr.replace(/[^a-zA-Z0-9-_]/g, '_');
           filesToZip.push({

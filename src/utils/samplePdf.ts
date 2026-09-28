@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { applyStandardMetadata } from './pdfMetadata';
 
 export async function createSamplePDF(): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
@@ -234,5 +235,6 @@ export async function createSamplePDF(): Promise<Uint8Array> {
     color: rgb(0.4, 0.4, 0.45),
   });
 
+  applyStandardMetadata(pdfDoc);
   return await pdfDoc.save();
 }

@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { isNativeMobileApp, isIOSPlatform } from './platform';
 import { detectUserCurrency, SUPPORTED_CURRENCIES } from './currencyFormatter';
 
@@ -120,10 +121,19 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
 
   if (typeof window === 'undefined') return;
 
+  // On standard web browsers (isasecuredpdf.com), completely skip the CdvPurchase attachment poll.
+  // Ensure CdvPurchase retry loops only run if running natively on Capacitor / native mobile app.
+  if (!Capacitor.isNativePlatform() && !isNativeMobileApp()) {
+    return;
+  }
+
   const cdv = getCdvPurchase();
   const store = cdv?.store || (window as any).store;
 
   if (!cdv || !store) {
+    if (!Capacitor.isNativePlatform() && !isNativeMobileApp()) {
+      return;
+    }
     if (retryCount < MAX_RETRIES) {
       retryCount++;
       console.log(`[StoreKit/PlayBilling] CdvPurchase not ready yet. Scheduling retry ${retryCount}/${MAX_RETRIES}...`);
@@ -273,7 +283,9 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
 // Auto-boot listener for Cordova / Capacitor deviceready & DOM loaded
 if (typeof window !== 'undefined') {
   const bootBilling = () => {
-    initPlayStore();
+    if (Capacitor.isNativePlatform() || isNativeMobileApp()) {
+      initPlayStore();
+    }
   };
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
