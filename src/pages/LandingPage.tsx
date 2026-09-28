@@ -201,9 +201,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span className={brandTextClass}>
               ISASecuredPDF
             </span>
-            <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-              v1.7.1 (Build 433)
-            </span>
           </div>
         </div>
 
@@ -854,11 +851,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="p-1.5 bg-cyan-500/10 text-cyan-500 rounded-lg">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+            <div className="flex items-center space-x-2">
               <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>ISASecuredPDF © 2026</span>
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full w-fit mt-1 sm:mt-0">
-                v1.7.1 • Build 433
-              </span>
             </div>
           </div>
 

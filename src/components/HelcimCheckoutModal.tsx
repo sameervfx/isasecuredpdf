@@ -164,9 +164,6 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
                   Unlock ISA Secure PDF Pro
                 </h3>
-                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
-                  Build 433
-                </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-tight mt-1">
                 100% Client-Side Air-Gapped PDF Suite • Official Store Pricing
