@@ -21,8 +21,12 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>(initialPlan);
   const [paymentTab, setPaymentTab] = useState<'helcim' | 'key'>('helcim');
   
-  // Dynamic Live Google Play Store Prices State
-  const [livePrices, setLivePrices] = useState<Record<string, string>>({});
+  // Dynamic Live Google Play / StoreKit Prices State (pre-cached with Canadian baseline)
+  const [livePrices, setLivePrices] = useState<Record<string, string>>(() => ({
+    [PLAY_PRODUCT_IDS.monthly]: 'CA$3.99',
+    [PLAY_PRODUCT_IDS.annual]: 'CA$39.99',
+    [PLAY_PRODUCT_IDS.lifetime]: 'CA$129.99',
+  }));
 
   // License Key State
   const [licenseKeyInput, setLicenseKeyInput] = useState<string>('');
@@ -152,11 +156,16 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               <CreditCard className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
-                Unlock ISA Secure PDF Pro
-              </h3>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
+                  Unlock ISA Secure PDF Pro
+                </h3>
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+                  Build 430
+                </span>
+              </div>
               <p className="text-[11px] text-slate-400 leading-tight mt-1">
-                100% Client-Side Air-Gapped PDF Suite
+                100% Client-Side Air-Gapped PDF Suite • CA$ Official Store Pricing
               </p>
               <p className="text-[10.5px] font-semibold text-emerald-400 leading-tight mt-0.5">
                 {isNativeApp ? 'Secure In-App Purchase' : 'Official Helcim Merchant Gateway'}
@@ -211,7 +220,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-cyan-300">
-                          {livePrices[PLAY_PRODUCT_IDS.monthly] || currentPricing.monthly || 'CA$3.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
+                          {livePrices[PLAY_PRODUCT_IDS.monthly] || 'CA$3.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
                       </div>
@@ -234,7 +243,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-emerald-300">
-                          {livePrices[PLAY_PRODUCT_IDS.annual] || currentPricing.annual || 'CA$39.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
+                          {livePrices[PLAY_PRODUCT_IDS.annual] || 'CA$39.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                         </div>
                         <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
                       </div>
@@ -257,7 +266,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-purple-300">
-                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || currentPricing.lifetime || 'CA$129.99'}
+                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || 'CA$129.99'}
                         </div>
                         <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
                       </div>
@@ -286,7 +295,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           {currentPricing.monthly}
                         </div>
                         <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalMonthly || '$5.99'}</span>
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalMonthly || 'CA$7.99'}</span>
                           <span className="text-slate-400 text-[10px]">{currentPricing.code}/mo</span>
                         </div>
                       </div>
@@ -317,7 +326,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           {currentPricing.annual}
                         </div>
                         <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || '$95.88'}</span>
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || 'CA$95.88'}</span>
                           <span className="text-emerald-400 font-semibold text-[10px]">{currentPricing.code}/yr</span>
                         </div>
                       </div>
@@ -343,7 +352,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           {currentPricing.lifetime}
                         </div>
                         <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalLifetime || '$249.99'}</span>
+                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalLifetime || 'CA$249.99'}</span>
                           <span className="text-purple-300 font-semibold text-[10px]">{currentPricing.code}</span>
                         </div>
                       </div>
