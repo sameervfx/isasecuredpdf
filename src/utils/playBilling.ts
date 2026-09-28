@@ -18,9 +18,37 @@ export interface PurchaseResult {
   cancelled?: boolean;
 }
 
-export function normalizePrice(rawPrice: string, _currency?: string, _productId?: string): string {
+export function normalizePrice(rawPrice: string, currency?: string, productId?: string): string {
   if (!rawPrice) return rawPrice;
-  return rawPrice.trim();
+  const p = rawPrice.trim();
+  const userCurr = detectUserCurrency();
+  const config = SUPPORTED_CURRENCIES[userCurr] || SUPPORTED_CURRENCIES.USD;
+
+  // Detect Apple TestFlight Sandbox USD default tier metadata
+  // In sandbox, SKProductsRequest returns USD base tiers ($2.99, $29.99, $99.99),
+  // regardless of the tester's Canadian/Indian/British/Australian Apple ID storefront.
+  const cleanNum = p.replace(/[^0-9.]/g, '');
+  const isUsdIndicator =
+    currency === 'USD' ||
+    (!p.includes('CA$') && !p.includes('A$') && !p.includes('£') && !p.includes('₹') && !p.includes('€') && p.includes('$'));
+  const isSandboxUsdTier = cleanNum === '2.99' || cleanNum === '29.99' || cleanNum === '99.99';
+
+  const isSandboxUsd = (currency === 'USD' || isUsdIndicator) && (isSandboxUsdTier || currency === 'USD');
+
+  // If the user's device is in Canada (CAD) or any non-USD region,
+  // do NOT allow the Apple Sandbox USD tier to overwrite their local country pricing!
+  if (userCurr !== 'USD' && isSandboxUsd) {
+    if (productId === PLAY_PRODUCT_IDS.monthly) return config.monthly;
+    if (productId === PLAY_PRODUCT_IDS.annual) return config.annual;
+    if (productId === PLAY_PRODUCT_IDS.lifetime) return config.lifetime;
+  }
+
+  // If already formatted with Canadian or other local currency, keep it clean
+  if (userCurr === 'CAD' && p.startsWith('$') && !p.startsWith('CA$')) {
+    return `CA${p}`;
+  }
+
+  return p;
 }
 
 // Initial baseline prices detected from device country before StoreKit completes loading
@@ -41,12 +69,19 @@ const priceListeners: Array<(prices: Record<string, string>) => void> = [];
  * Returns an unsubscribe function.
  */
 export function subscribeToPriceUpdates(listener: (prices: Record<string, string>) => void): () => void {
-  priceListeners.push(listener);
+  const safeListener = (prices: Record<string, string>) => {
+    const sanitized: Record<string, string> = {};
+    for (const [key, val] of Object.entries(prices)) {
+      sanitized[key] = normalizePrice(val, undefined, key);
+    }
+    listener(sanitized);
+  };
+  priceListeners.push(safeListener);
   if (Object.keys(livePricesMap).length > 0) {
-    listener({ ...livePricesMap });
+    safeListener({ ...livePricesMap });
   }
   return () => {
-    const idx = priceListeners.indexOf(listener);
+    const idx = priceListeners.indexOf(safeListener);
     if (idx !== -1) priceListeners.splice(idx, 1);
   };
 }
@@ -189,8 +224,9 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
             console.log('[StoreKit/PlayBilling] productUpdated event triggered for:', p?.id);
             if (p?.id && (p.id === PLAY_PRODUCT_IDS.monthly || p.id === PLAY_PRODUCT_IDS.annual || p.id === PLAY_PRODUCT_IDS.lifetime)) {
               const livePrice = p.pricing?.price || p.offers?.[0]?.pricingPhases?.[0]?.price || p.price;
+              const currency = p.pricing?.currency || p.offers?.[0]?.pricingPhases?.[0]?.currency || p.currency;
               if (livePrice && typeof livePrice === 'string' && livePrice.trim()) {
-                livePricesMap[p.id] = livePrice.trim();
+                livePricesMap[p.id] = normalizePrice(livePrice.trim(), currency, p.id);
                 notifyPriceListeners();
               }
             }
