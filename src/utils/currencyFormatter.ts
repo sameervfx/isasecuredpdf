@@ -27,34 +27,34 @@ export interface CurrencyConfig {
   lifetimeDiscountPercent?: string;
 }
 
-const STANDARD_CAD_CONFIG: Omit<CurrencyConfig, 'name' | 'country'> = {
-  code: 'CAD',
-  symbol: 'CA$',
-  monthly: 'CA$3.99',
-  annual: 'CA$39.99',
-  lifetime: 'CA$129.99',
-  monthlyNum: 3.99,
-  annualNum: 39.99,
-  lifetimeNum: 129.99,
-  usdMonthlyNum: 3.99,
-  usdAnnualNum: 39.99,
-  usdLifetimeNum: 129.99,
-  usdMonthlyFormatted: 'CA$3.99 CAD',
-  usdAnnualFormatted: 'CA$39.99 CAD',
-  usdLifetimeFormatted: 'CA$129.99 CAD',
-  originalMonthly: 'CA$7.99',
-  originalAnnual: 'CA$95.88',
-  originalLifetime: 'CA$249.99',
+const STANDARD_USD_CONFIG: Omit<CurrencyConfig, 'name' | 'country'> = {
+  code: 'USD',
+  symbol: '$',
+  monthly: '$2.99',
+  annual: '$29.99',
+  lifetime: '$99.99',
+  monthlyNum: 2.99,
+  annualNum: 29.99,
+  lifetimeNum: 99.99,
+  usdMonthlyNum: 2.99,
+  usdAnnualNum: 29.99,
+  usdLifetimeNum: 99.99,
+  usdMonthlyFormatted: '$2.99 USD',
+  usdAnnualFormatted: '$29.99 USD',
+  usdLifetimeFormatted: '$99.99 USD',
+  originalMonthly: '$5.99',
+  originalAnnual: '$71.88',
+  originalLifetime: '$199.99',
   monthlyDiscountPercent: '50% OFF',
   annualDiscountPercent: '58% OFF',
-  lifetimeDiscountPercent: '48% OFF',
+  lifetimeDiscountPercent: '50% OFF',
 };
 
 export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
   USD: {
-    ...STANDARD_CAD_CONFIG,
-    name: 'CAD (CA$) - North America',
-    country: 'North America & Global',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - United States',
+    country: 'United States & Global',
   },
   CAD: {
     code: 'CAD',
@@ -67,9 +67,9 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     monthlyNum: 3.99,
     annualNum: 39.99,
     lifetimeNum: 129.99,
-    usdMonthlyNum: 3.99,
-    usdAnnualNum: 39.99,
-    usdLifetimeNum: 129.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
     usdMonthlyFormatted: 'CA$3.99 CAD',
     usdAnnualFormatted: 'CA$39.99 CAD',
     usdLifetimeFormatted: 'CA$129.99 CAD',
@@ -81,98 +81,210 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     lifetimeDiscountPercent: '48% OFF',
   },
   EUR: {
-    code: 'CAD',
-    symbol: 'CA$',
-    name: 'CAD (CA$) - Canada',
-    country: 'Canada',
-    monthly: 'CA$3.99',
-    annual: 'CA$39.99',
-    lifetime: 'CA$129.99',
-    monthlyNum: 3.99,
-    annualNum: 39.99,
-    lifetimeNum: 129.99,
-    usdMonthlyNum: 3.99,
-    usdAnnualNum: 39.99,
-    usdLifetimeNum: 129.99,
-    usdMonthlyFormatted: 'CA$3.99 CAD',
-    usdAnnualFormatted: 'CA$39.99 CAD',
-    usdLifetimeFormatted: 'CA$129.99 CAD',
-    originalMonthly: 'CA$7.99',
-    originalAnnual: 'CA$95.88',
-    originalLifetime: 'CA$249.99',
+    code: 'EUR',
+    symbol: '€',
+    name: 'EUR (€) - European Union',
+    country: 'European Union',
+    monthly: '€2.99',
+    annual: '€29.99',
+    lifetime: '€89.99',
+    monthlyNum: 2.99,
+    annualNum: 29.99,
+    lifetimeNum: 89.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
+    originalMonthly: '€5.99',
+    originalAnnual: '€71.88',
+    originalLifetime: '€189.99',
     monthlyDiscountPercent: '50% OFF',
     annualDiscountPercent: '58% OFF',
-    lifetimeDiscountPercent: '48% OFF',
+    lifetimeDiscountPercent: '52% OFF',
   },
   GBP: {
-    ...STANDARD_CAD_CONFIG,
-    name: 'CAD (CA$) - United Kingdom',
+    code: 'GBP',
+    symbol: '£',
+    name: 'GBP (£) - United Kingdom',
     country: 'United Kingdom',
+    monthly: '£2.99',
+    annual: '£29.99',
+    lifetime: '£99.99',
+    monthlyNum: 2.99,
+    annualNum: 29.99,
+    lifetimeNum: 99.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
+    originalMonthly: '£5.99',
+    originalAnnual: '£59.88',
+    originalLifetime: '£199.99',
+    monthlyDiscountPercent: '50% OFF',
+    annualDiscountPercent: '50% OFF',
+    lifetimeDiscountPercent: '50% OFF',
   },
   AUD: {
-    ...STANDARD_CAD_CONFIG,
-    name: 'CAD (CA$) - Australia',
+    code: 'AUD',
+    symbol: 'A$',
+    name: 'AUD (A$) - Australia',
     country: 'Australia & New Zealand',
+    monthly: 'A$4.49',
+    annual: 'A$44.99',
+    lifetime: 'A$149.99',
+    monthlyNum: 4.49,
+    annualNum: 44.99,
+    lifetimeNum: 149.99,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
+    originalMonthly: 'A$8.99',
+    originalAnnual: 'A$107.88',
+    originalLifetime: 'A$299.99',
+    monthlyDiscountPercent: '50% OFF',
+    annualDiscountPercent: '58% OFF',
+    lifetimeDiscountPercent: '50% OFF',
   },
   INR: {
-    ...STANDARD_CAD_CONFIG,
-    name: 'CAD (CA$) - India',
+    code: 'INR',
+    symbol: '₹',
+    name: 'INR (₹) - India',
     country: 'India',
+    monthly: '₹249',
+    annual: '₹2,499',
+    lifetime: '₹7,999',
+    monthlyNum: 249,
+    annualNum: 2499,
+    lifetimeNum: 7999,
+    usdMonthlyNum: 2.99,
+    usdAnnualNum: 29.99,
+    usdLifetimeNum: 99.99,
+    usdMonthlyFormatted: '$2.99 USD',
+    usdAnnualFormatted: '$29.99 USD',
+    usdLifetimeFormatted: '$99.99 USD',
+    originalMonthly: '₹499',
+    originalAnnual: '₹5,988',
+    originalLifetime: '₹15,999',
+    monthlyDiscountPercent: '50% OFF',
+    annualDiscountPercent: '58% OFF',
+    lifetimeDiscountPercent: '50% OFF',
   },
   JPY: {
-    ...STANDARD_CAD_CONFIG,
-    name: 'CAD (CA$) - Japan',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - Japan',
     country: 'Japan',
   },
   BRL: {
-    ...STANDARD_CAD_CONFIG,
-    name: 'CAD (CA$) - Brazil',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - Brazil',
     country: 'Brazil',
   },
   MXN: {
-    ...STANDARD_CAD_CONFIG,
-    name: 'CAD (CA$) - Mexico',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - Mexico',
     country: 'Mexico',
   },
   AED: {
-    ...STANDARD_CAD_CONFIG,
-    name: 'CAD (CA$) - United Arab Emirates',
+    ...STANDARD_USD_CONFIG,
+    name: 'USD ($) - United Arab Emirates',
     country: 'UAE & Gulf States',
   },
 };
 
 /**
- * Returns user currency - defaults cleanly to CAD for North American / Canadian App Store alignment.
+ * Automatically detects the user's local currency based on device locale,
+ * browser languages, and timezone (e.g., Canadian timezones -> CAD).
  */
 export function detectUserCurrency(): string {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem('isa_user_currency', 'CAD');
-    } catch (e) {
-      // Ignore localStorage access restrictions
+  if (typeof window === 'undefined') return 'USD';
+
+  try {
+    const saved = localStorage.getItem('isa_user_currency');
+    if (saved && SUPPORTED_CURRENCIES[saved]) {
+      return saved;
     }
+
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const resolvedLocale = (Intl.DateTimeFormat().resolvedOptions().locale || '').toUpperCase();
+    const numberLocale = (new Intl.NumberFormat().resolvedOptions().locale || '').toUpperCase();
+    const languages = window.navigator.languages || [window.navigator.language || ''];
+    const langStr = languages.join(',').toUpperCase();
+    const allHints = `${timeZone} ${resolvedLocale} ${numberLocale} ${langStr}`.toUpperCase();
+
+    // Canada detection (timezones, locales, and language tags)
+    if (
+      allHints.includes('TORONTO') ||
+      allHints.includes('VANCOUVER') ||
+      allHints.includes('MONTREAL') ||
+      allHints.includes('EDMONTON') ||
+      allHints.includes('CALGARY') ||
+      allHints.includes('WINNIPEG') ||
+      allHints.includes('HALIFAX') ||
+      allHints.includes('ST_JOHNS') ||
+      allHints.includes('CANADA') ||
+      allHints.includes('REGINA') ||
+      allHints.includes('-CA') ||
+      allHints.includes('_CA') ||
+      allHints.includes('/CA')
+    ) {
+      return 'CAD';
+    }
+
+    // UK detection
+    if (timeZone.includes('London') || langStr.includes('-GB')) {
+      return 'GBP';
+    }
+
+    // India detection
+    if (timeZone.includes('Calcutta') || timeZone.includes('Kolkata') || langStr.includes('-IN')) {
+      return 'INR';
+    }
+
+    // Australia detection
+    if (timeZone.includes('Sydney') || timeZone.includes('Melbourne') || timeZone.includes('Brisbane') || timeZone.includes('Perth') || langStr.includes('-AU')) {
+      return 'AUD';
+    }
+
+    // Eurozone detection
+    if (
+      timeZone.includes('Paris') ||
+      timeZone.includes('Berlin') ||
+      timeZone.includes('Rome') ||
+      timeZone.includes('Madrid') ||
+      timeZone.includes('Amsterdam') ||
+      timeZone.includes('Brussels') ||
+      timeZone.includes('Vienna')
+    ) {
+      return 'EUR';
+    }
+  } catch (e) {
+    // fallback to USD
   }
-  return 'CAD';
+
+  return 'USD';
 }
 
 /**
  * Saves user currency choice to localStorage
  */
 export function saveUserCurrency(currencyCode: string): void {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem('isa_user_currency', currencyCode || 'CAD');
-    } catch (e) {
-      // Ignore
-    }
+  if (SUPPORTED_CURRENCIES[currencyCode]) {
+    localStorage.setItem('isa_user_currency', currencyCode);
   }
 }
 
 /**
  * Gets pricing details for a given plan and currency code
  */
-export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', currencyCode: string = 'CAD') {
-  const currency = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.CAD;
+export function getLocalizedPricing(plan: 'monthly' | 'annual' | 'lifetime', currencyCode: string = 'USD') {
+  const currency = SUPPORTED_CURRENCIES[currencyCode] || SUPPORTED_CURRENCIES.USD;
   const planKey = plan.charAt(0).toUpperCase() + plan.slice(1);
   return {
     formatted: currency[plan],

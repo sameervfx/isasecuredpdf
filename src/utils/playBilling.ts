@@ -1,5 +1,5 @@
-// Mobile In-App Billing Integration Utility (Google Play & Apple StoreKit)
 import { isNativeMobileApp, isIOSPlatform } from './platform';
+import { detectUserCurrency, SUPPORTED_CURRENCIES } from './currencyFormatter';
 
 export const PLAY_PRODUCT_IDS = {
   monthly: 'isasecuredpdf_pro_monthly',
@@ -18,72 +18,35 @@ export interface PurchaseResult {
   cancelled?: boolean;
 }
 
-export function normalizePrice(rawPrice: string, currency?: string, productId?: string): string {
+export function normalizePrice(rawPrice: string, _currency?: string, _productId?: string): string {
   if (!rawPrice) return rawPrice;
-  const p = rawPrice.trim();
-
-  // If this is the monthly product, or raw price reflects the USD $2.99 tier, strictly map to Canadian App Store CA$3.99
-  if (productId === PLAY_PRODUCT_IDS.monthly || p.includes('2.99') || p.includes('3.99')) {
-    return 'CA$3.99';
-  }
-
-  // If this is the annual product, or raw price reflects the USD $29.99 tier, strictly map to Canadian App Store CA$39.99
-  if (productId === PLAY_PRODUCT_IDS.annual || p.includes('29.99') || p.includes('39.99')) {
-    return 'CA$39.99';
-  }
-
-  // If this is the lifetime VIP product, or raw price reflects the USD $99.99 tier, strictly map to Canadian App Store CA$129.99
-  if (productId === PLAY_PRODUCT_IDS.lifetime || p.includes('99.99') || p.includes('129.99')) {
-    return 'CA$129.99';
-  }
-
-  // If already formatted with Canadian identifier, ensure no USD bleeding
-  if (p.includes('CA$') || p.includes('CAD')) {
-    return p;
-  }
-
-  // If it starts with a bare $, prefix with CA
-  if (p.startsWith('$')) {
-    return 'CA' + p;
-  }
-
-  // If currency is CAD or default, ensure it has CA$
-  if (currency === 'CAD' || !currency) {
-    return `CA$${p}`;
-  }
-
-  return p;
+  return rawPrice.trim();
 }
 
-// Global cached prices map with Canadian baseline values (matching Google Play / Apple StoreKit in CAD)
+// Initial baseline prices detected from device country before StoreKit completes loading
+const initialCurrency = detectUserCurrency();
+const initialConfig = SUPPORTED_CURRENCIES[initialCurrency] || SUPPORTED_CURRENCIES.USD;
+
+// Global cached prices map initialized dynamically to user's country, updated live by Apple StoreKit
 let livePricesMap: Record<string, string> = {
-  [PLAY_PRODUCT_IDS.monthly]: 'CA$3.99',
-  [PLAY_PRODUCT_IDS.annual]: 'CA$39.99',
-  [PLAY_PRODUCT_IDS.lifetime]: 'CA$129.99',
+  [PLAY_PRODUCT_IDS.monthly]: initialConfig.monthly,
+  [PLAY_PRODUCT_IDS.annual]: initialConfig.annual,
+  [PLAY_PRODUCT_IDS.lifetime]: initialConfig.lifetime,
 };
 let isStoreInitialized = false;
 const priceListeners: Array<(prices: Record<string, string>) => void> = [];
 
 /**
- * Subscribe to live Play Store / StoreKit price updates.
+ * Subscribe to live Apple StoreKit / In-App Purchase price updates.
  * Returns an unsubscribe function.
  */
 export function subscribeToPriceUpdates(listener: (prices: Record<string, string>) => void): () => void {
-  const safeListener = (prices: Record<string, string>) => {
-    const cleaned = {
-      ...prices,
-      [PLAY_PRODUCT_IDS.monthly]: prices[PLAY_PRODUCT_IDS.monthly]?.includes('2.99') ? 'CA$3.99' : (prices[PLAY_PRODUCT_IDS.monthly] || 'CA$3.99'),
-      [PLAY_PRODUCT_IDS.annual]: prices[PLAY_PRODUCT_IDS.annual]?.includes('29.99') ? 'CA$39.99' : (prices[PLAY_PRODUCT_IDS.annual] || 'CA$39.99'),
-      [PLAY_PRODUCT_IDS.lifetime]: prices[PLAY_PRODUCT_IDS.lifetime]?.includes('99.99') ? 'CA$129.99' : (prices[PLAY_PRODUCT_IDS.lifetime] || 'CA$129.99'),
-    };
-    listener(cleaned);
-  };
-  priceListeners.push(safeListener);
+  priceListeners.push(listener);
   if (Object.keys(livePricesMap).length > 0) {
-    safeListener({ ...livePricesMap });
+    listener({ ...livePricesMap });
   }
   return () => {
-    const idx = priceListeners.indexOf(safeListener);
+    const idx = priceListeners.indexOf(listener);
     if (idx !== -1) priceListeners.splice(idx, 1);
   };
 }
@@ -199,19 +162,8 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
           }
         });
 
-        // Strictly guarantee Canadian App Store official pricing
-        if (!newPrices[PLAY_PRODUCT_IDS.monthly] || newPrices[PLAY_PRODUCT_IDS.monthly].includes('2.99')) {
-          newPrices[PLAY_PRODUCT_IDS.monthly] = 'CA$3.99';
-        }
-        if (!newPrices[PLAY_PRODUCT_IDS.annual] || newPrices[PLAY_PRODUCT_IDS.annual].includes('29.99')) {
-          newPrices[PLAY_PRODUCT_IDS.annual] = 'CA$39.99';
-        }
-        if (!newPrices[PLAY_PRODUCT_IDS.lifetime] || newPrices[PLAY_PRODUCT_IDS.lifetime].includes('99.99')) {
-          newPrices[PLAY_PRODUCT_IDS.lifetime] = 'CA$129.99';
-        }
-
         if (Object.keys(newPrices).length > 0) {
-          console.log('[StoreKit/PlayBilling] Extracted live normalized prices:', newPrices);
+          console.log('[StoreKit/PlayBilling] Extracted live Apple StoreKit prices:', newPrices);
           livePricesMap = { ...livePricesMap, ...newPrices };
           notifyPriceListeners();
         }
@@ -233,8 +185,15 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
         });
 
         if (typeof store.when().productUpdated === 'function') {
-          store.when().productUpdated(() => {
-            console.log('[StoreKit/PlayBilling] productUpdated event triggered');
+          store.when().productUpdated((p: any) => {
+            console.log('[StoreKit/PlayBilling] productUpdated event triggered for:', p?.id);
+            if (p?.id && (p.id === PLAY_PRODUCT_IDS.monthly || p.id === PLAY_PRODUCT_IDS.annual || p.id === PLAY_PRODUCT_IDS.lifetime)) {
+              const livePrice = p.pricing?.price || p.offers?.[0]?.pricingPhases?.[0]?.price || p.price;
+              if (livePrice && typeof livePrice === 'string' && livePrice.trim()) {
+                livePricesMap[p.id] = livePrice.trim();
+                notifyPriceListeners();
+              }
+            }
             extractPrices();
           });
         }
@@ -247,8 +206,9 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
         });
       }
 
-      // Initialize store across both Apple App Store and Google Play platforms
-      const platformsToInit = [applePlatform, googlePlatform];
+      // Initialize store with active device platform
+      const isIOS = isIOSPlatform();
+      const platformsToInit = isIOS ? [applePlatform] : [googlePlatform];
       const initPromise = typeof store.initialize === 'function'
         ? store.initialize(platformsToInit)
         : Promise.resolve();

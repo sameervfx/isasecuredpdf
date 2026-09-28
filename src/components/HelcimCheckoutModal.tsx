@@ -21,11 +21,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>(initialPlan);
   const [paymentTab, setPaymentTab] = useState<'helcim' | 'key'>('helcim');
   
-  // Dynamic Live Google Play / StoreKit Prices State (pre-cached with Canadian baseline)
+  const detectedCurr = detectUserCurrency();
+  const initialPricing = SUPPORTED_CURRENCIES[detectedCurr] || SUPPORTED_CURRENCIES.USD;
+
+  // Dynamic Live Apple StoreKit Prices State (initialized from detected user country, updated live by StoreKit)
   const [livePrices, setLivePrices] = useState<Record<string, string>>(() => ({
-    [PLAY_PRODUCT_IDS.monthly]: 'CA$3.99',
-    [PLAY_PRODUCT_IDS.annual]: 'CA$39.99',
-    [PLAY_PRODUCT_IDS.lifetime]: 'CA$129.99',
+    [PLAY_PRODUCT_IDS.monthly]: initialPricing.monthly,
+    [PLAY_PRODUCT_IDS.annual]: initialPricing.annual,
+    [PLAY_PRODUCT_IDS.lifetime]: initialPricing.lifetime,
   }));
 
   // License Key State
@@ -35,12 +38,13 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   // Processing State
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  const [currencyCode, setCurrencyCode] = useState<string>('CAD');
+  const [currencyCode, setCurrencyCode] = useState<string>(() => detectedCurr);
 
   const [isNativeApp, setIsNativeApp] = useState<boolean>(() => isAndroidPlatform() || isNativeMobileApp() || isIOSPlatform());
 
   useEffect(() => {
-    setCurrencyCode(detectUserCurrency());
+    const curr = detectUserCurrency();
+    setCurrencyCode(curr);
     const verifyPlatform = () => {
       if (isAndroidPlatform() || isNativeMobileApp() || isIOSPlatform()) {
         setIsNativeApp(true);
@@ -61,12 +65,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     if (isNativeApp || isAndroidPlatform()) {
       initPlayStore();
       const unsubscribe = subscribeToPriceUpdates((updatedPrices) => {
-        const safePrices = {
-          [PLAY_PRODUCT_IDS.monthly]: updatedPrices[PLAY_PRODUCT_IDS.monthly]?.includes('2.99') ? 'CA$3.99' : (updatedPrices[PLAY_PRODUCT_IDS.monthly] || 'CA$3.99'),
-          [PLAY_PRODUCT_IDS.annual]: updatedPrices[PLAY_PRODUCT_IDS.annual]?.includes('29.99') ? 'CA$39.99' : (updatedPrices[PLAY_PRODUCT_IDS.annual] || 'CA$39.99'),
-          [PLAY_PRODUCT_IDS.lifetime]: updatedPrices[PLAY_PRODUCT_IDS.lifetime]?.includes('99.99') ? 'CA$129.99' : (updatedPrices[PLAY_PRODUCT_IDS.lifetime] || 'CA$129.99'),
-        };
-        setLivePrices(safePrices);
+        setLivePrices((prev) => ({ ...prev, ...updatedPrices }));
       });
       return () => unsubscribe();
     }
@@ -166,11 +165,11 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   Unlock ISA Secure PDF Pro
                 </h3>
                 <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
-                  Build 431
+                  Build 432
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 leading-tight mt-1">
-                100% Client-Side Air-Gapped PDF Suite • CA$ Official Store Pricing
+                100% Client-Side Air-Gapped PDF Suite • Official Store Pricing
               </p>
               <p className="text-[10.5px] font-semibold text-emerald-400 leading-tight mt-0.5">
                 {isNativeApp ? 'Secure In-App Purchase' : 'Official Helcim Merchant Gateway'}
@@ -225,7 +224,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-cyan-300">
-                          {livePrices[PLAY_PRODUCT_IDS.monthly] || 'CA$3.99'} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
+                          {livePrices[PLAY_PRODUCT_IDS.monthly] || initialPricing.monthly} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
                       </div>
@@ -248,7 +247,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-emerald-300">
-                          {livePrices[PLAY_PRODUCT_IDS.annual] || 'CA$39.99'} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
+                          {livePrices[PLAY_PRODUCT_IDS.annual] || initialPricing.annual} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
                         </div>
                         <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
                       </div>
@@ -271,7 +270,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </span>
                         </div>
                         <div className="my-1 text-xs sm:text-sm font-extrabold text-purple-300">
-                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || 'CA$129.99'}
+                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || initialPricing.lifetime}
                         </div>
                         <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
                       </div>
