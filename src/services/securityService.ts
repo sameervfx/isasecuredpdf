@@ -152,6 +152,7 @@ export const securityService = {
 
       for (let i = 0; i < numPages; i++) {
         const canvas = document.createElement('canvas');
+        canvas.getContext('2d', { willReadFrequently: true });
         const dimensions = await pdfRenderer.renderPageToCanvas(i, canvas, scale, 0, pdfBytes);
         const dataUrl = canvas.toDataURL('image/jpeg', jpegQuality);
 

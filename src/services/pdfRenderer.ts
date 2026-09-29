@@ -1,5 +1,14 @@
-import { getDocument, GlobalWorkerOptions, PDFDocumentProxy, AnnotationMode } from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist';
+import { getDocument, GlobalWorkerOptions, PDFDocumentProxy, AnnotationMode, VerbosityLevel } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
+
+// Silence non-fatal PDF.js worker & console formatting warnings
+try {
+  const libRef: any = pdfjsLib;
+  if (libRef && typeof libRef === 'object') {
+    libRef.verbosity = VerbosityLevel.ERRORS;
+  }
+} catch (e) {}
 
 export class PDFRendererService {
   private pdfDoc: PDFDocumentProxy | null = null;
@@ -46,7 +55,11 @@ export class PDFRendererService {
     this.ensureWorker();
     this.cancelAllRenders();
     const copyData = data.slice(0);
-    const loadingTask = getDocument({ data: copyData, password });
+    const loadingTask = getDocument({
+      data: copyData,
+      password,
+      verbosity: VerbosityLevel.ERRORS,
+    });
     this.pdfDoc = await loadingTask.promise;
     return this.pdfDoc;
   }
