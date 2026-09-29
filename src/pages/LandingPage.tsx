@@ -37,6 +37,7 @@ import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/pl
 import { handleNativePurchase, restoreNativePurchases, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
 import appLogo from '../assets/app_logo.jpg';
+import { ReviewsSection } from '../components/ReviewsSection';
 
 interface LandingPageProps {
   onLaunchEditor: () => void;
@@ -209,6 +210,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className={navLinkClass}>Features</a>
           <a href="#security" onClick={(e) => scrollToSection(e, 'security')} className={navLinkClass}>Security & Compliance</a>
           <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className={navLinkClass}>Pricing</a>
+          <a href="#reviews" onClick={(e) => scrollToSection(e, 'reviews')} className={navLinkClass}>Reviews</a>
           <a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className={navLinkClass}>FAQ</a>
         </div>
 
@@ -301,6 +303,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-cyan-500/60 hover:text-cyan-300 transition flex items-center justify-between shadow-md active:scale-98"
               >
                 <span>💎 Pricing</span>
+                <span className="text-xs text-slate-500 font-mono">→</span>
+              </a>
+
+              <a
+                href="#reviews"
+                onClick={(e) => {
+                  scrollToSection(e, 'reviews');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="p-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-cyan-500/60 hover:text-cyan-300 transition flex items-center justify-between shadow-md active:scale-98"
+              >
+                <span>⭐ Reviews</span>
                 <span className="text-xs text-slate-500 font-mono">→</span>
               </a>
 
@@ -795,6 +809,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         </div>
       </section>
+
+      {/* 5.5 Verified Reviews & Social Proof */}
+      <ReviewsSection
+        isLight={isLight}
+        sectionBgClass={sectionBgClass}
+        cardBgClass={cardBgClass}
+        cardTitleClass={cardTitleClass}
+        cardDescClass={cardDescClass}
+        headingTextClass={headingTextClass}
+      />
 
       {/* 6. FAQ Section */}
       <section id="faq" className="scroll-mt-24 py-20 px-4 lg:px-8 max-w-4xl mx-auto w-full">
