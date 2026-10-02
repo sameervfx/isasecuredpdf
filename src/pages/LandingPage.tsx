@@ -29,7 +29,8 @@ import {
   BookOpen,
   Camera,
   Menu,
-  Star
+  Star,
+  Smartphone
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 import { SUPPORTED_CURRENCIES, detectUserCurrency } from '../utils/currencyFormatter';
@@ -871,16 +872,47 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* 7. Comprehensive Footer */}
       <footer className={`mt-auto ${isLight ? 'bg-white border-t border-slate-200 text-slate-800' : 'bg-slate-950 border-t border-slate-800/80 text-slate-400'} px-4 lg:px-8 py-10`}>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs font-normal">
-          <div className="flex items-center space-x-3">
-            <div className="p-1.5 bg-cyan-500/10 text-cyan-500 rounded-lg">
-              <ShieldCheck className="w-5 h-5" />
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-1.5 bg-cyan-500/10 text-cyan-500 rounded-lg">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>ISASecuredPDF © 2026</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>ISASecuredPDF © 2026</span>
-            </div>
+
+            {/* Google Play Store Badge Button */}
+            <a
+              href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-2.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-white rounded-xl border border-slate-800 hover:border-emerald-500/60 transition shadow-md group"
+              title="Download ISASecuredPDF on Google Play Store"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M3.6 1.4L13.8 11.6 3.6 21.8C3.2 21.4 3 20.8 3 20V3.2C3 2.4 3.2 1.8 3.6 1.4z" />
+                <path fill="#FBBC04" d="M17.4 8L13.8 11.6 17.4 15.2 21.4 12.9C22.2 12.4 22.2 11.6 21.4 11.1L17.4 8z" />
+                <path fill="#34A853" d="M13.8 11.6L3.6 21.8C4.1 22.3 4.8 22.4 5.6 22L17.4 15.2 13.8 11.6z" />
+                <path fill="#EA4335" d="M3.6 1.4C4.1 0.9 4.8 1 5.6 1.4L17.4 8.2 13.8 11.8 3.6 1.4z" />
+              </svg>
+              <div className="text-left leading-none">
+                <span className="text-[8px] uppercase tracking-wider text-slate-400 font-semibold block group-hover:text-emerald-400 transition">GET IT ON</span>
+                <span className="text-xs font-bold text-white tracking-tight">Google Play</span>
+              </div>
+            </a>
           </div>
 
           <div className={`flex flex-wrap items-center justify-center gap-6 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
+            <a
+              href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:text-emerald-300 font-semibold transition flex items-center space-x-1"
+            >
+              <span>Android App (Google Play)</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
             {isNativeApp && (
               <button
                 onClick={async () => {
@@ -1048,7 +1080,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div className="flex items-center space-x-2.5">
                 <Download className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-base font-bold text-white">Download Desktop Apps</h3>
+                <h3 className="text-base font-bold text-white">Download Apps & Platforms</h3>
               </div>
               <button onClick={() => setIsDownloadModalOpen(false)} className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
                 <X className="w-5 h-5" />
@@ -1058,10 +1090,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Desktop Subscription Benefit Badge */}
             <div className="px-3 py-2 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl flex items-center space-x-2 text-xs font-semibold text-cyan-300">
               <Sparkles className="w-4 h-4 text-yellow-300 flex-shrink-0" />
-              <span>Includes Standalone Offline Desktop Apps (.exe & .dmg)</span>
+              <span>Cross-Platform • Mobile & Offline Standalone Desktop</span>
             </div>
 
             <div className="space-y-3">
+              {/* Android Google Play Store Card */}
+              <a
+                href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-between p-4 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-xl transition group text-left"
+              >
+                <div className="flex items-center space-x-3">
+                  <Smartphone className="w-5 h-5 text-emerald-400" />
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center space-x-2">
+                      <span>Android App on Google Play</span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded font-semibold">Active</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">Official Store • 100% On-Device Privacy</div>
+                  </div>
+                </div>
+                <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition" />
+              </a>
+
               <button
                 onClick={() => handleDesktopDownload('windows')}
                 className="w-full flex items-center justify-between p-4 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-xl transition group text-left"
