@@ -59,6 +59,18 @@ const TESTIMONIALS: Testimonial[] = [
     initials: 'AM'
   },
   {
+    name: 'Syed Ala',
+    role: 'Verified Android User',
+    device: 'Redmi Note 10T 5G',
+    source: 'playstore',
+    stars: 5,
+    highlight: 'Modern Technology & Precious Privacy Sector',
+    quote: "Nice application, easy to use... Developer already knows about the precious privacy sector, that's why they worked really well on it. Keep growing guys! Perfect example of modern technology and privacy with premium features.",
+    verified: true,
+    avatarBg: 'from-rose-500 to-pink-600',
+    initials: 'SA'
+  },
+  {
     name: 'Abdullah Mushtaq',
     role: 'VFX Paint Artist',
     source: 'linkedin',
