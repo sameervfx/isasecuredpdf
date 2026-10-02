@@ -904,15 +904,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <div className={`flex flex-wrap items-center justify-center gap-6 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
-            <a
-              href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-emerald-400 hover:text-emerald-300 font-semibold transition flex items-center space-x-1"
-            >
-              <span>Android App (Google Play)</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
             {isNativeApp && (
               <button
                 onClick={async () => {
