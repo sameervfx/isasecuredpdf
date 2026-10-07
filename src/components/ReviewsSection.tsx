@@ -71,6 +71,18 @@ const TESTIMONIALS: Testimonial[] = [
     initials: 'SA'
   },
   {
+    name: 'Shivam Srivastava',
+    role: 'Verified Android User',
+    device: 'OnePlus Nord2 5G',
+    source: 'playstore',
+    stars: 5,
+    highlight: 'User-Friendly & Clean Interface',
+    quote: 'User-friendly app...clean UI',
+    verified: true,
+    avatarBg: 'from-sky-500 to-indigo-600',
+    initials: 'SS'
+  },
+  {
     name: 'Abdullah Mushtaq',
     role: 'VFX Paint Artist',
     source: 'linkedin',
