@@ -454,48 +454,6 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       <a href="https://isasecuredpdf.com/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Privacy Policy</a>
                     </div>
                   </div>
-
-                  {/* License Key Secondary Activation option for Web Purchasers */}
-                  <div className="pt-2 border-t border-slate-800/80">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentTab(paymentTab === 'key' ? 'helcim' : 'key')}
-                      className="w-full text-center text-xs text-purple-300 hover:text-purple-200 font-semibold py-1 transition flex items-center justify-center space-x-1.5"
-                    >
-                      <Key className="w-3.5 h-3.5 text-yellow-400" />
-                      <span>
-                        {paymentTab === 'key'
-                          ? 'Back to Store Purchase'
-                          : isIOSPlatform()
-                          ? 'Have a License Key? Redeem Here →'
-                          : 'Already bought on web? Redeem License Key →'}
-                      </span>
-                    </button>
-
-                    {paymentTab === 'key' && (
-                      <form onSubmit={handleVerifyLicenseKey} className="mt-3 space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-purple-500/30 animate-fadeIn">
-                        <div className="flex items-center space-x-2 text-purple-300 font-bold text-xs">
-                          <Key className="w-4 h-4 text-yellow-400" />
-                          <span>Activate Purchased License Key</span>
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="e.g. ISA-PRO-8942-X920"
-                          value={licenseKeyInput}
-                          onChange={(e) => setLicenseKeyInput(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition"
-                        />
-                        {keyError && <p className="text-[11px] text-rose-400 font-medium">{keyError}</p>}
-                        <button
-                          type="submit"
-                          disabled={isProcessing}
-                          className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-xs rounded-xl transition transform active:scale-95 flex items-center justify-center space-x-2"
-                        >
-                          <span>Activate Pro Access</span>
-                        </button>
-                      </form>
-                    )}
-                  </div>
                 </div>
               ) : !isAndroidPlatform() ? (
                 /* Condition 2: Web Browser Environment (Official Helcim Hosted Gateway Checkout) */
