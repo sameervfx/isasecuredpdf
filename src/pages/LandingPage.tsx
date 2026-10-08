@@ -217,14 +217,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Right: Desktop Buttons & Mobile Hamburger Button */}
         <div className="flex items-center space-x-1.5 sm:space-x-3 flex-shrink-0">
-          <button
-            onClick={() => setIsDownloadModalOpen(true)}
-            title="Download Standalone Desktop Apps (.zip for Windows/macOS)"
-            className="hidden md:flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/50 rounded-xl text-xs font-semibold text-cyan-300 transition active:scale-95 shadow"
-          >
-            <Monitor className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-bold">Desktop Apps</span>
-          </button>
+          {!isNativeApp && (
+            <button
+              onClick={() => setIsDownloadModalOpen(true)}
+              title="Download Standalone Desktop Apps (.zip for Windows/macOS)"
+              className="hidden md:flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/50 rounded-xl text-xs font-semibold text-cyan-300 transition active:scale-95 shadow"
+            >
+              <Monitor className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-bold">Desktop Apps</span>
+            </button>
+          )}
 
           {onOpenUserGuide && (
             <button
@@ -332,17 +334,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </a>
             </div>
 
-            <div className="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2 text-xs font-extrabold">
-              <button
-                onClick={() => {
-                  setIsDownloadModalOpen(true);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="p-3 bg-slate-900 text-cyan-300 hover:text-white rounded-xl border border-slate-800 hover:border-cyan-500/60 flex items-center justify-center space-x-2 shadow-md transition active:scale-95"
-              >
-                <Monitor className="w-4 h-4 text-cyan-400" />
-                <span>💻 Desktop Apps</span>
-              </button>
+            <div className={`pt-2 border-t border-slate-800 ${isNativeApp ? 'grid grid-cols-1' : 'grid grid-cols-2'} gap-2 text-xs font-extrabold`}>
+              {!isNativeApp && (
+                <button
+                  onClick={() => {
+                    setIsDownloadModalOpen(true);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="p-3 bg-slate-900 text-cyan-300 hover:text-white rounded-xl border border-slate-800 hover:border-cyan-500/60 flex items-center justify-center space-x-2 shadow-md transition active:scale-95"
+                >
+                  <Monitor className="w-4 h-4 text-cyan-400" />
+                  <span>💻 Desktop Apps</span>
+                </button>
+              )}
 
               {onOpenUserGuide && (
                 <button
@@ -886,8 +890,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Google Play Store Badge Button (Rendered on Web and Android only; hidden on iOS per Apple Guideline 2.3.10) */}
-            {!isIOSPlatform() && (
+            {/* Google Play Store Badge Button (Rendered on Web and Android only; hidden on iOS per Apple Guideline 2.3.10 and completely on native app) */}
+            {!isNativeApp && !isIOSPlatform() && (
               <a
                 href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
                 target="_blank"
@@ -1072,8 +1076,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       )}
 
-      {/* DESKTOP DOWNLOAD MODAL */}
-      {isDownloadModalOpen && (
+      {/* DESKTOP DOWNLOAD MODAL (Rendered on Web only; hidden inside native mobile apps) */}
+      {!isNativeApp && isDownloadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
           <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
