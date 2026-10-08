@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Star, X, MessageSquare, ThumbsUp, Heart, ExternalLink, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { isIOSPlatform } from '../utils/platform';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -17,14 +18,16 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
   if (!isOpen) return null;
 
   const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.isasecuredpdf.app';
+  const APP_STORE_URL = 'https://apps.apple.com/app/isasecuredpdf/id6742323863?action=write-review';
+  const storeUrl = isIOSPlatform() ? APP_STORE_URL : PLAY_STORE_URL;
 
   const handleStarClick = (num: number) => {
     setRating(num);
   };
 
-  const handleGooglePlayReview = () => {
+  const handleStoreReview = () => {
     localStorage.setItem('isa_has_rated', 'true');
-    window.open(PLAY_STORE_URL, '_blank', 'noopener,noreferrer');
+    window.open(storeUrl, '_blank', 'noopener,noreferrer');
     setSubmittedType('store');
     setIsSubmitted(true);
     if (onRated) onRated();
@@ -123,15 +126,17 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
             {rating >= 4 && (
               <div className="space-y-3 animate-fade-in pt-1">
                 <div className="p-3 bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs rounded-xl font-semibold">
-                  🌟 Wow, 5 Stars! Would you mind leaving a quick review on Google Play Store?
+                  {isIOSPlatform()
+                    ? '🌟 Wow, 5 Stars! Would you mind leaving a quick review on the App Store?'
+                    : '🌟 Wow, 5 Stars! Would you mind leaving a quick review on Google Play Store?'}
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleGooglePlayReview}
+                  onClick={handleStoreReview}
                   className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xl shadow-amber-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2"
                 >
-                  <span>Leave 5-Star Review on Google Play</span>
+                  <span>{isIOSPlatform() ? 'Leave 5-Star Review on App Store' : 'Leave 5-Star Review on Google Play'}</span>
                   <ExternalLink className="w-4 h-4" />
                 </button>
               </div>

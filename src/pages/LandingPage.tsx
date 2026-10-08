@@ -1000,23 +1000,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <h4 className="font-bold text-white mb-1">1. How to Cancel Your Subscription</h4>
                     <p className="mb-2">You can cancel your recurring subscription at any time with a single click:</p>
                     <div className="space-y-2.5">
-                      <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
-                        <strong className="text-cyan-400 block">🤖 Android (Google Play Subscriptions):</strong>
-                        <p className="text-[11px] text-slate-400">Manage or cancel your Google Play subscription directly in your Google Account:</p>
-                        <a
-                          href="https://play.google.com/store/account/subscriptions"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-1 px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 font-bold rounded-lg transition inline-flex items-center space-x-1.5 text-xs block text-center"
-                        >
-                          <span>🔗 Manage Google Play Subscriptions ↗</span>
-                        </a>
-                      </div>
-
                       <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-1">
                         <strong className="text-cyan-400 block">🍏 iOS (Apple App Store):</strong>
                         <p className="text-[11px] text-slate-400">Open iOS <strong>Settings app</strong> → Tap Apple ID Name → <strong>Subscriptions</strong> → <strong>Cancel Subscription</strong>.</p>
                       </div>
+
+                      {!isIOSPlatform() && (
+                        <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                          <strong className="text-cyan-400 block">🤖 Android (Google Play Subscriptions):</strong>
+                          <p className="text-[11px] text-slate-400">Manage or cancel your Google Play subscription directly in your Google Account:</p>
+                          <a
+                            href="https://play.google.com/store/account/subscriptions"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 font-bold rounded-lg transition inline-flex items-center space-x-1.5 text-xs block text-center"
+                          >
+                            <span>🔗 Manage Google Play Subscriptions ↗</span>
+                          </a>
+                        </div>
+                      )}
 
                       <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
                         <strong className="text-cyan-400 block">💳 Web & Desktop Purchases:</strong>

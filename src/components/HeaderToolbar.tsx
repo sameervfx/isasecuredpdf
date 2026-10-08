@@ -63,6 +63,7 @@ import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
 import { getRecentFiles, clearRecentFiles, RecentFileItem } from '../utils/recentFiles';
 import { ExportFormatType } from './PremiumExportModal';
+import { isIOSPlatform } from '../utils/platform';
 import appLogo from '../assets/app_logo.png';
 
 interface HeaderToolbarProps {
@@ -1610,7 +1611,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             {onOpenReviewModal && (
               <button
                 onClick={onOpenReviewModal}
-                title="Rate ISASecured PDF 5-Stars on Google Play Store"
+                title={isIOSPlatform() ? "Rate ISASecured PDF 5-Stars on App Store" : "Rate ISASecured PDF 5-Stars on Google Play Store"}
                 className="hidden 2xl:flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-extrabold rounded-lg sm:rounded-xl border border-amber-500/40 transition active:scale-95 shrink-0"
               >
                 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />

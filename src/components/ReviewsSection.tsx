@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Star, ShieldCheck, CheckCircle2, ExternalLink, MessageSquare, Linkedin, Smartphone } from 'lucide-react';
+import { isIOSPlatform } from '../utils/platform';
 
 interface ReviewsSectionProps {
   isLight: boolean;
@@ -60,7 +61,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: 'Syed Ala',
-    role: 'Verified Android User',
+    role: 'Verified App User',
     device: 'Redmi Note 10T 5G',
     source: 'playstore',
     stars: 5,
@@ -72,7 +73,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: 'Shivam Srivastava',
-    role: 'Verified Android User',
+    role: 'Verified App User',
     device: 'OnePlus Nord2 5G',
     source: 'playstore',
     stars: 5,
@@ -117,7 +118,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: 'Irtiza Ali',
-    role: 'Verified Android User',
+    role: 'Verified App User',
     device: 'Xiaomi Redmi Note 7 Pro',
     source: 'playstore',
     stars: 5,
@@ -140,7 +141,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: 'Fuzal Ali',
-    role: 'Verified Android User',
+    role: 'Verified App User',
     device: 'Samsung Galaxy S25 Ultra',
     source: 'playstore',
     stars: 5,
@@ -229,7 +230,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               }`}
             >
               <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Google Play 5.0 ★ Reviews</span>
+              <span>{isIOSPlatform() ? 'Verified App 5.0 ★ Reviews' : 'Google Play 5.0 ★ Reviews'}</span>
             </button>
           </div>
         </div>
@@ -295,7 +296,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               <div className="mt-5 pt-3 border-t border-slate-800/40 flex items-center justify-between text-[10px] text-slate-500">
                 <span>{t.device ? `Device: ${t.device}` : 'Enterprise Endorsement'}</span>
                 <span className="font-semibold text-slate-400">
-                  {t.source === 'linkedin' ? 'LinkedIn Verified' : 'Google Play Store'}
+                  {t.source === 'linkedin' ? 'LinkedIn Verified' : isIOSPlatform() ? 'Verified Store Review' : 'Google Play Store'}
                 </span>
               </div>
             </div>
@@ -321,16 +322,18 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
             </div>
           </div>
 
-          <a
-            href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center space-x-2 flex-shrink-0"
-          >
-            <Star className="w-4 h-4 fill-slate-950" />
-            <span>View All 5-Star Reviews on Play Store</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+          {!isIOSPlatform() && (
+            <a
+              href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center space-x-2 flex-shrink-0"
+            >
+              <Star className="w-4 h-4 fill-slate-950" />
+              <span>View All 5-Star Reviews on Play Store</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
         </div>
       </div>
     </section>
