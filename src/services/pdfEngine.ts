@@ -10,8 +10,41 @@ function parseHexColor(hexColor: string) {
   return rgb(r, g, b);
 }
 
+import fontkit from '@pdf-lib/fontkit';
 import { applyStandardMetadata } from '../utils/pdfMetadata';
 export { applyStandardMetadata };
+
+let cachedNunitoBold: Uint8Array | null = null;
+let cachedNunitoSemiBold: Uint8Array | null = null;
+let cachedNunitoRegular: Uint8Array | null = null;
+
+async function loadNunitoFontBytes(type: 'regular' | 'semibold' | 'bold'): Promise<Uint8Array | null> {
+  try {
+    if (type === 'bold' && cachedNunitoBold) return cachedNunitoBold;
+    if (type === 'semibold' && cachedNunitoSemiBold) return cachedNunitoSemiBold;
+    if (type === 'regular' && cachedNunitoRegular) return cachedNunitoRegular;
+
+    const fileName =
+      type === 'bold'
+        ? 'Nunito-Bold.woff'
+        : type === 'semibold'
+        ? 'Nunito-SemiBold.woff'
+        : 'Nunito-Regular.woff';
+
+    const resp = await fetch(`/fonts/${fileName}`);
+    if (resp.ok) {
+      const buf = await resp.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      if (type === 'bold') cachedNunitoBold = bytes;
+      if (type === 'semibold') cachedNunitoSemiBold = bytes;
+      if (type === 'regular') cachedNunitoRegular = bytes;
+      return bytes;
+    }
+  } catch (e) {
+    console.warn(`Could not load /fonts/${type}:`, e);
+  }
+  return null;
+}
 
 export class PDFEngineService {
   async extractFormFields(pdfDoc: PDFDocument): Promise<AcroFormField[]> {
@@ -95,17 +128,50 @@ export class PDFEngineService {
     const copyBytes = new Uint8Array(state.fileBytes.slice(0));
     const pdfDoc = await PDFDocument.load(copyBytes, { ignoreEncryption: true });
     
+    // Register fontkit to support embedding true vector WOFF/TTF fonts
+    try {
+      pdfDoc.registerFontkit(fontkit);
+    } catch (fkErr) {
+      console.warn('Fontkit registration warning:', fkErr);
+    }
+
     // Embed core vector fonts matching user selected text styles
     const fontTimes = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const fontTimesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
     const fontHelvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontHelveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const fontCourier = await pdfDoc.embedFont(StandardFonts.Courier);
-    const font = fontTimes;
+    const fontCourierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
+    const font = fontHelvetica;
 
-    const getFontForFamily = (family?: string) => {
-      if (!family) return fontTimes;
+    // Embed custom geometric rounded fonts for authentic VAG Rounded matching
+    let fontNunitoBold: any = null;
+    let fontNunitoSemiBold: any = null;
+    try {
+      const hasNunito = (state.textAnnotations || []).some((a) =>
+        /nunito|rounded|vag/i.test(a.fontFamily || '')
+      );
+      if (hasNunito) {
+        const boldBytes = await loadNunitoFontBytes('bold');
+        const semiBoldBytes = await loadNunitoFontBytes('semibold');
+        if (boldBytes) fontNunitoBold = await pdfDoc.embedFont(boldBytes);
+        if (semiBoldBytes) fontNunitoSemiBold = await pdfDoc.embedFont(semiBoldBytes);
+      }
+    } catch (fErr) {
+      console.warn('Could not embed custom Nunito font in export:', fErr);
+    }
+
+    const getFontForFamily = (family?: string, fontWeight?: string | number) => {
+      const isBold = fontWeight === 'bold' || fontWeight === '700' || fontWeight === 700 || fontWeight === '600' || fontWeight === 600;
+      if (!family) return isBold ? fontHelveticaBold : fontHelvetica;
       const fam = family.toLowerCase();
+      if (fam.includes('nunito') || fam.includes('rounded') || fam.includes('vag')) {
+        if (isBold && fontNunitoBold) return fontNunitoBold;
+        if (fontNunitoSemiBold) return fontNunitoSemiBold;
+        if (fontNunitoBold) return fontNunitoBold;
+      }
       if (fam.includes('courier') || fam.includes('mono') || fam.includes('lucida')) {
-        return fontCourier;
+        return isBold ? fontCourierBold : fontCourier;
       }
       if (
         fam.includes('arial') ||
@@ -115,11 +181,17 @@ export class PDFEngineService {
         fam.includes('trebuchet') ||
         fam.includes('impact') ||
         fam.includes('segoe') ||
-        fam.includes('gothic')
+        fam.includes('gothic') ||
+        fam.includes('roboto') ||
+        fam.includes('calibri') ||
+        fam.includes('system-ui')
       ) {
-        return fontHelvetica;
+        return isBold ? fontHelveticaBold : fontHelvetica;
       }
-      return fontTimes;
+      if (fam.includes('times') || fam.includes('roman') || fam.includes('serif') || fam.includes('georgia')) {
+        return isBold ? fontTimesBold : fontTimes;
+      }
+      return isBold ? fontHelveticaBold : fontHelvetica;
     };
 
     // 2. Fill AcroForms and Update Appearance Streams (/AP) ONLY if form fields exist
@@ -241,20 +313,22 @@ export class PDFEngineService {
       const pdfY = pageH - textAnn.y - totalHeight;
 
       if (textAnn.isRedact) {
+        const bgCol = textAnn.backgroundColor ? parseHexColor(textAnn.backgroundColor) : rgb(1, 1, 1);
         targetPage.drawRectangle({
           x: textAnn.x,
           y: pdfY,
           width: totalWidth,
           height: totalHeight,
-          color: rgb(1, 1, 1),
+          color: bgCol,
           borderWidth: 0,
         });
       }
 
-      const annFont = getFontForFamily(textAnn.fontFamily);
+      const annFont = getFontForFamily(textAnn.fontFamily, textAnn.fontWeight);
+      const isCustomFont = annFont === fontNunitoBold || annFont === fontNunitoSemiBold;
 
       for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-        const cleanLine = lines[lineIdx].replace(/[^\x00-\x7F]/g, '');
+        const cleanLine = isCustomFont ? lines[lineIdx] : lines[lineIdx].replace(/[^\x00-\x7F]/g, '');
         if (cleanLine) {
           let drawX = textAnn.x + 2;
           let drawY = pageH - textAnn.y - (lineIdx * lineHeight) - textAnn.fontSize * 0.85;

@@ -25,8 +25,10 @@ export interface TextAnnotation {
   text: string;
   fontSize: number;
   fontFamily?: string;
+  fontWeight?: string | number;
   color: string; // Hex e.g. '#000000'
-  isRedact: boolean; // Solid white rectangle covering existing text before writing new text
+  backgroundColor?: string; // Hex e.g. '#f2fbfd' matching base page color
+  isRedact: boolean; // Solid rectangle covering existing text before writing new text
   isUnderline?: boolean; // Underline text toggle
   opacity?: number; // Transparency 0.05 to 1.0
   rotation?: number; // Rotation in degrees e.g. -45, 90

@@ -720,7 +720,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   handleToolSelect('text');
                   toggleDropdown('text', textDropdownRef, 208);
                 }}
-                title="Add Text & Type on PDF (T) - Click for text formatting options"
+                title="Edit Existing Text & Type on PDF (T) - Hover any text to edit in-place, or click anywhere to type"
                 className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   toolMode === 'text' || (isTextDropdownOpen && popoverPos.name === 'text')
                     ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
@@ -757,6 +757,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                       onChange={(e) => setTextFontFamily && setTextFontFamily(e.target.value)}
                       className="bg-slate-950 text-slate-100 border border-slate-700 rounded-lg px-2 py-1 text-xs font-semibold hover:border-cyan-500 transition w-full"
                     >
+                      <option value="'Nunito', 'VAG Rounded', 'Arial Rounded MT Bold', sans-serif">Nunito / VAG Rounded (Modern)</option>
                       <option value="'Times New Roman', Times, serif">Times New Roman (Legal)</option>
                       <option value="Arial, Helvetica, sans-serif">Arial / Helvetica (Sans)</option>
                       <option value="'Courier New', Courier, monospace">Courier New (Mono)</option>
@@ -811,7 +812,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   <div className="flex flex-col space-y-1">
                     <label className="text-[10px] font-semibold text-slate-400">Text Color</label>
                     <div className="flex items-center space-x-1.5 bg-slate-950 border border-slate-800 rounded-lg p-1.5 justify-between">
-                      {['#000000', '#1e3a8a', '#dc2626', '#15803d', '#7e22ce', '#ffffff'].map((c) => (
+                      {['#58595b', '#0094c1', '#aa258d', '#000000', '#1e3a8a', '#dc2626', '#15803d', '#ffffff'].map((c) => (
                         <button
                           key={c}
                           onClick={() => setTextColor && setTextColor(c)}
@@ -824,7 +825,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                       ))}
                       <input
                         type="color"
-                        value={textColor || '#000000'}
+                        value={textColor || '#58595b'}
                         onChange={(e) => setTextColor && setTextColor(e.target.value)}
                         className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
                         title="Custom Color Picker"

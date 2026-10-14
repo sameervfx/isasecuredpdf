@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Eye, EyeOff, Move, Clipboard, Minus, Plus, Type, Underline } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Trash2, Eye, EyeOff, Move, Clipboard, Minus, Plus, Type, Underline, Bold, Palette, Droplet } from 'lucide-react';
 import { TextAnnotation } from '../types/pdf';
+import { pdfRenderer, DetectedPDFTextLine } from '../services/pdfRenderer';
 
 interface TextAnnotationEditorProps {
   annotations: TextAnnotation[];
@@ -38,7 +39,24 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   textIsUnderline,
 }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detectedLines, setDetectedLines] = useState<DetectedPDFTextLine[]>([]);
+  const [hoveredLineId, setHoveredLineId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (isTextMode && pageIndex >= 0) {
+      pdfRenderer.extractPageTextLines(pageIndex).then((lines) => {
+        if (isMounted) setDetectedLines(lines);
+      });
+    } else {
+      setDetectedLines([]);
+      setHoveredLineId(null);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isTextMode, pageIndex]);
 
   // Drag state for moving text annotations around
   const [dragState, setDragState] = useState<{
@@ -54,6 +72,35 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
   const scaleX = originalWidth > 0 ? canvasWidth / originalWidth : 1;
   const scaleY = originalHeight > 0 ? canvasHeight / originalHeight : 1;
+
+  // Dynamic color palette: extracts all detected text colors from current page + brand accents
+  const availableColors = useMemo(() => {
+    const set = new Set<string>();
+    // Add all detected text colors from this page first
+    detectedLines.forEach((l) => {
+      if (l.color && l.color.startsWith('#')) set.add(l.color.toLowerCase());
+    });
+    // Curated brand brochure accents (Reliance Cyan, Reliance Magenta, Charcoal, Navy, etc.)
+    ['#58595b', '#0094c1', '#aa258d', '#034ea2', '#000000', '#dc2626', '#16a34a', '#2563eb', '#ffffff'].forEach((c) => set.add(c.toLowerCase()));
+    return Array.from(set);
+  }, [detectedLines]);
+
+  const handlePickColorEyeDropper = async (annId: string) => {
+    try {
+      if (typeof window !== 'undefined' && 'EyeDropper' in window) {
+        const eyeDropper = new (window as any).EyeDropper();
+        const result = await eyeDropper.open();
+        if (result?.sRGBHex) {
+          onUpdateAnnotation(annId, { color: result.sRGBHex });
+        }
+      } else {
+        const input = document.getElementById(`native-color-${annId}`) as HTMLInputElement;
+        if (input) input.click();
+      }
+    } catch (e) {
+      // User dismissed eyedropper without picking
+    }
+  };
 
   // Global Mouse & Touch Move/Up Handlers for Dragging Text & Floating Toolbar
   useEffect(() => {
@@ -154,6 +201,53 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
 
   if (originalWidth <= 0 || originalHeight <= 0) return null;
 
+  const sampleCanvasBg = (screenX: number, screenY: number, screenW: number, screenH: number): string => {
+    try {
+      const canvas = containerRef.current?.parentElement?.querySelector('canvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+          // Margin test points directly adjacent to text bounding box
+          const testPoints = [
+            { x: Math.max(1, screenX - 4), y: Math.max(1, screenY + screenH / 2) },
+            { x: Math.max(1, screenX + screenW / 2), y: Math.max(1, screenY - 3) },
+            { x: Math.min(canvas.width - 2, screenX + screenW + 4), y: Math.max(1, screenY + screenH / 2) },
+            { x: Math.max(1, screenX - 3), y: Math.max(1, screenY - 2) },
+          ];
+          for (const pt of testPoints) {
+            const p = ctx.getImageData(Math.round(pt.x), Math.round(pt.y), 1, 1).data;
+            if (p[3] > 0) {
+              return '#' + [p[0], p[1], p[2]].map((c) => c.toString(16).padStart(2, '0')).join('');
+            }
+          }
+        }
+      }
+    } catch (e) {}
+    return '#ffffff';
+  };
+
+  const measureTextWidth = (
+    text: string,
+    fontSize: number,
+    fontFamily?: string,
+    fontWeight?: string | number
+  ): number => {
+    if (!text) return 36;
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = `${fontWeight || 'normal'} ${fontSize}px ${fontFamily || 'sans-serif'}`;
+        const lines = text.split('\n');
+        const maxW = Math.max(...lines.map((l) => ctx.measureText(l).width), 0);
+        return Math.round(maxW + 8);
+      }
+    } catch (e) {}
+    const lines = text.split('\n');
+    const maxChars = Math.max(...lines.map((l) => l.length), 1);
+    return Math.round(maxChars * fontSize * 0.55 + 8);
+  };
+
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isTextMode) return;
     
@@ -161,6 +255,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = (e.clientX - rect.left) / scaleX;
     const clickY = (e.clientY - rect.top) / scaleY;
+    const sampledBg = sampleCanvasBg(e.clientX - rect.left, e.clientY - rect.top, 50, 20);
 
     onAddAnnotation({
       pageIndex,
@@ -168,10 +263,52 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       y: Math.round(clickY),
       text: '',
       fontSize: textFontSize || 14,
-      fontFamily: textFontFamily || "'Times New Roman', Times, serif",
-      color: textColor || '#000000',
+      fontFamily: textFontFamily || "'Nunito', 'VAG Rounded', sans-serif",
+      color: textColor || '#58595b',
+      backgroundColor: sampledBg,
       isRedact: textIsRedact || false,
       isUnderline: textIsUnderline || false,
+      width: 40,
+    });
+  };
+
+  const handleLineClick = (e: React.MouseEvent, line: DetectedPDFTextLine) => {
+    e.stopPropagation();
+
+    const screenX = line.x * scaleX;
+    const screenY = line.y * scaleY;
+    const screenW = line.width * scaleX;
+    const screenH = line.height * scaleY;
+    const detectedBg = sampleCanvasBg(screenX, screenY, screenW, screenH);
+
+    // Measure exact rendered font width to prevent any words wrapping or disappearing
+    const measuredInitialW = measureTextWidth(
+      line.text,
+      line.fontSize,
+      line.fontFamily,
+      line.fontWeight
+    );
+
+    // 2px safety padding so mask seamlessly conceals original printed text
+    const padX = 2;
+    const padY = 2;
+    const totalW = Math.max(line.width + padX * 2, measuredInitialW + 4);
+    const totalH = Math.max(line.height + padY * 2, line.fontSize * 1.35);
+
+    onAddAnnotation({
+      pageIndex,
+      x: Math.max(0, line.x - padX),
+      y: Math.max(0, line.y - padY),
+      text: line.text,
+      fontSize: line.fontSize,
+      fontFamily: line.fontFamily,
+      fontWeight: line.fontWeight || 'normal',
+      color: line.color || '#58595b',
+      backgroundColor: detectedBg,
+      isRedact: true, // Seamlessly masks original text using the EXACT sampled page background color!
+      isUnderline: textIsUnderline || false,
+      width: Math.round(totalW),
+      height: Math.round(totalH),
     });
   };
 
@@ -250,14 +387,62 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       }`}
       style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}
     >
+      {/* Existing Detected Text Lines Overlay (Hover to highlight, click to edit in-place) */}
+      {isTextMode &&
+        detectedLines.map((line) => {
+          // Don't show detected line box if user already edited / placed an annotation over it
+          const hasAnnotation = pageAnnotations.some(
+            (a) => Math.abs(a.x - line.x) < 25 && Math.abs(a.y - line.y) < 18
+          );
+          if (hasAnnotation) return null;
+
+          const screenX = line.x * scaleX;
+          const screenY = line.y * scaleY;
+          const screenW = Math.max(line.width * scaleX, 24);
+          const screenH = Math.max(line.height * scaleY, 14);
+          const isHovered = hoveredLineId === line.id;
+
+          return (
+            <div
+              key={line.id}
+              onMouseEnter={() => setHoveredLineId(line.id)}
+              onMouseLeave={() => setHoveredLineId(null)}
+              onClick={(e) => handleLineClick(e, line)}
+              className={`absolute pointer-events-auto cursor-text rounded transition-all duration-150 z-10 ${
+                isHovered
+                  ? 'bg-cyan-500/20 border border-dashed border-cyan-400 shadow-sm ring-2 ring-cyan-400/30'
+                  : 'hover:bg-cyan-500/10 hover:border hover:border-dashed hover:border-cyan-400/50'
+              }`}
+              style={{
+                left: `${screenX}px`,
+                top: `${screenY}px`,
+                width: `${screenW}px`,
+                height: `${screenH}px`,
+              }}
+              title="Click to edit this text in-place"
+            >
+              {isHovered && (
+                <span
+                  className={`absolute ${
+                    screenY < 24 ? 'top-full mt-1' : '-top-6'
+                  } left-0 px-1.5 py-0.5 bg-cyan-600 text-white text-[9px] font-black rounded shadow uppercase tracking-wider whitespace-nowrap pointer-events-none animate-fadeIn`}
+                >
+                  ✎ Edit Text
+                </span>
+              )}
+            </div>
+          );
+        })}
+
       {pageAnnotations.map((ann) => {
         const scaledX = ann.x * scaleX;
         const scaledY = ann.y * scaleY;
         const isSelected = selectedId === ann.id;
         const lines = (ann.text || '').split('\n');
         const lineCount = Math.max(1, lines.length);
-        const maxCharCount = Math.max(...lines.map((l) => l.length), 1);
-        const calculatedWidth = Math.max(80, maxCharCount * (ann.fontSize * 0.62) + 24);
+        const dynamicW = measureTextWidth(ann.text, ann.fontSize, ann.fontFamily || textFontFamily, ann.fontWeight);
+        const effectiveWidth = Math.max(ann.width || 0, dynamicW);
+        const effectiveHeight = ann.height ? ann.height * scaleY : undefined;
         const tbOffset = toolbarOffsets[ann.id] || { x: 0, y: 35 };
 
         return (
@@ -268,13 +453,14 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
               setSelectedId(ann.id);
             }}
             className={`text-annotation-element absolute pointer-events-auto p-0 border-0 outline-none select-text ${
-              ann.isRedact
-                ? 'bg-white p-1 rounded shadow-sm'
-                : 'bg-transparent'
-            } ${isSelected ? 'ring-1 ring-cyan-400/60 ring-dashed z-30' : 'z-20'}`}
+              isSelected ? 'ring-1 ring-cyan-400/60 ring-dashed z-30' : 'z-20'
+            }`}
             style={{
               left: `${scaledX}px`,
               top: `${scaledY}px`,
+              width: `${effectiveWidth * scaleX}px`,
+              minHeight: effectiveHeight ? `${effectiveHeight}px` : undefined,
+              backgroundColor: ann.isRedact ? (ann.backgroundColor || '#ffffff') : 'transparent',
               opacity: ann.opacity !== undefined ? ann.opacity : 1.0,
               transform: ann.rotation ? `translate(-50%, -50%) rotate(${ann.rotation}deg)` : undefined,
               transformOrigin: 'center center',
@@ -286,22 +472,42 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
               ref={(el) => {
                 if (el && isSelected && document.activeElement !== el) {
                   el.focus();
+                  try {
+                    el.setSelectionRange(el.value.length, el.value.length);
+                  } catch (e) {}
                 }
               }}
               value={ann.text}
-              onChange={(e) => onUpdateAnnotation(ann.id, { text: e.target.value })}
+              onChange={(e) => {
+                const newText = e.target.value;
+                const measuredW = measureTextWidth(
+                  newText,
+                  ann.fontSize,
+                  ann.fontFamily || textFontFamily,
+                  ann.fontWeight
+                );
+                onUpdateAnnotation(ann.id, {
+                  text: newText,
+                  width: Math.max(30, measuredW),
+                });
+              }}
               placeholder="Type text..."
               rows={lineCount}
-              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none font-sans font-semibold p-0 m-0 leading-normal"
+              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none p-0 m-0 w-full overflow-hidden resize-none select-text"
               style={{
                 fontSize: `${ann.fontSize * scaleY}px`,
-                fontFamily: ann.fontFamily || textFontFamily || "'Times New Roman', Times, serif",
+                fontFamily: ann.fontFamily || textFontFamily || "'Nunito', 'VAG Rounded', sans-serif",
+                fontWeight: ann.fontWeight || 'normal',
                 color: ann.color || '#000000',
                 caretColor: ann.color || '#000000',
                 textDecoration: ann.isUnderline ? 'underline' : 'none',
-                width: `${calculatedWidth * scaleX}px`,
+                lineHeight: '1.25',
+                letterSpacing: 'normal',
+                width: '100%',
                 whiteSpace: 'pre',
                 overflow: 'hidden',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
                 resize: 'none',
               }}
             />
@@ -336,8 +542,8 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                 <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1 py-0.5 border border-slate-700">
                   <button
                     type="button"
-                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: Math.max(6, ann.fontSize - 2) })}
-                    title="Decrease Font Size (-2pt)"
+                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: Math.max(6, ann.fontSize - 1) })}
+                    title="Decrease Font Size (-1pt)"
                     className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                   >
                     <Minus className="w-3 h-3" />
@@ -349,13 +555,37 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: Math.min(120, ann.fontSize + 2) })}
-                    title="Increase Font Size (+2pt)"
+                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: Math.min(120, ann.fontSize + 1) })}
+                    title="Increase Font Size (+1pt)"
                     className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
+
+                {/* Bold Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isCurrentlyBold =
+                      ann.fontWeight === 'bold' ||
+                      ann.fontWeight === '700' ||
+                      ann.fontWeight === 700 ||
+                      ann.fontWeight === '600';
+                    onUpdateAnnotation(ann.id, { fontWeight: isCurrentlyBold ? 'normal' : 'bold' });
+                  }}
+                  title="Toggle Bold"
+                  className={`p-1 rounded transition ${
+                    ann.fontWeight === 'bold' ||
+                    ann.fontWeight === '700' ||
+                    ann.fontWeight === 700 ||
+                    ann.fontWeight === '600'
+                      ? 'bg-cyan-500 text-white font-bold'
+                      : 'hover:bg-slate-800 text-slate-300'
+                  }`}
+                >
+                  <Bold className="w-3.5 h-3.5" />
+                </button>
 
                 {/* Underline Toggle Button */}
                 <button
@@ -369,19 +599,55 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                   <Underline className="w-3.5 h-3.5" />
                 </button>
 
-                {/* Quick Color Swatches */}
+                {/* Comprehensive Color Palette with Exact Page Color Matching */}
                 <div className="flex items-center space-x-1 pl-0.5">
-                  {['#000000', '#dc2626', '#2563eb', '#ffffff'].map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => onUpdateAnnotation(ann.id, { color })}
-                      className={`w-3.5 h-3.5 rounded-full border border-slate-600 transition ${
-                        ann.color === color ? 'scale-125 border-white ring-1 ring-cyan-400 shadow' : 'opacity-80 hover:opacity-100'
-                      }`}
-                      style={{ backgroundColor: color }}
+                  {/* EyeDropper Tool to sample exact pixel color from brochure */}
+                  <button
+                    type="button"
+                    onClick={() => handlePickColorEyeDropper(ann.id)}
+                    title="EyeDropper: Sample exact color from anywhere on page"
+                    className="p-1 hover:bg-cyan-500/30 text-cyan-300 hover:text-white rounded transition flex items-center"
+                  >
+                    <Droplet className="w-3 h-3" />
+                  </button>
+
+                  {/* Dynamic Color Swatches */}
+                  {Array.from(new Set([ann.color || '#000000', ...availableColors]))
+                    .filter((c): c is string => typeof c === 'string' && c.startsWith('#'))
+                    .slice(0, 9)
+                    .map((color) => {
+                      const currentColor = (ann.color || '#000000').toLowerCase();
+                      const isSelected = currentColor === color.toLowerCase();
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => onUpdateAnnotation(ann.id, { color })}
+                          className={`w-3.5 h-3.5 rounded-full border transition ${
+                            isSelected
+                              ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
+                              : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          title={`Select ${color}`}
+                        />
+                      );
+                    })}
+
+                  {/* Native Color Picker for custom Hex/RGB colors */}
+                  <label
+                    title="Custom Color Spectrum Picker"
+                    className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white"
+                  >
+                    <Palette className="w-3 h-3" />
+                    <input
+                      id={`native-color-${ann.id}`}
+                      type="color"
+                      value={ann.color && ann.color.startsWith('#') ? ann.color : '#000000'}
+                      onChange={(e) => onUpdateAnnotation(ann.id, { color: e.target.value })}
+                      className="sr-only"
                     />
-                  ))}
+                  </label>
                 </div>
 
                 <div className="w-[1px] h-3.5 bg-slate-700" />
