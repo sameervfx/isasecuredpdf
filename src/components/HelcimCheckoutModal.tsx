@@ -138,12 +138,18 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     const accountName = isIOS ? 'Apple ID account' : 'Google Play account';
 
     if (selectedPlan === 'monthly') {
-      return `Billed monthly through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
+      return isIOS 
+        ? `Pro Monthly Pass • 1 Month Auto-Renewable Subscription. Billed monthly to your Apple ID. Cancel anytime.`
+        : `Billed monthly through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
     }
     if (selectedPlan === 'lifetime') {
-      return `One-time charge through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
+      return isIOS
+        ? `Lifetime VIP License • Permanent One-Time Purchase. Charged to your Apple ID.`
+        : `One-time charge through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
     }
-    return `Billed annually through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
+    return isIOS
+      ? `Pro Annual Pass • 1 Year Auto-Renewable Subscription. Billed annually to your Apple ID. Cancel anytime.`
+      : `Billed annually through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
   };
 
   return (
@@ -362,16 +368,62 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 )}
               </div>
 
-              {/* Condition 1: Native Mobile App (Google Play Billing Only) */}
+              {/* Condition 1: Native Mobile App (Google Play Billing / Apple In-App Purchase) */}
               {isNativeApp ? (
                 <div className="space-y-4 my-3">
-                  {/* Google Play Billing Primary Button with Native Launch */}
+                  {/* Pro Feature Benefits Checklist (Explicitly defines what the user receives per Apple Guideline 3.1.2(c)) */}
+                  <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
+                      <div className="flex items-center space-x-2">
+                        <Sparkles className="w-4 h-4 text-cyan-400" />
+                        <h5 className="font-bold text-white text-xs tracking-tight">
+                          {selectedPlan === 'monthly' ? 'Monthly Pass Includes:' : selectedPlan === 'annual' ? 'Annual Pass Includes:' : 'Lifetime VIP Includes:'}
+                        </h5>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                        {selectedPlan === 'monthly' ? 'Full Access • 1 Month' : selectedPlan === 'annual' ? 'Full Access • 1 Year' : 'Full Access • Permanent'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Direct Text & Typo Editing in PDFs</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Export to Word, Excel, PPTX & Images</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Unlimited Digital Signatures & Stamps</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Fill & Save Interactive AcroForms</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Custom Watermarks & AES-128 Security</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>100% Client-Side Air-Gapped Privacy</span>
+                      </div>
+                      <div className="flex items-center space-x-2 sm:col-span-2 text-cyan-300 font-semibold pt-0.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>Zero Cloud Uploads • No Ads • Unlimited PDF Processing</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Primary Store Purchase Button */}
                   <button
                     type="button"
                     disabled={isProcessing}
                     onClick={async () => {
                       setIsProcessing(true);
-                      trackEvent('pricing_checkout_clicked', `google_play_${selectedPlan}`);
+                      trackEvent('pricing_checkout_clicked', `native_${selectedPlan}`);
                       try {
                         const res = await handleNativePurchase(selectedPlan);
                         setIsProcessing(false);
@@ -382,8 +434,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                             onClose();
                           }, 1200);
                         } else if (res.cancelled) {
-                          // Dismissed or clicked outside: safely do nothing, Pro remains locked
-                          console.log('[GooglePlayBilling] Purchase dismissed or cancelled by user.');
+                          console.log('[NativeBilling] Purchase dismissed or cancelled by user.');
                         } else {
                           alert(res.error || 'Unable to complete purchase. Please try again.');
                         }
@@ -412,9 +463,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   {/* Mandatory In-App Subscriptions Policy Disclosure & Restore Purchases */}
                   <div className="text-[10px] text-slate-400 text-center leading-relaxed px-2 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80 space-y-2">
                     {isIOSPlatform() ? (
-                      <p>
-                        Payment will be charged to your Apple ID account at confirmation of purchase. Subscription automatically renews unless auto-renew is cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your <a href="https://apps.apple.com/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Apple Account Settings</a>.
-                      </p>
+                      <div className="space-y-1.5 text-left text-[10.5px]">
+                        <p className="font-bold text-slate-200">
+                          Subscription Details & Terms:
+                        </p>
+                        <ul className="space-y-0.5 text-slate-300 list-disc list-inside">
+                          <li><span className="font-semibold text-white">Title of Service:</span> {selectedPlan === 'monthly' ? 'Pro Monthly Pass' : selectedPlan === 'annual' ? 'Pro Annual Pass' : 'Lifetime VIP Access'}</li>
+                          <li><span className="font-semibold text-white">Length of Subscription:</span> {selectedPlan === 'monthly' ? '1 Month (Auto-Renewable)' : selectedPlan === 'annual' ? '1 Year (Auto-Renewable)' : 'Permanent Lifetime License (One-Time)'}</li>
+                          <li><span className="font-semibold text-white">Price:</span> {selectedPlan === 'monthly' ? `${livePrices[PLAY_PRODUCT_IDS.monthly] || initialPricing.monthly} per month` : selectedPlan === 'annual' ? `${livePrices[PLAY_PRODUCT_IDS.annual] || initialPricing.annual} per year` : `${livePrices[PLAY_PRODUCT_IDS.lifetime] || initialPricing.lifetime} one-time`}</li>
+                        </ul>
+                        <p className="text-[10px] text-slate-400 pt-1 leading-normal">
+                          Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless auto-renew is cancelled at least 24 hours before the end of the current billing period. Your account will be charged for renewal within 24 hours prior to the end of the current period. Manage or cancel anytime in your <a href="https://apps.apple.com/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Apple Account Settings</a>.
+                        </p>
+                      </div>
                     ) : (
                       <p>
                         Payment will be charged to your Google Play Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Manage or cancel anytime via <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Google Play Account Settings</a>.
