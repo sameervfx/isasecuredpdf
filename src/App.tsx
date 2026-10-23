@@ -13,6 +13,7 @@ import { downloadFile, printPdfBlob, saveToPhoneStorage, shareToOtherApps } from
 import { WatermarkOptions } from './components/WatermarkModal';
 import { ExportFormatType } from './components/PremiumExportModal';
 import { ExportSaveModal } from './components/ExportSaveModal';
+import { checkAndConsumeMonthlyQuota, canUseMonthlyQuotaFeature, FREE_MONTHLY_DOC_LIMIT } from './utils/monthlyUsageLimit';
 
 // Code-split heavy editor modals and canvas viewer so LandingPage loads instantly in < 5ms
 const PDFCanvasViewer = React.lazy(() => import('./components/PDFCanvasViewer').then(m => ({ default: m.PDFCanvasViewer })));
@@ -635,7 +636,22 @@ export const App: React.FC = () => {
 
   const [signatureModalTab, setSignatureModalTab] = useState<'draw' | 'type' | 'upload'>('draw');
 
+  const notifyMonthlyQuotaStatus = useCallback((used: number, limit: number) => {
+    setStorageToastMessage(`Free Starter: ${used}/${limit} monthly documents used (Sign, Split & Image/Logo).`);
+    setTimeout(() => setStorageToastMessage(null), 3500);
+  }, []);
+
+  const notifyMonthlyQuotaReached = useCallback(() => {
+    setStorageToastMessage(`Free Starter limit reached (${FREE_MONTHLY_DOC_LIMIT}/${FREE_MONTHLY_DOC_LIMIT} documents/month). Upgrade to Pro for unlimited access!`);
+    setTimeout(() => setStorageToastMessage(null), 5000);
+    handleOpenCheckout('annual');
+  }, [handleOpenCheckout]);
+
   const handleOpenSignatureModal = (tab: 'draw' | 'type' | 'upload' = 'draw') => {
+    if (!canUseMonthlyQuotaFeature(isProActive, 'sign')) {
+      notifyMonthlyQuotaReached();
+      return;
+    }
     setSignatureModalTab(tab);
     setIsSignatureModalOpen(true);
   };
@@ -650,11 +666,22 @@ export const App: React.FC = () => {
   };
 
   const handleSelectSavedSignature = (dataUrl: string) => {
+    if (!canUseMonthlyQuotaFeature(isProActive, 'sign')) {
+      notifyMonthlyQuotaReached();
+      return;
+    }
     setPendingSignatureDataUrl(dataUrl);
     setToolMode('sign');
   };
 
   const handleAddSignatureAtCoords = (sigData: Omit<SignatureAnnotation, 'id'>) => {
+    const quota = checkAndConsumeMonthlyQuota(isProActive, 'sign');
+    if (!quota.allowed) {
+      setPendingSignatureDataUrl(null);
+      setToolMode('select');
+      notifyMonthlyQuotaReached();
+      return;
+    }
     pushToHistory(docState);
     const newSig: SignatureAnnotation = {
       ...sigData,
@@ -663,6 +690,9 @@ export const App: React.FC = () => {
     setDocState((prev) => ({ ...prev, signatures: [...prev.signatures, newSig] }));
     setPendingSignatureDataUrl(null);
     setToolMode('select');
+    if (!isProActive) {
+      notifyMonthlyQuotaStatus(quota.used, quota.limit);
+    }
   };
 
   const handleUpdateSignature = (id: string, updated: Partial<SignatureAnnotation>) => {
@@ -741,12 +771,20 @@ export const App: React.FC = () => {
   };
 
   const handleAddImageStamp = (imgData: Omit<ImageStampAnnotation, 'id'>) => {
+    const quota = checkAndConsumeMonthlyQuota(isProActive, 'image');
+    if (!quota.allowed) {
+      notifyMonthlyQuotaReached();
+      return;
+    }
     pushToHistory(docState);
     const newImg: ImageStampAnnotation = {
       ...imgData,
       id: `img_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     };
     setDocState((prev) => ({ ...prev, imageStamps: [...(prev.imageStamps || []), newImg] }));
+    if (!isProActive) {
+      notifyMonthlyQuotaStatus(quota.used, quota.limit);
+    }
   };
 
   const handleUpdateImageStamp = (id: string, updated: Partial<ImageStampAnnotation>) => {
@@ -946,6 +984,12 @@ export const App: React.FC = () => {
   const handleExportMultiplePDFs = useCallback(
     async (mode: 'split_all' | 'custom_range', customRanges?: string) => {
       if (!docState.fileBytes) return;
+      const quota = checkAndConsumeMonthlyQuota(isProActive, 'split');
+      if (!quota.allowed) {
+        setIsSaveMultipleModalOpen(false);
+        notifyMonthlyQuotaReached();
+        return;
+      }
       setIsExportingMultiple(true);
       try {
         const { pdfEngine } = await import('./services/pdfEngine');
@@ -963,6 +1007,9 @@ export const App: React.FC = () => {
           setMobileExportData({ fileName: result.fileName, blob, mimeType: 'application/zip', title: 'Export Split PDFs (ZIP)' });
           setIsMobileExportDialogOpen(true);
         }
+        if (!isProActive) {
+          notifyMonthlyQuotaStatus(quota.used, quota.limit);
+        }
       } catch (err) {
         console.error('Export multiple PDFs error:', err);
         const errMsg = err instanceof Error ? err.message : String(err);
@@ -971,7 +1018,7 @@ export const App: React.FC = () => {
         setIsExportingMultiple(false);
       }
     },
-    [docState]
+    [docState, isProActive, notifyMonthlyQuotaReached, notifyMonthlyQuotaStatus]
   );
 
   const handleOpenPayloadData = useCallback(
@@ -1135,7 +1182,13 @@ export const App: React.FC = () => {
           onOpenPageManager={() => setIsPageManagerOpen(true)}
           onOpenCreateModal={() => setIsCreateModalOpen(true)}
           onOpenMergeModal={() => setIsMergeModalOpen(true)}
-          onOpenSaveMultipleModal={() => setIsSaveMultipleModalOpen(true)}
+          onOpenSaveMultipleModal={() => {
+            if (!canUseMonthlyQuotaFeature(isProActive, 'split')) {
+              notifyMonthlyQuotaReached();
+              return;
+            }
+            setIsSaveMultipleModalOpen(true);
+          }}
           onOpenPremiumExportModal={handleOpenPremiumExportModal}
           onOpenReviewModal={() => setIsReviewModalOpen(true)}
           onOpenRecentFile={handleOpenRecentFile}

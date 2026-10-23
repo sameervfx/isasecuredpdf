@@ -209,7 +209,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 
                 {/* 1. NATIVE MOBILE PLAN CARDS (Dynamic Play Store Catalog Binding) */}
                 {isNativeApp || isAndroidPlatform() ? (
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 items-stretch">
                     {/* Monthly Plan */}
                     <div
                       onClick={() => setSelectedPlan('monthly')}
@@ -219,17 +219,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      <div>
-                        <div className="flex flex-col gap-1 mb-1">
-                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight">Monthly Pass</h4>
-                          <span className="self-start bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded">
+                      <div className="flex flex-col h-full justify-between">
+                        <div className="flex flex-col items-start gap-1">
+                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight whitespace-nowrap">Monthly Pass</h4>
+                          <span className="inline-flex items-center justify-center bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-extrabold text-[8px] leading-none px-2 py-1 rounded-md whitespace-nowrap">
                             Standard
                           </span>
                         </div>
-                        <div className="my-1 text-xs sm:text-sm font-extrabold text-cyan-300">
-                          {livePrices[PLAY_PRODUCT_IDS.monthly] || initialPricing.monthly} <span className="text-[9px] font-normal text-slate-400">/ mo</span>
+                        <div className="mt-2 pt-1">
+                          <div className="text-xs sm:text-sm font-extrabold text-cyan-300 whitespace-nowrap leading-tight">
+                            {livePrices[PLAY_PRODUCT_IDS.monthly] || initialPricing.monthly}<span className="text-[9px] font-medium text-slate-400">/mo</span>
+                          </div>
+                          <p className="text-[9.5px] sm:text-[10px] text-slate-400 font-medium mt-0.5 whitespace-nowrap">Billed Monthly</p>
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Billed Monthly</p>
                       </div>
                     </div>
 
@@ -242,17 +244,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      <div>
-                        <div className="flex flex-col gap-1 mb-1">
-                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight">Annual Pass</h4>
-                          <span className="self-start bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded shadow-sm">
+                      <div className="flex flex-col h-full justify-between">
+                        <div className="flex flex-col items-start gap-1">
+                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight whitespace-nowrap">Annual Pass</h4>
+                          <span className="inline-flex items-center justify-center bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[8px] leading-none px-2 py-1 rounded-md shadow-sm whitespace-nowrap">
                             Best Value
                           </span>
                         </div>
-                        <div className="my-1 text-xs sm:text-sm font-extrabold text-emerald-300">
-                          {livePrices[PLAY_PRODUCT_IDS.annual] || initialPricing.annual} <span className="text-[9px] font-normal text-emerald-400">/ yr</span>
+                        <div className="mt-2 pt-1">
+                          <div className="text-xs sm:text-sm font-extrabold text-emerald-300 whitespace-nowrap leading-tight">
+                            {livePrices[PLAY_PRODUCT_IDS.annual] || initialPricing.annual}<span className="text-[9px] font-medium text-emerald-400">/yr</span>
+                          </div>
+                          <p className="text-[9.5px] sm:text-[10px] text-emerald-400 font-semibold mt-0.5 whitespace-nowrap">Billed Annually</p>
                         </div>
-                        <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">Billed Annually</p>
                       </div>
                     </div>
 
@@ -265,23 +269,25 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      <div>
-                        <div className="flex flex-col gap-1 mb-1">
-                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight">Lifetime VIP</h4>
-                          <span className="self-start bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded shadow-sm">
+                      <div className="flex flex-col h-full justify-between">
+                        <div className="flex flex-col items-start gap-1">
+                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight whitespace-nowrap">Lifetime VIP</h4>
+                          <span className="inline-flex items-center justify-center bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[8px] leading-none px-2 py-1 rounded-md shadow-sm whitespace-nowrap">
                             VIP Access
                           </span>
                         </div>
-                        <div className="my-1 text-xs sm:text-sm font-extrabold text-purple-300">
-                          {livePrices[PLAY_PRODUCT_IDS.lifetime] || initialPricing.lifetime}
+                        <div className="mt-2 pt-1">
+                          <div className="text-xs sm:text-sm font-extrabold text-purple-300 whitespace-nowrap leading-tight">
+                            {livePrices[PLAY_PRODUCT_IDS.lifetime] || initialPricing.lifetime}
+                          </div>
+                          <p className="text-[9.5px] sm:text-[10px] text-purple-300 font-semibold mt-0.5 whitespace-nowrap">One-Time Access</p>
                         </div>
-                        <p className="text-[10px] text-purple-300 font-semibold mt-0.5">One-Time Access</p>
                       </div>
                     </div>
                   </div>
                 ) : (
                   /* 2. WEB BROWSER PLAN CARDS (With Localized Currency Display) */
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 items-stretch">
                     {/* Monthly Plan */}
                     <div
                       onClick={() => setSelectedPlan('monthly')}
@@ -291,19 +297,21 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      <div>
-                        <div className="flex flex-col gap-1 mb-1">
-                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight">Monthly Pass</h4>
-                          <span className="self-start bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded">
+                      <div className="flex flex-col h-full justify-between">
+                        <div className="flex flex-col items-start gap-1">
+                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight whitespace-nowrap">Monthly Pass</h4>
+                          <span className="inline-flex items-center justify-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold text-[8px] leading-none px-2 py-1 rounded-md whitespace-nowrap">
                             {currentPricing.monthlyDiscountPercent || '50% OFF'}
                           </span>
                         </div>
-                        <div className="my-1 text-sm sm:text-base font-extrabold text-white">
-                          {currentPricing.monthly}
-                        </div>
-                        <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalMonthly || 'CA$7.99'}</span>
-                          <span className="text-slate-400 text-[10px]">{currentPricing.code}/mo</span>
+                        <div className="mt-2 pt-1">
+                          <div className="text-xs sm:text-base font-extrabold text-white whitespace-nowrap leading-tight">
+                            {currentPricing.monthly}<span className="text-[9px] font-medium text-slate-400">/mo</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[9.5px] mt-0.5 gap-1 whitespace-nowrap">
+                            <span className="line-through text-slate-500 font-medium">{currentPricing.originalMonthly || 'CA$7.99'}</span>
+                            <span className="text-slate-400 font-semibold">{currentPricing.code}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -317,24 +325,26 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      <div>
-                        <div className="flex flex-col gap-1 mb-1">
-                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight">Annual Pass</h4>
-                          <div className="flex items-center gap-1">
-                            <span className="self-start bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded shadow-sm">
+                      <div className="flex flex-col h-full justify-between">
+                        <div className="flex flex-col items-start gap-1">
+                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight whitespace-nowrap">Annual Pass</h4>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="inline-flex items-center justify-center bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-extrabold text-[8px] leading-none px-1.5 py-1 rounded-md shadow-sm whitespace-nowrap">
                               Best Value
                             </span>
-                            <span className="self-start bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded">
+                            <span className="hidden sm:inline-flex items-center justify-center bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-extrabold text-[8px] leading-none px-1.5 py-1 rounded-md whitespace-nowrap">
                               {currentPricing.annualDiscountPercent || '58% OFF'}
                             </span>
                           </div>
                         </div>
-                        <div className="my-1 text-sm sm:text-base font-extrabold text-emerald-300">
-                          {currentPricing.annual}
-                        </div>
-                        <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalAnnual || 'CA$95.88'}</span>
-                          <span className="text-emerald-400 font-semibold text-[10px]">{currentPricing.code}/yr</span>
+                        <div className="mt-2 pt-1">
+                          <div className="text-xs sm:text-base font-extrabold text-emerald-300 whitespace-nowrap leading-tight">
+                            {currentPricing.annual}<span className="text-[9px] font-medium text-emerald-400">/yr</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[9.5px] mt-0.5 gap-1 whitespace-nowrap">
+                            <span className="line-through text-slate-500 font-medium">{currentPricing.originalAnnual || 'CA$95.88'}</span>
+                            <span className="text-emerald-400 font-semibold">{currentPricing.code}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -348,19 +358,21 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      <div>
-                        <div className="flex flex-col gap-1 mb-1">
-                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight">Lifetime VIP</h4>
-                          <span className="self-start bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[7.5px] px-1.5 py-0.5 rounded">
+                      <div className="flex flex-col h-full justify-between">
+                        <div className="flex flex-col items-start gap-1">
+                          <h4 className="font-bold text-white text-[11px] sm:text-xs leading-tight whitespace-nowrap">Lifetime VIP</h4>
+                          <span className="inline-flex items-center justify-center bg-purple-500/20 text-purple-300 border border-purple-500/30 font-extrabold text-[8px] leading-none px-2 py-1 rounded-md whitespace-nowrap">
                             VIP Access
                           </span>
                         </div>
-                        <div className="my-1 text-sm sm:text-base font-extrabold text-purple-300">
-                          {currentPricing.lifetime}
-                        </div>
-                        <div className="flex items-center justify-between text-[10px] mt-1 gap-0.5">
-                          <span className="line-through text-slate-500 font-medium text-[9px]">{currentPricing.originalLifetime || 'CA$249.99'}</span>
-                          <span className="text-purple-300 font-semibold text-[10px]">{currentPricing.code}</span>
+                        <div className="mt-2 pt-1">
+                          <div className="text-xs sm:text-base font-extrabold text-purple-300 whitespace-nowrap leading-tight">
+                            {currentPricing.lifetime}
+                          </div>
+                          <div className="flex items-center justify-between text-[9.5px] mt-0.5 gap-1 whitespace-nowrap">
+                            <span className="line-through text-slate-500 font-medium">{currentPricing.originalLifetime || 'CA$249.99'}</span>
+                            <span className="text-purple-300 font-semibold">{currentPricing.code}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -372,16 +384,16 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               {isNativeApp ? (
                 <div className="space-y-4 my-3">
                   {/* Pro Feature Benefits Checklist (Explicitly defines what the user receives per Apple Guideline 3.1.2(c)) */}
-                  <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 space-y-2.5">
-                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
-                      <div className="flex items-center space-x-2">
-                        <Sparkles className="w-4 h-4 text-cyan-400" />
-                        <h5 className="font-bold text-white text-xs tracking-tight">
+                  <div className="bg-slate-950/90 p-3.5 sm:p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+                      <div className="flex items-center space-x-1.5 min-w-0">
+                        <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <h5 className="font-bold text-white text-[11px] sm:text-xs tracking-tight whitespace-nowrap">
                           {selectedPlan === 'monthly' ? 'Monthly Pass Includes:' : selectedPlan === 'annual' ? 'Annual Pass Includes:' : 'Lifetime VIP Includes:'}
                         </h5>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                        {selectedPlan === 'monthly' ? 'Full Access • 1 Month' : selectedPlan === 'annual' ? 'Full Access • 1 Year' : 'Full Access • Permanent'}
+                      <span className="inline-flex items-center justify-center text-[9.5px] sm:text-[10px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 leading-tight">
+                        {selectedPlan === 'monthly' ? 'Full Access • 1 Mo' : selectedPlan === 'annual' ? 'Full Access • 1 Yr' : 'Full Access • VIP'}
                       </span>
                     </div>
 
@@ -400,7 +412,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       </div>
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Fill & Save Interactive AcroForms</span>
+                        <span>Unlimited Split PDF & Add Image / Logo</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -410,6 +422,19 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                         <span>100% Client-Side Air-Gapped Privacy</span>
                       </div>
+                      {selectedPlan === 'monthly' ? (
+                        <div className="flex items-center space-x-2 sm:col-span-2 text-slate-400 pt-0.5">
+                          <span className="text-[10.5px] text-amber-300/90 font-medium flex items-center space-x-1.5">
+                            <span className="shrink-0">🔒</span>
+                            <span>Windows & Mac Offline Desktop Apps (Annual & Lifetime Pass only)</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2 sm:col-span-2 pt-0.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span className="font-bold text-emerald-300">Windows & Mac Offline Desktop Apps Included</span>
+                        </div>
+                      )}
                       <div className="flex items-center space-x-2 sm:col-span-2 text-cyan-300 font-semibold pt-0.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                         <span>Zero Cloud Uploads • No Ads • Unlimited PDF Processing</span>
@@ -465,7 +490,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     {isIOSPlatform() ? (
                       <div className="space-y-1.5 text-left text-[10.5px]">
                         <p className="font-bold text-slate-200">
-                          Subscription Details & Terms:
+                          Subscription Details & Terms**:
                         </p>
                         <ul className="space-y-0.5 text-slate-300 list-disc list-inside">
                           <li><span className="font-semibold text-white">Title of Service:</span> {selectedPlan === 'monthly' ? 'Pro Monthly Pass' : selectedPlan === 'annual' ? 'Pro Annual Pass' : 'Lifetime VIP Access'}</li>
@@ -510,10 +535,13 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
 
                     {/* Mandatory Apple Guideline 3.1.2: Terms of Use & Privacy Policy */}
                     <div className="flex justify-center items-center space-x-3 text-[9.5px] text-slate-500 pt-1">
-                      <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Use (EULA)</a>
+                      <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Service** (EULA)</a>
                       <span>•</span>
                       <a href="https://isasecuredpdf.com/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Privacy Policy</a>
                     </div>
+                    <p className="text-[9px] text-slate-500 pt-0.5">
+                      ** Terms of Service**, free-tier usage limits (up to 5 documents/month for Sign, Split & Add Image/Logo), and pricing are subject to change.
+                    </p>
                   </div>
                 </div>
               ) : !isAndroidPlatform() ? (
@@ -551,18 +579,26 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   {paymentTab === 'helcim' ? (
                     <>
                       {/* Pro Feature Checklist */}
-                      <div className="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2">
-                        <h5 className="font-bold text-white text-xs mb-1.5">
-                          {selectedPlan === 'monthly' ? 'Monthly Pass Includes:' : selectedPlan === 'annual' ? 'Annual Pass Includes:' : 'Lifetime VIP Includes:'}
-                        </h5>
+                      <div className="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+                          <div className="flex items-center space-x-1.5 min-w-0">
+                            <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                            <h5 className="font-bold text-white text-[11px] sm:text-xs tracking-tight whitespace-nowrap">
+                              {selectedPlan === 'monthly' ? 'Monthly Pass Includes:' : selectedPlan === 'annual' ? 'Annual Pass Includes:' : 'Lifetime VIP Includes:'}
+                            </h5>
+                          </div>
+                          <span className="inline-flex items-center justify-center text-[9.5px] sm:text-[10px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 leading-tight">
+                            {selectedPlan === 'monthly' ? 'Full Access • 1 Mo' : selectedPlan === 'annual' ? 'Full Access • 1 Yr' : 'Full Access • VIP'}
+                          </span>
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
                           <div className="flex items-center space-x-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                            <span>Apply Watermark</span>
+                            <span>Apply Watermark & AES-128 Security</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                            <span>Add Password Protection</span>
+                            <span>Unlimited Digital Signatures & Stamps</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
@@ -570,7 +606,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           </div>
                           <div className="flex items-center space-x-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                            <span>Upload JPG / PNG Signature</span>
+                            <span>Unlimited Split PDF & Add Image / Logo</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
@@ -583,7 +619,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                           {selectedPlan === 'monthly' ? (
                             <div className="flex items-center space-x-2 sm:col-span-2 text-slate-400 pt-0.5">
                               <span className="text-[10.5px] text-amber-300/90 font-medium flex items-center space-x-1.5">
-                                <span>🔒</span>
+                                <span className="shrink-0">🔒</span>
                                 <span>Windows & Mac Offline Desktop Apps (Annual & Lifetime Pass only)</span>
                               </span>
                             </div>

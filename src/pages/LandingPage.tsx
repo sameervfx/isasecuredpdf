@@ -602,8 +602,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                   <ul className={`space-y-3 text-xs ${cardDescClass}`}>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Editing Tools</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Annotation</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Zero Registration Barrier</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Up to 5 Documents / Month (Sign, Split & Add Image/Logo)**</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Zero Registration</span></li>
                   </ul>
                 </div>
               </div>
@@ -653,8 +653,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
 
                   <ul className={`space-y-2.5 text-xs ${cardDescClass}`}>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited Sign, Split PDF & Add Image / Logo</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Export to Word, Excel, PowerPoint</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Upload JPG / PNG Signature & Seals</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited Redact, Overwrite & AcroForm Fill</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Apply Custom Watermarks & Passwords</span></li>
                   </ul>
@@ -774,8 +774,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     )}
                   </div>
 
-                  <ul className={`space-y-3 text-xs ${cardDescClass}`}>
+                  <ul className={`space-y-2.5 text-xs ${cardDescClass}`}>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>One-time payment, zero recurring fees forever</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>Windows & Mac Offline Desktop Apps Included</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>All future Pro Web & Desktop App updates included**</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" /><span>Priority IT & Compliance Support</span></li>
                   </ul>
@@ -797,9 +798,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Footnote for Lifetime License updates notice */}
-          <p className="text-[11px] text-slate-400 text-center mt-5 font-normal max-w-3xl mx-auto">
-            ** Lifetime License includes all future core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
+          {/* Footnote for Terms of Service**, Free Starter limits & Lifetime License updates notice */}
+          <p className="text-[11px] text-slate-400 text-center mt-5 font-normal max-w-3xl mx-auto leading-relaxed">
+            ** Terms of Service**, free-tier monthly usage limits (Free Starter includes up to 5 documents/month for Sign Document, Split PDF, and Add Image/Logo), and pricing are subject to change at any time. Lifetime License includes all future core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
           </p>
 
           {/* Subscription Policy Terms Disclosure Footer */}
@@ -926,7 +927,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </button>
             )}
             <button onClick={() => setActiveModal('privacy')} className="hover:text-cyan-600 transition">Privacy Policy</button>
-            <button onClick={() => setActiveModal('terms')} className="hover:text-cyan-600 transition">Terms of Service</button>
+            <button onClick={() => setActiveModal('terms')} className="hover:text-cyan-600 transition">Terms of Service**</button>
             <button onClick={() => setActiveModal('refund')} className="hover:text-cyan-600 transition">Refund & Cancellation Policy</button>
             <button onClick={() => setActiveModal('contact')} className="hover:text-cyan-600 transition">Contact & Support</button>
           </div>
@@ -942,7 +943,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <ShieldCheck className="w-5 h-5 text-cyan-400" />
                 <span>
                   {activeModal === 'privacy' && 'Privacy Policy'}
-                  {activeModal === 'terms' && 'Terms of Service'}
+                  {activeModal === 'terms' && 'Terms of Service**'}
                   {activeModal === 'refund' && 'Refund & Cancellation Policy'}
                   {activeModal === 'contact' && 'Contact & Support'}
                 </span>
@@ -993,9 +994,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               )}
 
               {activeModal === 'terms' && (
-                <p>
-                  <b>Terms of Service:</b> By downloading, installing, or using PDF Engine Studio, you agree to these terms. The software is provided "as-is" without warranties of any kind. You are granted a non-exclusive, non-transferable license to use the software for personal or commercial document editing. You agree not to reverse engineer or illegally redistribute licensed binaries.
-                </p>
+                <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
+                  <div>
+                    <h4 className="font-bold text-white mb-1">1. Acceptance of Terms of Service**</h4>
+                    <p>
+                      By downloading, installing, accessing, or using ISASecuredPDF (PDF Engine Studio), you agree to be bound by these Terms of Service**. The software is provided "as-is" without warranties of any kind. You are granted a non-exclusive, non-transferable license to use the software for personal or commercial document editing in accordance with your selected plan tier. You agree not to reverse engineer or illegally redistribute licensed binaries.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-white mb-1">2. Free Starter Monthly Usage Limit (5 Documents / Month)**</h4>
+                    <p>
+                      Free Starter tier users are permitted to use <b>Sign Document (Digital Signatures)</b>, <b>Split PDF / Extract Multiple PDFs</b>, and <b>Add Image / Logo</b> on up to <b>5 documents per calendar month</b> across the web and mobile app. Once the 5-document monthly limit is reached, an active <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> license is required to continue using unlimited signatures, document splitting, image/logo placement, and advanced Pro tools.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-white mb-1">3. Pro Subscriptions, Desktop Apps & Lifetime VIP**</h4>
+                    <p>
+                      <b>Pro Monthly</b> unlocks unlimited web and mobile PDF editing, signing, splitting, image/logo insertion, watermarking, password protection, and Office format exports. <b>Pro Annual</b> and <b>Lifetime VIP</b> plans additionally include access to the standalone <b>Windows & Mac Offline Desktop Apps</b>.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-[11px] text-amber-300/90">
+                    <b>** Right to Modify Terms, Usage Limits & Pricing:</b> Please note that these <b>Terms of Service**</b>, free-tier monthly document limits, included features, and subscription or lifetime pricing are subject to change, update, or modification at any time at our sole discretion. Continued use of the software following any changes constitutes acceptance of the revised Terms of Service**.
+                  </div>
+                </div>
               )}
 
               {activeModal === 'refund' && (
