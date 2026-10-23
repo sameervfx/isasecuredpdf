@@ -39,6 +39,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [currencyCode, setCurrencyCode] = useState<string>(() => detectedCurr);
+  const [activeLegalModal, setActiveLegalModal] = useState<'terms' | 'privacy' | null>(null);
 
   const [isNativeApp, setIsNativeApp] = useState<boolean>(() => isAndroidPlatform() || isNativeMobileApp() || isIOSPlatform());
 
@@ -534,19 +535,24 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       </button>
                     </div>
 
-                    {/* Terms of Service** & Privacy Policy (Apple EULA only on iOS) */}
-                    <div className="flex justify-center items-center space-x-3 text-[9.5px] text-slate-500 pt-1">
-                      {isIOSPlatform() ? (
-                        <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Use (EULA)</a>
-                      ) : (
-                        <a href="https://isasecuredpdf.com/#terms" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Service**</a>
-                      )}
+                    {/* Terms of Service** & Privacy Policy (In-App Modal) */}
+                    <div className="flex justify-center items-center space-x-3 text-[10px] text-slate-400 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveLegalModal('terms')}
+                        className="hover:text-cyan-400 underline font-medium transition"
+                      >
+                        Terms of Service**
+                      </button>
                       <span>•</span>
-                      <a href="https://isasecuredpdf.com/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Privacy Policy</a>
+                      <button
+                        type="button"
+                        onClick={() => setActiveLegalModal('privacy')}
+                        className="hover:text-cyan-400 underline font-medium transition"
+                      >
+                        Privacy Policy
+                      </button>
                     </div>
-                    <p className="text-[9px] text-slate-500 pt-0.5">
-                      ** Subject to Terms of Service** (terms and pricing may be updated at any time).
-                    </p>
                   </div>
                 </div>
               ) : !isAndroidPlatform() ? (
@@ -713,6 +719,110 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
             </div>
 
             <span className="text-slate-500 font-mono text-[9px]">Merchant ID: Helcim-ISA-Secure</span>
+          </div>
+        )}
+
+        {/* In-App Terms of Service** & Privacy Policy Overlay (Identical to LandingPage Modal, Never Leaves App) */}
+        {activeLegalModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+            <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
+                <div className="flex items-center space-x-2 text-white font-bold text-sm">
+                  <ShieldCheck className="w-5 h-5 text-cyan-400" />
+                  <span>
+                    {activeLegalModal === 'privacy' && 'Privacy Policy'}
+                    {activeLegalModal === 'terms' && 'Terms of Service**'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveLegalModal(null)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 text-xs text-slate-300 leading-relaxed max-h-[60vh] overflow-y-auto space-y-4">
+                {activeLegalModal === 'privacy' && (
+                  <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
+                    <div>
+                      <h4 className="font-bold text-white mb-1">1. Zero Document Data Collection</h4>
+                      <p>
+                        ISASecuredPDF (PDF Engine Studio) operates 100% client-side. We do NOT collect, store, transmit, or process your PDF files, document text, signatures, form entries, or metadata on external cloud servers. All document rendering and manipulation happen entirely in your local browser memory or desktop operating system RAM.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-white mb-1">2. Local Data Storage</h4>
+                      <p>
+                        Temporary workspace preferences or cached file states may be saved locally within your device's browser memory (via Local Storage or IndexedDB). This data never leaves your workstation and can be cleared at any time by clearing your browser cache.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-white mb-1">3. Billing & Payments</h4>
+                      <p>
+                        Any payment or subscription details provided during purchase are processed securely by our Merchant of Record and are subject to their respective privacy standards and PCI-DSS compliance. We do not store or process payment card numbers on our servers.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-white mb-1">4. Third-Party Analytics & Advertising</h4>
+                      <p>
+                        We may utilize privacy-compliant third-party analytics and advertising networks (such as Google AdSense) that collect non-personally identifiable usage metrics using browser cookies to display contextual advertisements.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-white mb-1">5. Contact Us</h4>
+                      <p>
+                        If you have any questions regarding this Privacy Policy, please contact us at <a href="mailto:support@isasecuredpdf.com" className="text-cyan-400 font-bold hover:underline">support@isasecuredpdf.com</a>.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {activeLegalModal === 'terms' && (
+                  <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
+                    <div>
+                      <h4 className="font-bold text-white mb-1">1. Acceptance of Terms of Service**</h4>
+                      <p>
+                        By downloading, installing, accessing, or using ISASecuredPDF (PDF Engine Studio), you agree to be bound by these Terms of Service**. The software is provided "as-is" without warranties of any kind. You are granted a non-exclusive, non-transferable license to use the software for personal or commercial document editing in accordance with your selected plan tier. You agree not to reverse engineer or illegally redistribute licensed binaries.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-white mb-1">2. Free Starter Monthly Usage Limit (5 Documents / Month)**</h4>
+                      <p>
+                        Free Starter tier users are permitted to use <b>Sign Document (Digital Signatures)</b>, <b>Split PDF / Extract Multiple PDFs</b>, and <b>Add Image / Logo</b> on up to <b>5 documents per calendar month</b> across the web and mobile app. Once the 5-document monthly limit is reached, an active <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> license is required to continue using unlimited signatures, document splitting, image/logo placement, and advanced Pro tools.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-white mb-1">3. Pro Subscriptions, Desktop Apps & Lifetime VIP**</h4>
+                      <p>
+                        <b>Pro Monthly</b> unlocks unlimited web and mobile PDF editing, signing, splitting, image/logo insertion, watermarking, password protection, and Office format exports. <b>Pro Annual</b> and <b>Lifetime VIP</b> plans additionally include access to the standalone <b>Windows & Mac Offline Desktop Apps</b>.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-[11px] text-amber-300/90">
+                      <b>** Right to Modify Terms, Usage Limits & Pricing:</b> Please note that these <b>Terms of Service**</b>, free-tier monthly document limits, included features, and subscription or lifetime pricing are subject to change, update, or modification at any time at our sole discretion. Continued use of the software following any changes constitutes acceptance of the revised Terms of Service**.
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setActiveLegalModal(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
