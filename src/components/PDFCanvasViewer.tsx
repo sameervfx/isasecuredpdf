@@ -143,6 +143,14 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   const deletedPages = state?.deletedPages || new Set<number>();
   const activePages = pageOrder.filter((idx) => !deletedPages.has(idx));
 
+  const isDrawingToolActive =
+    toolMode === 'draw' ||
+    toolMode === 'highlight' ||
+    toolMode === 'eraser' ||
+    toolMode === 'line' ||
+    toolMode === 'rectangle' ||
+    toolMode === 'oval';
+
   // True Fit to Screen: calculates actual viewport bounds subtracting headers/paddings
   const handleFitToScreen = useCallback(() => {
     const container = containerRef.current;
@@ -686,7 +694,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
-        className={`flex-1 flex flex-col items-center justify-center p-6 ${activeTheme?.bgClass || 'bg-slate-950'} ${isLight ? 'text-slate-900' : 'text-slate-100'} relative overflow-hidden transition-colors duration-500`}
+        className={`flex-1 overflow-y-auto flex flex-col items-center justify-start sm:justify-center p-4 sm:p-6 min-h-0 ${activeTheme?.bgClass || 'bg-slate-950'} ${isLight ? 'text-slate-900' : 'text-slate-100'} relative transition-colors duration-500`}
       >
         {/* Background glows */}
         <div className="absolute w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none -top-40 -left-40" />
@@ -880,7 +888,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       <main
         ref={containerRef}
         tabIndex={0}
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
         className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative focus:outline-none min-w-0 transition-colors duration-500`}
       >
 
@@ -905,7 +913,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
             onTouchEnd={handlePageTouchEnd}
             onDoubleClick={handlePageDoubleClick}
             className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0 cursor-default"
-            style={{ width: `${w}px`, height: `${h}px`, touchAction: 'none' }}
+            style={{ width: `${w}px`, height: `${h}px`, touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
           >
             <canvas
               ref={(el) => {

@@ -126,17 +126,17 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const [midTone, setMidTone] = useState<number>(0);
   const [showOriginalComparison, setShowOriginalComparison] = useState<boolean>(false);
 
-  // Crop Margin Sliders & Polygon Corners
-  const [cropLeft, setCropLeft] = useState<number>(5);
-  const [cropRight, setCropRight] = useState<number>(5);
-  const [cropTop, setCropTop] = useState<number>(15);
-  const [cropBottom, setCropBottom] = useState<number>(15);
+  // Crop Margin Sliders & Polygon Corners (Default 0% = auto reach to page corners)
+  const [cropLeft, setCropLeft] = useState<number>(0);
+  const [cropRight, setCropRight] = useState<number>(0);
+  const [cropTop, setCropTop] = useState<number>(0);
+  const [cropBottom, setCropBottom] = useState<number>(0);
 
   const [corners, setCorners] = useState<{ tl: Point; tr: Point; br: Point; bl: Point }>({
-    tl: { x: 5, y: 15 },
-    tr: { x: 95, y: 15 },
-    br: { x: 95, y: 85 },
-    bl: { x: 5, y: 85 },
+    tl: { x: 0, y: 0 },
+    tr: { x: 100, y: 0 },
+    br: { x: 100, y: 100 },
+    bl: { x: 0, y: 100 },
   });
   const [draggingCorner, setDraggingCorner] = useState<'tl' | 'tr' | 'br' | 'bl' | null>(null);
   const [activeSlider, setActiveSlider] = useState<'top' | 'bottom' | 'left' | 'right' | null>(null);
@@ -206,6 +206,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   useEffect(() => {
     const handlePointerMove = (e: MouseEvent | TouchEvent) => {
       if (!draggingCorner || !cropContainerRef.current) return;
+      if ('touches' in e && e.cancelable) {
+        e.preventDefault();
+      }
       const rect = cropContainerRef.current.getBoundingClientRect();
       const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
@@ -230,7 +233,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     if (draggingCorner || activeSlider) {
       window.addEventListener('mousemove', handlePointerMove);
       window.addEventListener('mouseup', handlePointerUp);
-      window.addEventListener('touchmove', handlePointerMove);
+      window.addEventListener('touchmove', handlePointerMove, { passive: false });
       window.addEventListener('touchend', handlePointerUp);
     }
 
@@ -535,15 +538,15 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     setBrightness(page.brightness || 0);
     setContrast(page.contrast || 0);
     setMidTone(page.midTone || 0);
-    setCropLeft(page.cropLeft !== undefined ? page.cropLeft : 5);
-    setCropRight(page.cropRight !== undefined ? page.cropRight : 5);
-    setCropTop(page.cropTop !== undefined ? page.cropTop : 15);
-    setCropBottom(page.cropBottom !== undefined ? page.cropBottom : 15);
+    setCropLeft(page.cropLeft !== undefined ? page.cropLeft : 0);
+    setCropRight(page.cropRight !== undefined ? page.cropRight : 0);
+    setCropTop(page.cropTop !== undefined ? page.cropTop : 0);
+    setCropBottom(page.cropBottom !== undefined ? page.cropBottom : 0);
 
-    const cL = page.cropLeft !== undefined ? page.cropLeft : 5;
-    const cR = page.cropRight !== undefined ? page.cropRight : 5;
-    const cT = page.cropTop !== undefined ? page.cropTop : 15;
-    const cB = page.cropBottom !== undefined ? page.cropBottom : 15;
+    const cL = page.cropLeft !== undefined ? page.cropLeft : 0;
+    const cR = page.cropRight !== undefined ? page.cropRight : 0;
+    const cT = page.cropTop !== undefined ? page.cropTop : 0;
+    const cB = page.cropBottom !== undefined ? page.cropBottom : 0;
 
     setCorners({
       tl: { x: cL, y: cT },
@@ -585,10 +588,10 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       brightness: 0,
       contrast: 0,
       midTone: 0,
-      cropLeft: 5,
-      cropRight: 5,
-      cropTop: 15,
-      cropBottom: 15,
+      cropLeft: 0,
+      cropRight: 0,
+      cropTop: 0,
+      cropBottom: 0,
     };
 
     stopCamera();
@@ -625,10 +628,10 @@ export const ScanModal: React.FC<ScanModalProps> = ({
             brightness: 0,
             contrast: 0,
             midTone: 0,
-            cropLeft: 5,
-            cropRight: 5,
-            cropTop: 15,
-            cropBottom: 15,
+            cropLeft: 0,
+            cropRight: 0,
+            cropTop: 0,
+            cropBottom: 0,
           };
           newPagesToAppend.push(newPage);
         }
@@ -1132,11 +1135,11 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       {/* ================= STEP 2: POST-SNAP CROP, EXPOSURE & TONE FINE-TUNING ================= */}
       {currentStep === 'edit' && pages[activePageIndex] && (
         <div className="flex flex-col w-full h-full bg-slate-950 text-slate-100 overflow-hidden">
-          {/* Sleek Modernized Top Header Pushed Down Below Status Bar */}
-          <div className="pt-[max(2rem,env(safe-area-inset-top)+1rem)] px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+          {/* Sleek Sticky Top Header */}
+          <div className="pt-[max(1.5rem,env(safe-area-inset-top)+0.75rem)] px-4 py-3 bg-slate-900/95 backdrop-blur border-b border-slate-800 flex items-center justify-between z-30 shrink-0 shadow-md">
             <button
               onClick={() => setCurrentStep('camera')}
-              className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition flex items-center space-x-1"
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center space-x-1"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="text-xs font-bold hidden sm:inline">Back</span>
@@ -1146,30 +1149,34 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               <h3 className="text-sm font-extrabold text-white tracking-wide">
                 Edit Page {activePageIndex + 1} of {pages.length}
               </h3>
+              <p className="text-[10px] text-cyan-400 font-semibold">Fine-tune trim, tone & filters</p>
             </div>
 
             <button
               onClick={handleSavePageEdits}
-              className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/25 flex items-center space-x-1.5 transition transform active:scale-95"
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5 transition transform active:scale-95"
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-4 h-4 text-slate-950" />
               <span>Confirm</span>
             </button>
           </div>
 
-          {/* Main Edit Canvas Viewer Container */}
-          <div className="flex-1 relative bg-black flex items-center justify-center p-3 overflow-hidden">
+          {/* Scrollable View for Large Document Preview + Edit Controls Below */}
+          <div className="flex-1 overflow-y-auto overscroll-contain bg-slate-950 flex flex-col">
+
+          {/* Big Prominent Document Preview Section */}
+          <div className="w-full bg-black/95 flex items-center justify-center p-3 sm:p-6 min-h-[52vh] sm:min-h-[64vh] shrink-0 border-b border-slate-800/80">
             {editSubTab === 'crop' ? (
               /* Interactive Crop Corner Selector Overlay with Precision Canvas Magnifying Lens */
-              <div className="relative inline-block max-w-full max-h-[58vh] select-none cursor-crosshair shadow-2xl bg-slate-950 touch-none">
+              <div className="relative inline-block max-w-full select-none cursor-crosshair shadow-2xl bg-slate-950 touch-none">
                 <div
                   ref={cropContainerRef}
-                  className="relative max-w-full max-h-[58vh] overflow-hidden rounded-2xl border-2 border-cyan-500/40 touch-none"
+                  className="relative max-w-full overflow-hidden rounded-2xl border-2 border-cyan-500/40 touch-none"
                 >
                   <img
                     src={pages[activePageIndex].originalDataUrl}
                     alt="Crop Source"
-                    className="max-w-full max-h-[58vh] object-contain pointer-events-none select-none touch-none"
+                    className="max-w-full max-h-[70vh] sm:max-h-[78vh] w-auto h-auto object-contain pointer-events-none select-none touch-none"
                   />
 
                   <svg className="absolute inset-0 w-full h-full pointer-events-none touch-none">
@@ -1194,7 +1201,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                     <div
                       key={c.key}
                       style={{ left: `${c.pos.x}%`, top: `${c.pos.y}%` }}
-                      className={`absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full shadow-2xl border-2 border-white flex items-center justify-center text-[10px] font-black z-30 transition-transform touch-none ${
+                      className={`absolute -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full shadow-2xl border-2 border-white flex items-center justify-center text-[10px] font-black z-30 transition-transform touch-none cursor-grab active:cursor-grabbing ${
                         draggingCorner === c.key
                           ? 'bg-amber-400 text-black scale-125 ring-4 ring-amber-400/50'
                           : 'bg-cyan-400 text-slate-950 hover:scale-125'
@@ -1230,10 +1237,10 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               </div>
             ) : (
               /* Real-Time Exposure & Tone Canvas Preview */
-              <div className="relative flex items-center justify-center max-w-full max-h-[58vh] overflow-hidden rounded-2xl border-2 border-cyan-500/40 bg-slate-950 p-2 shadow-2xl">
+              <div className="relative flex items-center justify-center max-w-full overflow-hidden rounded-2xl border-2 border-cyan-500/40 bg-slate-950 p-2 shadow-2xl">
                 <canvas
                   ref={liveEditCanvasRef}
-                  className="max-w-full max-h-[55vh] object-contain rounded-xl shadow-lg"
+                  className="max-w-full max-h-[70vh] sm:max-h-[78vh] w-auto h-auto object-contain rounded-xl shadow-lg"
                 />
 
                 {showOriginalComparison && (
@@ -1315,28 +1322,32 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                   </span>
                   <div className="flex items-center space-x-1.5">
                     <button
-                      onClick={() => setPresetCrop(15)}
-                      className="px-2 py-0.5 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 text-[11px] font-extrabold rounded-lg border border-cyan-700/60 shadow"
+                      onClick={() => setPresetCrop(0)}
+                      className={`px-2.5 py-1 text-[11px] font-black rounded-lg border shadow transition ${
+                        cropTop === 0 && cropBottom === 0 && cropLeft === 0 && cropRight === 0
+                          ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border-cyan-700/60 ring-1 ring-cyan-500/40'
+                          : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                      }`}
                     >
-                      Default 15%
+                      Full Corners (0%)
                     </button>
                     <button
                       onClick={() => setPresetCrop(5)}
-                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-cyan-300 text-[11px] font-extrabold rounded-lg border border-slate-800"
+                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-[11px] font-bold rounded-lg border border-slate-800"
                     >
                       Trim 5%
                     </button>
                     <button
                       onClick={() => setPresetCrop(10)}
-                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-cyan-300 text-[11px] font-extrabold rounded-lg border border-slate-800"
+                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-[11px] font-bold rounded-lg border border-slate-800"
                     >
                       Trim 10%
                     </button>
                     <button
-                      onClick={() => setPresetCrop(0)}
+                      onClick={() => setPresetCrop(15)}
                       className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-slate-400 text-[11px] font-bold rounded-lg border border-slate-800"
                     >
-                      Reset
+                      Trim 15%
                     </button>
                   </div>
                 </div>
@@ -1552,8 +1563,20 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                 ))}
               </div>
             )}
+
+            {/* Primary Confirm Button at Bottom of Scrollable View */}
+            <div className="pt-3">
+              <button
+                onClick={handleSavePageEdits}
+                className="w-full py-3.5 px-6 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2 transition transform active:scale-98"
+              >
+                <CheckCircle2 className="w-5 h-5 text-slate-950" />
+                <span>Confirm Page Edits & Continue ➔</span>
+              </button>
+            </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* ================= STEP 3: SCAN SUMMARY & EXPORT OPTIONS ================= */}

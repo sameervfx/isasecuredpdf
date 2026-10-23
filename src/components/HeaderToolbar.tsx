@@ -655,9 +655,12 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               </>
             )}
 
-            <span className={`${hasDocument ? 'hidden sm:inline-flex' : 'inline-flex'} items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0`}>
+            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
               <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
               100% Offline
+            </span>
+            <span className="sm:hidden inline-flex items-center p-1 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0" title="100% Offline">
+              <ShieldCheck className="w-3.5 h-3.5" />
             </span>
           </div>
           <p className="hidden 2xl:block text-xs text-slate-400 truncate">Zero Server Data Transmission Guarantee</p>
