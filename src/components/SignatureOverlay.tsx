@@ -60,6 +60,9 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
     };
 
     const handlePointerMove = (e: MouseEvent | TouchEvent) => {
+      if ('touches' in e && e.cancelable) {
+        e.preventDefault();
+      }
       const { clientX, clientY } = getClientCoords(e);
       if (dragState) {
         if (!containerRef.current || originalWidth <= 0 || originalHeight <= 0) return;
@@ -113,6 +116,16 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
       window.removeEventListener('touchcancel', handlePointerUp);
     };
   }, [dragState, resizeState, scaleX, scaleY, originalWidth, originalHeight, onUpdateSignature]);
+
+  // Auto-select newly placed signature so mobile users immediately see handles
+  const prevSigCountRef = useRef<number>(pageSigs.length);
+  useEffect(() => {
+    if (pageSigs.length > prevSigCountRef.current) {
+      const newest = pageSigs[pageSigs.length - 1];
+      if (newest) setSelectedId(newest.id);
+    }
+    prevSigCountRef.current = pageSigs.length;
+  }, [pageSigs]);
 
   // Click / Touch outside listener to deselect signature handles
   useEffect(() => {
@@ -206,6 +219,7 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
               opacity: sig.opacity !== undefined ? sig.opacity : 1.0,
               transform: sig.rotation ? `translate(-50%, -50%) rotate(${sig.rotation}deg)` : undefined,
               transformOrigin: 'center center',
+              touchAction: 'none',
             }}
           >
             <img
@@ -241,10 +255,11 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
               <div
                 onMouseDown={(e) => handleStartResize(e, sig)}
                 onTouchStart={(e) => handleStartResize(e, sig)}
-                className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-cyan-500 border-2 border-white rounded-full cursor-se-resize shadow-lg flex items-center justify-center z-40 hover:scale-125 transition-transform"
+                style={{ touchAction: 'none' }}
+                className="absolute -bottom-2.5 -right-2.5 w-7 h-7 sm:w-5 sm:h-5 bg-cyan-500 border-2 border-white rounded-full cursor-se-resize shadow-lg flex items-center justify-center z-40 hover:scale-125 active:scale-125 transition-transform"
                 title="Drag to resize signature"
               >
-                <Maximize2 className="w-2 h-2 text-white" />
+                <Maximize2 className="w-3 h-3 sm:w-2.5 sm:h-2.5 text-white" />
               </div>
             )}
           </div>

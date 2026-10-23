@@ -57,6 +57,9 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
     };
 
     const handlePointerMove = (e: MouseEvent | TouchEvent) => {
+      if ('touches' in e && e.cancelable) {
+        e.preventDefault();
+      }
       const { clientX, clientY } = getClientCoords(e);
       if (dragState) {
         if (!containerRef.current || originalWidth <= 0 || originalHeight <= 0) return;
@@ -255,6 +258,7 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
               top: `${scaledY}px`,
               width: `${scaledWidth}px`,
               height: `${scaledHeight}px`,
+              touchAction: 'none',
             }}
           >
             <svg className="w-full h-full overflow-visible pointer-events-none">
@@ -317,10 +321,11 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
               <div
                 onMouseDown={(e) => handleStartResize(e, shape)}
                 onTouchStart={(e) => handleStartResize(e, shape)}
-                className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-blue-500 border-2 border-white rounded-full cursor-se-resize shadow-lg flex items-center justify-center z-40 hover:scale-125 transition-transform"
+                style={{ touchAction: 'none' }}
+                className="absolute -bottom-2.5 -right-2.5 w-7 h-7 sm:w-5 sm:h-5 bg-blue-500 border-2 border-white rounded-full cursor-se-resize shadow-lg flex items-center justify-center z-40 hover:scale-125 active:scale-125 transition-transform"
                 title="Drag to resize shape"
               >
-                <Maximize2 className="w-2 h-2 text-white" />
+                <Maximize2 className="w-3 h-3 sm:w-2.5 sm:h-2.5 text-white" />
               </div>
             )}
           </div>

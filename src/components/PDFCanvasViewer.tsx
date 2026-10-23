@@ -167,11 +167,44 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     onZoomChange(targetZoom);
   }, [state.pages, state.pageRotations, activePages, currentPage, onZoomChange]);
 
-  // Double-tap and double-click zoom reset / toggle
+  // Track multi-touch pinch & touch drag state so lifting fingers after a pinch or drag never triggers double-tap zoom reset
   const lastTapRef = useRef<number>(0);
-  const handlePageTouchEnd = () => {
+  const lastTapPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const lastMultiTouchTimeRef = useRef<number>(0);
+  const didTouchMoveRef = useRef<boolean>(false);
+  const isPinchingRef = useRef<boolean>(false);
+
+  // Double-tap and double-click zoom reset / toggle (strictly single-finger tap, never after pinch/drag)
+  const handlePageTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
     const now = Date.now();
-    if (now - lastTapRef.current < 300) {
+    // Ignore if any finger is still down, or if this touch was part of a 2-finger pinch or drag pan
+    if (
+      e.touches.length > 0 ||
+      e.changedTouches.length !== 1 ||
+      isPinchingRef.current ||
+      didTouchMoveRef.current ||
+      now - lastMultiTouchTimeRef.current < 550
+    ) {
+      lastTapRef.current = 0;
+      return;
+    }
+
+    // Ignore taps on interactive overlay items (images, signatures, shapes, text boxes, buttons)
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      target.closest(
+        '.image-stamp-element, .signature-element, .shape-element, .text-annotation-element, button, input, textarea, select'
+      )
+    ) {
+      lastTapRef.current = 0;
+      return;
+    }
+
+    const touch = e.changedTouches[0];
+    const tapDist = Math.hypot(touch.clientX - lastTapPosRef.current.x, touch.clientY - lastTapPosRef.current.y);
+
+    if (now - lastTapRef.current < 300 && tapDist < 36) {
       if (Math.abs(zoom - 1.0) < 0.05) {
         handleFitToScreen();
       } else {
@@ -180,10 +213,20 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       lastTapRef.current = 0;
     } else {
       lastTapRef.current = now;
+      lastTapPosRef.current = { x: touch.clientX, y: touch.clientY };
     }
   };
 
-  const handlePageDoubleClick = () => {
+  const handlePageDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      target.closest(
+        '.image-stamp-element, .signature-element, .shape-element, .text-annotation-element, button, input, textarea, select'
+      )
+    ) {
+      return;
+    }
     if (Math.abs(zoom - 1.0) < 0.05) {
       handleFitToScreen();
     } else {
@@ -202,7 +245,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen, onToggleFullscreen]);
 
-  // Ctrl/Cmd + Mouse Wheel Zooming directly on document canvas (clamped to 15% - 250%)
+  // Ctrl/Cmd + Mouse Wheel Zooming directly on document canvas (clamped to 15% - 500%)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -226,13 +269,17 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     zoomRef.current = zoom;
   }, [zoom]);
 
-  // Touch Pinch-to-Zoom & 1-Finger Drag Panning with clamped 15% floor
+  // Touch Pinch-to-Zoom & 1-Finger Drag Panning with clamped 15% floor & focal-point stability
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     let initialTouchDist = 0;
     let initialZoom = zoomRef.current;
+    let pinchStartMidX = 0;
+    let pinchStartMidY = 0;
+    let pinchStartScrollLeft = 0;
+    let pinchStartScrollTop = 0;
     let isPanning = false;
     let startX = 0;
     let startY = 0;
@@ -246,64 +293,151 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       return Math.hypot(dx, dy);
     };
 
+    const getTouchMidpoint = (e: TouchEvent) => {
+      const rect = container.getBoundingClientRect();
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+      return { midX, midY };
+    };
+
+    const isInteractiveOverlayTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      return Boolean(
+        target.closest(
+          '.image-stamp-element, .signature-element, .shape-element, .text-annotation-element, button, input, textarea, select'
+        )
+      );
+    };
+
+    const beginPinch = (e: TouchEvent) => {
+      initialTouchDist = getTouchDist(e);
+      initialZoom = zoomRef.current;
+      const { midX, midY } = getTouchMidpoint(e);
+      pinchStartMidX = midX;
+      pinchStartMidY = midY;
+      pinchStartScrollLeft = container.scrollLeft;
+      pinchStartScrollTop = container.scrollTop;
+      isPanning = false;
+      isPinchingRef.current = true;
+      didTouchMoveRef.current = true;
+      lastMultiTouchTimeRef.current = Date.now();
+      lastTapRef.current = 0;
+    };
+
     const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        e.preventDefault();
-        initialTouchDist = getTouchDist(e);
-        initialZoom = zoomRef.current;
-        isPanning = false;
-      } else if (e.touches.length === 1 && toolMode === 'select') {
-        isPanning = true;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        startScrollLeft = container.scrollLeft;
-        startScrollTop = container.scrollTop;
+      const target = e.target as HTMLElement | null;
+      // Only handle touches inside the PDF viewer container
+      if (!target || !container.contains(target)) return;
+
+      if (e.touches.length >= 2) {
+        // If user is 2-finger pinching directly on a selected image stamp, let ImageStampOverlay handle image resize
+        if (target.closest('.image-stamp-element')) {
+          lastMultiTouchTimeRef.current = Date.now();
+          isPanning = false;
+          return;
+        }
+        if (e.cancelable) e.preventDefault();
+        beginPinch(e);
+      } else if (e.touches.length === 1) {
+        didTouchMoveRef.current = false;
+        if (toolMode === 'select' && !isInteractiveOverlayTarget(target)) {
+          isPanning = true;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          startScrollLeft = container.scrollLeft;
+          startScrollTop = container.scrollTop;
+        } else {
+          isPanning = false;
+        }
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && initialTouchDist > 0) {
-        e.preventDefault();
+      const target = e.target as HTMLElement | null;
+      if (!target || !container.contains(target)) return;
+
+      if (e.touches.length >= 2) {
+        lastMultiTouchTimeRef.current = Date.now();
+        didTouchMoveRef.current = true;
+        if (target.closest('.image-stamp-element')) {
+          isPanning = false;
+          return;
+        }
+        if (e.cancelable) e.preventDefault();
+
+        // If 2nd finger joined mid-gesture, initialize pinch baseline smoothly from current zoom
+        if (initialTouchDist <= 0 || !isPinchingRef.current) {
+          beginPinch(e);
+          return;
+        }
+
         const currentDist = getTouchDist(e);
-        if (currentDist > 0) {
+        if (currentDist > 8 && initialTouchDist > 8) {
           const scaleRatio = currentDist / initialTouchDist;
-          const newZoom = Math.max(0.15, Math.min(5.0, Math.round(initialZoom * scaleRatio * 100) / 100));
-          onZoomChange(newZoom);
+          const rawZoom = initialZoom * scaleRatio;
+          const newZoom = Math.max(0.15, Math.min(5.0, Math.round(rawZoom * 100) / 100));
+
+          if (Math.abs(newZoom - zoomRef.current) >= 0.01) {
+            const effectiveRatio = newZoom / initialZoom;
+            const { midX, midY } = getTouchMidpoint(e);
+            zoomRef.current = newZoom;
+            onZoomChange(newZoom);
+
+            // Keep the pinched focal point stable under the user's two fingers
+            requestAnimationFrame(() => {
+              const docPointX = pinchStartScrollLeft + pinchStartMidX;
+              const docPointY = pinchStartScrollTop + pinchStartMidY;
+              container.scrollLeft = Math.max(0, docPointX * effectiveRatio - midX);
+              container.scrollTop = Math.max(0, docPointY * effectiveRatio - midY);
+            });
+          }
         }
       } else if (isPanning && e.touches.length === 1 && toolMode === 'select') {
+        if (Date.now() - lastMultiTouchTimeRef.current < 250) return;
         const dx = e.touches[0].clientX - startX;
         const dy = e.touches[0].clientY - startY;
+        if (Math.hypot(dx, dy) > 8) {
+          didTouchMoveRef.current = true;
+        }
         container.scrollLeft = startScrollLeft - dx;
         container.scrollTop = startScrollTop - dy;
       }
     };
 
-    const handleTouchEnd = () => {
-      initialTouchDist = 0;
-      isPanning = false;
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (isPinchingRef.current || e.touches.length >= 1) {
+        lastMultiTouchTimeRef.current = Date.now();
+      }
+      if (e.touches.length < 2) {
+        initialTouchDist = 0;
+        isPinchingRef.current = false;
+      }
+      if (e.touches.length === 0) {
+        isPanning = false;
+      }
     };
 
     const preventSafariGesture = (e: Event) => {
       e.preventDefault();
     };
 
-    window.addEventListener('gesturestart', preventSafariGesture, { passive: false });
-    window.addEventListener('gesturechange', preventSafariGesture, { passive: false });
-    window.addEventListener('gestureend', preventSafariGesture, { passive: false });
+    container.addEventListener('gesturestart', preventSafariGesture, { passive: false });
+    container.addEventListener('gesturechange', preventSafariGesture, { passive: false });
+    container.addEventListener('gestureend', preventSafariGesture, { passive: false });
 
-    window.addEventListener('touchstart', handleTouchStart, { passive: false });
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
-      window.removeEventListener('gesturestart', preventSafariGesture);
-      window.removeEventListener('gesturechange', preventSafariGesture);
-      window.removeEventListener('gestureend', preventSafariGesture);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('touchcancel', handleTouchEnd);
+      container.removeEventListener('gesturestart', preventSafariGesture);
+      container.removeEventListener('gesturechange', preventSafariGesture);
+      container.removeEventListener('gestureend', preventSafariGesture);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [toolMode, onZoomChange]);
 
@@ -414,9 +548,10 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       }
     };
 
+    const debounceMs = isPinchingRef.current ? 90 : 20;
     const debounceTimer = setTimeout(() => {
       renderVisiblePages().finally(() => { renderingRef.current = false; });
-    }, 20);
+    }, debounceMs);
 
     return () => {
       clearTimeout(debounceTimer);
@@ -649,7 +784,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         ref={containerRef}
         tabIndex={0}
         style={{ touchAction: 'pan-x pan-y' }}
-        className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative scroll-smooth focus:outline-none min-w-0 transition-colors duration-500`}
+        className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative focus:outline-none min-w-0 transition-colors duration-500`}
       >
 
       {activePages.map((origIdx, seqIdx) => {
