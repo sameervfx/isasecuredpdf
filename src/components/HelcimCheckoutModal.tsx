@@ -537,7 +537,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     {/* Terms of Service** & Privacy Policy (Apple EULA only on iOS) */}
                     <div className="flex justify-center items-center space-x-3 text-[9.5px] text-slate-500 pt-1">
                       {isIOSPlatform() ? (
-                        <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Service** (EULA)</a>
+                        <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Use (EULA)</a>
                       ) : (
                         <a href="https://isasecuredpdf.com/#terms" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Service**</a>
                       )}
@@ -545,7 +545,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       <a href="https://isasecuredpdf.com/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Privacy Policy</a>
                     </div>
                     <p className="text-[9px] text-slate-500 pt-0.5">
-                      ** Terms of Service**, free-tier usage limits (up to 5 documents/month for Sign, Split & Add Image/Logo), and pricing are subject to change.
+                      ** Subject to Terms of Service** (terms and pricing may be updated at any time).
                     </p>
                   </div>
                 </div>

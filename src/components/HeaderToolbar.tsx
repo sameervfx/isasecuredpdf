@@ -537,7 +537,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   >
                     <div className="flex items-center space-x-2.5">
                       <FolderArchive className="w-4 h-4 text-purple-400" />
-                      <span>Split / Save Multiple PDFs (ZIP)... {!isProActive && <span className="text-[9px] font-extrabold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20 ml-1">5/MO FREE</span>}</span>
+                      <span>Split / Save Multiple PDFs (ZIP)...</span>
                     </div>
                   </button>
 

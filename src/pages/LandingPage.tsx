@@ -601,9 +601,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
 
                   <ul className={`space-y-3 text-xs ${cardDescClass}`}>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Editing Tools</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Up to 5 Documents / Month (Sign, Split & Add Image/Logo)**</span></li>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Zero Registration</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Essential Web PDF Editing Tools**</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Smart AcroForm Filling & Annotation</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" /><span>Zero Registration Barrier</span></li>
                   </ul>
                 </div>
               </div>
@@ -653,8 +653,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
 
                   <ul className={`space-y-2.5 text-xs ${cardDescClass}`}>
-                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited Sign, Split PDF & Add Image / Logo</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Export to Word, Excel, PowerPoint</span></li>
+                    <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Upload JPG / PNG Signature & Seals</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Unlimited Redact, Overwrite & AcroForm Fill</span></li>
                     <li className="flex items-start space-x-2"><CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" /><span>Apply Custom Watermarks & Passwords</span></li>
                   </ul>
@@ -798,9 +798,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Footnote for Terms of Service**, Free Starter limits & Lifetime License updates notice */}
+          {/* Footnote for Terms of Service** & Lifetime License updates notice */}
           <p className="text-[11px] text-slate-400 text-center mt-5 font-normal max-w-3xl mx-auto leading-relaxed">
-            ** Terms of Service**, free-tier monthly usage limits (Free Starter includes up to 5 documents/month for Sign Document, Split PDF, and Add Image/Logo), and pricing are subject to change at any time. Lifetime License includes all future core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
+            ** Subject to Terms of Service** (terms, usage limits, and pricing may be updated at any time). Lifetime License includes all future core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
           </p>
 
           {/* Subscription Policy Terms Disclosure Footer */}

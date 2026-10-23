@@ -636,13 +636,12 @@ export const App: React.FC = () => {
 
   const [signatureModalTab, setSignatureModalTab] = useState<'draw' | 'type' | 'upload'>('draw');
 
-  const notifyMonthlyQuotaStatus = useCallback((used: number, limit: number) => {
-    setStorageToastMessage(`Free Starter: ${used}/${limit} monthly documents used (Sign, Split & Image/Logo).`);
-    setTimeout(() => setStorageToastMessage(null), 3500);
+  const notifyMonthlyQuotaStatus = useCallback((_used: number, _limit: number) => {
+    // Silent during free uses 1-5; prompt only when the 5-document limit is reached
   }, []);
 
   const notifyMonthlyQuotaReached = useCallback(() => {
-    setStorageToastMessage(`Free Starter limit reached (${FREE_MONTHLY_DOC_LIMIT}/${FREE_MONTHLY_DOC_LIMIT} documents/month). Upgrade to Pro for unlimited access!`);
+    setStorageToastMessage(`Monthly free limit reached (${FREE_MONTHLY_DOC_LIMIT} documents/month). Upgrade to Pro for unlimited access!`);
     setTimeout(() => setStorageToastMessage(null), 5000);
     handleOpenCheckout('annual');
   }, [handleOpenCheckout]);
