@@ -37,9 +37,17 @@ interface Point {
   y: number; // percentage 0 - 100
 }
 
+const DEFAULT_5PCT_CORNERS = {
+  tl: { x: 5, y: 5 },
+  tr: { x: 95, y: 5 },
+  br: { x: 95, y: 95 },
+  bl: { x: 5, y: 95 },
+};
+
 /**
  * Intelligent client-side document corner & paper edge detector (0-100%).
  * Uses Otsu thresholding + extremal quad search on downsampled canvas. Runs in < 10ms.
+ * If contrast detection is confused or low-contrast, cleanly defaults to 5% uniform trim.
  */
 function autoDetectDocumentCorners(
   source: HTMLCanvasElement | HTMLImageElement
@@ -48,7 +56,7 @@ function autoDetectDocumentCorners(
     const origW = 'naturalWidth' in source ? (source.naturalWidth || source.width) : source.width;
     const origH = 'naturalHeight' in source ? (source.naturalHeight || source.height) : source.height;
     if (!origW || !origH) {
-      return { tl: { x: 0, y: 0 }, tr: { x: 100, y: 0 }, br: { x: 100, y: 100 }, bl: { x: 0, y: 100 } };
+      return DEFAULT_5PCT_CORNERS;
     }
 
     // Downsample to max dimension 250px for fast <10ms client-side processing
@@ -62,7 +70,7 @@ function autoDetectDocumentCorners(
     canvas.height = h;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) {
-      return { tl: { x: 0, y: 0 }, tr: { x: 100, y: 0 }, br: { x: 100, y: 100 }, bl: { x: 0, y: 100 } };
+      return DEFAULT_5PCT_CORNERS;
     }
 
     ctx.drawImage(source, 0, 0, w, h);
@@ -129,6 +137,13 @@ function autoDetectDocumentCorners(
     }
     const avgCenter = centerLumSum / centerCount;
 
+    // Check contrast difference: if center and border are too similar (< 16 diff),
+    // contrast detection is confused. Default cleanly to 5% uniform trim!
+    const contrastDiff = Math.abs(avgCenter - avgBorder);
+    if (contrastDiff < 16) {
+      return DEFAULT_5PCT_CORNERS;
+    }
+
     const isDocBrighter = avgCenter >= avgBorder;
     const isDocumentPixel = (val: number) => (isDocBrighter ? val >= threshold - 12 : val <= threshold + 12);
 
@@ -149,9 +164,9 @@ function autoDetectDocumentCorners(
     }
 
     const coverage = docCount / totalPixels;
-    // If detected document covers almost full frame (> 94%) or is negligible (< 12%), default to 0% corners
-    if (coverage > 0.94 || coverage < 0.12 || minX >= maxX || minY >= maxY) {
-      return { tl: { x: 0, y: 0 }, tr: { x: 100, y: 0 }, br: { x: 100, y: 100 }, bl: { x: 0, y: 100 } };
+    // If detected document covers almost full frame (> 92%) or is negligible (< 18%), default cleanly to 5% corners
+    if (coverage > 0.92 || coverage < 0.18 || minX >= maxX || minY >= maxY) {
+      return DEFAULT_5PCT_CORNERS;
     }
 
     // 4. Find the 4 extremal corners closest to the 4 corners of the frame
@@ -188,22 +203,302 @@ function autoDetectDocumentCorners(
     const cBR = toPct(bestBR);
     const cBL = toPct(bestBL);
 
-    // Validate quad shape (must have width and height > 15%)
-    if (cTR.x - cTL.x >= 15 && cBR.x - cBL.x >= 15 && cBL.y - cTL.y >= 15 && cBR.y - cTR.y >= 15) {
+    const wTop = cTR.x - cTL.x;
+    const wBottom = cBR.x - cBL.x;
+    const hLeft = cBL.y - cTL.y;
+    const hRight = cBR.y - cTR.y;
+    const topSkew = Math.abs(cTL.y - cTR.y);
+    const bottomSkew = Math.abs(cBL.y - cBR.y);
+    const leftSkew = Math.abs(cTL.x - cBL.x);
+    const rightSkew = Math.abs(cTR.x - cBR.x);
+
+    // Validate that the detected corners form a clear, non-confused quadrilateral:
+    // Minimum 25% width/height, sane order (TL left of TR, etc.), and max 22% perspective skew
+    const isValidQuad =
+      cTL.x < cTR.x &&
+      cBL.x < cBR.x &&
+      cTL.y < cBL.y &&
+      cTR.y < cBR.y &&
+      wTop >= 25 &&
+      wBottom >= 25 &&
+      hLeft >= 25 &&
+      hRight >= 25 &&
+      topSkew <= 22 &&
+      bottomSkew <= 22 &&
+      leftSkew <= 22 &&
+      rightSkew <= 22;
+
+    if (isValidQuad) {
       return { tl: cTL, tr: cTR, br: cBR, bl: cBL };
     }
 
-    // Fallback to bounding box percentages
-    return {
-      tl: { x: Math.max(0, Math.round((minX / w) * 100)), y: Math.max(0, Math.round((minY / h) * 100)) },
-      tr: { x: Math.min(100, Math.round((maxX / w) * 100)), y: Math.max(0, Math.round((minY / h) * 100)) },
-      br: { x: Math.min(100, Math.round((maxX / w) * 100)), y: Math.min(100, Math.round((maxY / h) * 100)) },
-      bl: { x: Math.max(0, Math.round((minX / w) * 100)), y: Math.min(100, Math.round((maxY / h) * 100)) },
-    };
+    // Fallback: If contrast detection gets confused or corners are irregular,
+    // do not scatter corners here and there - cleanly default to 5% uniform trim!
+    return DEFAULT_5PCT_CORNERS;
   } catch (e) {
-    return { tl: { x: 0, y: 0 }, tr: { x: 100, y: 0 }, br: { x: 100, y: 100 }, bl: { x: 0, y: 100 } };
+    return DEFAULT_5PCT_CORNERS;
   }
 }
+
+const VirtualEdgeViewer: React.FC<{
+  imageUrl: string;
+  activeEdge: 'top' | 'bottom' | 'left' | 'right';
+  cropTop: number;
+  cropBottom: number;
+  cropLeft: number;
+  cropRight: number;
+  onSelectEdge?: (edge: 'top' | 'bottom' | 'left' | 'right') => void;
+}> = ({ imageUrl, activeEdge, cropTop, cropBottom, cropLeft, cropRight, onSelectEdge }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const nw = img.naturalWidth || img.width || 800;
+      const nh = img.naturalHeight || img.height || 1000;
+
+      const cw = 640;
+      const ch = 180;
+      canvas.width = cw;
+      canvas.height = ch;
+
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const drawRoundRect = (x: number, y: number, w: number, h: number, r: number) => {
+        if (typeof (ctx as any).roundRect === 'function') {
+          (ctx as any).roundRect(x, y, w, h, r);
+        } else {
+          ctx.rect(x, y, w, h);
+        }
+      };
+
+      if (activeEdge === 'top') {
+        const viewPct = Math.min(100, Math.max(cropTop + 18, 28));
+        const srcH = (viewPct / 100) * nh;
+        const srcY = 0;
+        const srcX = (cropLeft / 100) * nw * 0.4;
+        const srcW = nw - srcX - ((cropRight / 100) * nw * 0.4);
+
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cw, ch);
+
+        const cutY = (cropTop / viewPct) * ch;
+
+        if (cutY > 0) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+          ctx.fillRect(0, 0, cw, cutY);
+
+          ctx.fillStyle = '#f87171';
+          ctx.font = 'bold 11px system-ui, sans-serif';
+          ctx.fillText('TRIMMED (EXCLUDED)', 12, Math.max(16, cutY - 6));
+        }
+
+        ctx.shadowColor = '#06b6d4';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, cutY);
+        ctx.lineTo(cw, cutY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#06b6d4';
+        ctx.beginPath();
+        drawRoundRect(cw / 2 - 60, cutY - 11, 120, 22, 6);
+        ctx.fill();
+
+        ctx.fillStyle = '#020617';
+        ctx.font = 'bold 11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`✂ TOP CUT ${cropTop}%`, cw / 2, cutY);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+
+        ctx.fillStyle = '#22d3ee';
+        ctx.font = 'bold 10px system-ui, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('KEPT IN PDF ↓', cw - 12, ch - 6);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+      } else if (activeEdge === 'bottom') {
+        const viewPct = Math.min(100, Math.max(cropBottom + 18, 28));
+        const srcH = (viewPct / 100) * nh;
+        const srcY = nh - srcH;
+        const srcX = (cropLeft / 100) * nw * 0.4;
+        const srcW = nw - srcX - ((cropRight / 100) * nw * 0.4);
+
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cw, ch);
+
+        const cutY = ch - (cropBottom / viewPct) * ch;
+
+        if (cutY < ch) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+          ctx.fillRect(0, cutY, cw, ch - cutY);
+
+          ctx.fillStyle = '#f87171';
+          ctx.font = 'bold 11px system-ui, sans-serif';
+          ctx.fillText('TRIMMED (EXCLUDED)', 12, Math.min(ch - 8, cutY + 16));
+        }
+
+        ctx.shadowColor = '#06b6d4';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, cutY);
+        ctx.lineTo(cw, cutY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#06b6d4';
+        ctx.beginPath();
+        drawRoundRect(cw / 2 - 65, cutY - 11, 130, 22, 6);
+        ctx.fill();
+
+        ctx.fillStyle = '#020617';
+        ctx.font = 'bold 11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`✂ BOTTOM CUT ${cropBottom}%`, cw / 2, cutY);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+
+        ctx.fillStyle = '#22d3ee';
+        ctx.font = 'bold 10px system-ui, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillText('↑ KEPT IN PDF', cw - 12, 8);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+      } else if (activeEdge === 'left') {
+        const viewPct = Math.min(100, Math.max(cropLeft + 18, 28));
+        const srcW = (viewPct / 100) * nw;
+        const srcX = 0;
+        const srcY = 0;
+        const srcH = nh;
+
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cw, ch);
+
+        const cutX = (cropLeft / viewPct) * cw;
+
+        if (cutX > 0) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+          ctx.fillRect(0, 0, cutX, ch);
+
+          ctx.fillStyle = '#f87171';
+          ctx.font = 'bold 10px system-ui, sans-serif';
+          ctx.fillText('TRIMMED', 8, 20);
+        }
+
+        ctx.shadowColor = '#06b6d4';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(cutX, 0);
+        ctx.lineTo(cutX, ch);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#06b6d4';
+        ctx.beginPath();
+        drawRoundRect(Math.max(10, cutX - 50), ch / 2 - 11, 100, 22, 6);
+        ctx.fill();
+
+        ctx.fillStyle = '#020617';
+        ctx.font = 'bold 11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`✂ LEFT ${cropLeft}%`, Math.max(10, cutX - 50) + 50, ch / 2);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+      } else if (activeEdge === 'right') {
+        const viewPct = Math.min(100, Math.max(cropRight + 18, 28));
+        const srcW = (viewPct / 100) * nw;
+        const srcX = nw - srcW;
+        const srcY = 0;
+        const srcH = nh;
+
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, cw, ch);
+
+        const cutX = cw - (cropRight / viewPct) * cw;
+
+        if (cutX < cw) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+          ctx.fillRect(cutX, 0, cw - cutX, ch);
+
+          ctx.fillStyle = '#f87171';
+          ctx.font = 'bold 10px system-ui, sans-serif';
+          ctx.fillText('TRIMMED', cutX + 8, 20);
+        }
+
+        ctx.shadowColor = '#06b6d4';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(cutX, 0);
+        ctx.lineTo(cutX, ch);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#06b6d4';
+        ctx.beginPath();
+        drawRoundRect(Math.min(cw - 110, cutX - 50), ch / 2 - 11, 100, 22, 6);
+        ctx.fill();
+
+        ctx.fillStyle = '#020617';
+        ctx.font = 'bold 11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`✂ RIGHT ${cropRight}%`, Math.min(cw - 110, cutX - 50) + 50, ch / 2);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+      }
+    };
+    img.src = imageUrl;
+  }, [imageUrl, activeEdge, cropTop, cropBottom, cropLeft, cropRight]);
+
+  return (
+    <div className="w-full bg-slate-950 rounded-2xl border-2 border-cyan-500/50 shadow-2xl overflow-hidden ring-2 ring-cyan-500/20 my-1">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 border-b border-slate-800">
+        <div className="flex items-center space-x-1.5">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="text-[11px] font-extrabold text-cyan-300 uppercase tracking-wider">
+            Virtual View: {activeEdge} Edge Magnifier
+          </span>
+        </div>
+        <div className="flex items-center space-x-1">
+          {(['top', 'bottom', 'left', 'right'] as const).map((edge) => (
+            <button
+              key={edge}
+              type="button"
+              onClick={() => onSelectEdge?.(edge)}
+              className={`px-2 py-0.5 rounded text-[10px] font-black uppercase transition ${
+                activeEdge === edge
+                  ? 'bg-cyan-400 text-slate-950 shadow'
+                  : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {edge}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="relative w-full h-24 sm:h-28 bg-slate-950">
+        <canvas ref={canvasRef} className="w-full h-full object-cover" />
+      </div>
+    </div>
+  );
+};
 
 const LoupeCanvas: React.FC<{
   imageUrl: string;
@@ -295,20 +590,21 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const [midTone, setMidTone] = useState<number>(0);
   const [showOriginalComparison, setShowOriginalComparison] = useState<boolean>(false);
 
-  // Crop Margin Sliders & Polygon Corners (Default 0% = auto reach to page corners)
-  const [cropLeft, setCropLeft] = useState<number>(0);
-  const [cropRight, setCropRight] = useState<number>(0);
-  const [cropTop, setCropTop] = useState<number>(0);
-  const [cropBottom, setCropBottom] = useState<number>(0);
+  // Crop Margin Sliders & Polygon Corners (Default 5% uniform margin)
+  const [cropLeft, setCropLeft] = useState<number>(5);
+  const [cropRight, setCropRight] = useState<number>(5);
+  const [cropTop, setCropTop] = useState<number>(5);
+  const [cropBottom, setCropBottom] = useState<number>(5);
 
   const [corners, setCorners] = useState<{ tl: Point; tr: Point; br: Point; bl: Point }>({
-    tl: { x: 0, y: 0 },
-    tr: { x: 100, y: 0 },
-    br: { x: 100, y: 100 },
-    bl: { x: 0, y: 100 },
+    tl: { x: 5, y: 5 },
+    tr: { x: 95, y: 5 },
+    br: { x: 95, y: 95 },
+    bl: { x: 5, y: 95 },
   });
   const [draggingCorner, setDraggingCorner] = useState<'tl' | 'tr' | 'br' | 'bl' | null>(null);
   const [activeSlider, setActiveSlider] = useState<'top' | 'bottom' | 'left' | 'right' | null>(null);
+  const [inspectEdge, setInspectEdge] = useState<'top' | 'bottom' | 'left' | 'right'>('top');
 
   const [qrScanUrl, setQrScanUrl] = useState<string>('');
 
@@ -707,23 +1003,18 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     setBrightness(page.brightness || 0);
     setContrast(page.contrast || 0);
     setMidTone(page.midTone || 0);
-    setCropLeft(page.cropLeft !== undefined ? page.cropLeft : 0);
-    setCropRight(page.cropRight !== undefined ? page.cropRight : 0);
-    setCropTop(page.cropTop !== undefined ? page.cropTop : 0);
-    setCropBottom(page.cropBottom !== undefined ? page.cropBottom : 0);
-
-    const cL = page.cropLeft !== undefined ? page.cropLeft : 0;
-    const cR = page.cropRight !== undefined ? page.cropRight : 0;
-    const cT = page.cropTop !== undefined ? page.cropTop : 0;
-    const cB = page.cropBottom !== undefined ? page.cropBottom : 0;
+    setCropLeft(page.cropLeft !== undefined ? page.cropLeft : 5);
+    setCropRight(page.cropRight !== undefined ? page.cropRight : 5);
+    setCropTop(page.cropTop !== undefined ? page.cropTop : 5);
+    setCropBottom(page.cropBottom !== undefined ? page.cropBottom : 5);
 
     if (page.corners) {
       setCorners(page.corners);
     } else {
-      const cL = page.cropLeft !== undefined ? page.cropLeft : 0;
-      const cR = page.cropRight !== undefined ? page.cropRight : 0;
-      const cT = page.cropTop !== undefined ? page.cropTop : 0;
-      const cB = page.cropBottom !== undefined ? page.cropBottom : 0;
+      const cL = page.cropLeft !== undefined ? page.cropLeft : 5;
+      const cR = page.cropRight !== undefined ? page.cropRight : 5;
+      const cT = page.cropTop !== undefined ? page.cropTop : 5;
+      const cB = page.cropBottom !== undefined ? page.cropBottom : 5;
 
       setCorners({
         tl: { x: cL, y: cT },
@@ -1544,7 +1835,11 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                     </button>
                     <button
                       onClick={() => setPresetCrop(5)}
-                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-[11px] font-bold rounded-lg border border-slate-800"
+                      className={`px-2 py-0.5 text-[11px] font-bold rounded-lg border transition ${
+                        cropTop === 5 && cropBottom === 5 && cropLeft === 5 && cropRight === 5
+                          ? 'bg-cyan-950 text-cyan-300 border-cyan-700 ring-1 ring-cyan-500/30'
+                          : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                      }`}
                     >
                       Trim 5%
                     </button>
@@ -1563,11 +1858,24 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                   </div>
                 </div>
 
+                {/* Virtual Edge Magnifier View - Always visible live view of the edge being trimmed */}
+                <VirtualEdgeViewer
+                  imageUrl={pages[activePageIndex].originalDataUrl}
+                  activeEdge={inspectEdge}
+                  cropTop={cropTop}
+                  cropBottom={cropBottom}
+                  cropLeft={cropLeft}
+                  cropRight={cropRight}
+                  onSelectEdge={(edge) => setInspectEdge(edge)}
+                />
+
                 {/* 4 Fine-Tuning Crop Margin Sliders (Top, Bottom, Left, Right) */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                      <span>Top Trim</span>
+                  <div className={`p-2 rounded-xl transition ${inspectEdge === 'top' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
+                    <div className="flex justify-between text-[11px] font-bold mb-1">
+                      <span className={inspectEdge === 'top' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
+                        Top Trim {inspectEdge === 'top' && '●'}
+                      </span>
                       <span className="text-cyan-400">{cropTop}%</span>
                     </div>
                     <input
@@ -1575,20 +1883,29 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                       min="0"
                       max="40"
                       value={cropTop}
-                      onMouseDown={() => setActiveSlider('top')}
-                      onTouchStart={() => setActiveSlider('top')}
+                      onMouseDown={() => {
+                        setActiveSlider('top');
+                        setInspectEdge('top');
+                      }}
+                      onTouchStart={() => {
+                        setActiveSlider('top');
+                        setInspectEdge('top');
+                      }}
                       onMouseUp={() => setActiveSlider(null)}
                       onTouchEnd={() => setActiveSlider(null)}
                       onChange={(e) => {
                         setActiveSlider('top');
+                        setInspectEdge('top');
                         handleSliderMarginChange('top', Number(e.target.value));
                       }}
                       className="w-full accent-cyan-400 cursor-pointer"
                     />
                   </div>
-                  <div>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                      <span>Bottom Trim</span>
+                  <div className={`p-2 rounded-xl transition ${inspectEdge === 'bottom' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
+                    <div className="flex justify-between text-[11px] font-bold mb-1">
+                      <span className={inspectEdge === 'bottom' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
+                        Bottom Trim {inspectEdge === 'bottom' && '●'}
+                      </span>
                       <span className="text-cyan-400">{cropBottom}%</span>
                     </div>
                     <input
@@ -1596,20 +1913,29 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                       min="0"
                       max="40"
                       value={cropBottom}
-                      onMouseDown={() => setActiveSlider('bottom')}
-                      onTouchStart={() => setActiveSlider('bottom')}
+                      onMouseDown={() => {
+                        setActiveSlider('bottom');
+                        setInspectEdge('bottom');
+                      }}
+                      onTouchStart={() => {
+                        setActiveSlider('bottom');
+                        setInspectEdge('bottom');
+                      }}
                       onMouseUp={() => setActiveSlider(null)}
                       onTouchEnd={() => setActiveSlider(null)}
                       onChange={(e) => {
                         setActiveSlider('bottom');
+                        setInspectEdge('bottom');
                         handleSliderMarginChange('bottom', Number(e.target.value));
                       }}
                       className="w-full accent-cyan-400 cursor-pointer"
                     />
                   </div>
-                  <div>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                      <span>Left Trim</span>
+                  <div className={`p-2 rounded-xl transition ${inspectEdge === 'left' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
+                    <div className="flex justify-between text-[11px] font-bold mb-1">
+                      <span className={inspectEdge === 'left' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
+                        Left Trim {inspectEdge === 'left' && '●'}
+                      </span>
                       <span className="text-cyan-400">{cropLeft}%</span>
                     </div>
                     <input
@@ -1617,20 +1943,29 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                       min="0"
                       max="40"
                       value={cropLeft}
-                      onMouseDown={() => setActiveSlider('left')}
-                      onTouchStart={() => setActiveSlider('left')}
+                      onMouseDown={() => {
+                        setActiveSlider('left');
+                        setInspectEdge('left');
+                      }}
+                      onTouchStart={() => {
+                        setActiveSlider('left');
+                        setInspectEdge('left');
+                      }}
                       onMouseUp={() => setActiveSlider(null)}
                       onTouchEnd={() => setActiveSlider(null)}
                       onChange={(e) => {
                         setActiveSlider('left');
+                        setInspectEdge('left');
                         handleSliderMarginChange('left', Number(e.target.value));
                       }}
                       className="w-full accent-cyan-400 cursor-pointer"
                     />
                   </div>
-                  <div>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                      <span>Right Trim</span>
+                  <div className={`p-2 rounded-xl transition ${inspectEdge === 'right' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
+                    <div className="flex justify-between text-[11px] font-bold mb-1">
+                      <span className={inspectEdge === 'right' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
+                        Right Trim {inspectEdge === 'right' && '●'}
+                      </span>
                       <span className="text-cyan-400">{cropRight}%</span>
                     </div>
                     <input
@@ -1638,12 +1973,19 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                       min="0"
                       max="40"
                       value={cropRight}
-                      onMouseDown={() => setActiveSlider('right')}
-                      onTouchStart={() => setActiveSlider('right')}
+                      onMouseDown={() => {
+                        setActiveSlider('right');
+                        setInspectEdge('right');
+                      }}
+                      onTouchStart={() => {
+                        setActiveSlider('right');
+                        setInspectEdge('right');
+                      }}
                       onMouseUp={() => setActiveSlider(null)}
                       onTouchEnd={() => setActiveSlider(null)}
                       onChange={(e) => {
                         setActiveSlider('right');
+                        setInspectEdge('right');
                         handleSliderMarginChange('right', Number(e.target.value));
                       }}
                       className="w-full accent-cyan-400 cursor-pointer"
