@@ -26,8 +26,8 @@ const PremiumExportModal = React.lazy(() => import('./components/PremiumExportMo
 const ThemeModal = React.lazy(() => import('./components/ThemeModal').then(m => ({ default: m.ThemeModal })));
 const UserGuideModal = React.lazy(() => import('./components/UserGuideModal').then(m => ({ default: m.UserGuideModal })));
 const HelcimCheckoutModal = React.lazy(() => import('./components/HelcimCheckoutModal').then(m => ({ default: m.HelcimCheckoutModal })));
-const PasswordModal = React.lazy(() => import('./components/PasswordModal').then(m => ({ default: m.PasswordModal })));
-const CompressModal = React.lazy(() => import('./components/CompressModal').then(m => ({ default: m.CompressModal })));
+import { PasswordModal } from './components/PasswordModal';
+import { CompressModal } from './components/CompressModal';
 import { ScanModal } from './components/ScanModal';
 const AppDownloadModal = React.lazy(() => import('./components/AppDownloadModal').then(m => ({ default: m.AppDownloadModal })));
 const ReviewModal = React.lazy(() => import('./components/ReviewModal').then(m => ({ default: m.ReviewModal })));

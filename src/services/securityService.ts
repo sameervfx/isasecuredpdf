@@ -3,11 +3,29 @@ import { applyStandardMetadata } from '../utils/pdfMetadata';
 import { pdfRenderer } from './pdfRenderer';
 
 let cachedMuPDF: typeof import('mupdf') | null = null;
-async function getMuPDF() {
-  if (!cachedMuPDF) {
-    cachedMuPDF = await import('mupdf');
+let loadingMuPDFPromise: Promise<typeof import('mupdf')> | null = null;
+
+async function getMuPDF(): Promise<typeof import('mupdf')> {
+  if (cachedMuPDF) return cachedMuPDF;
+  if (!loadingMuPDFPromise) {
+    loadingMuPDFPromise = (async () => {
+      try {
+        cachedMuPDF = await import('mupdf');
+        return cachedMuPDF;
+      } catch (err) {
+        // Fallback if a live deployment updated chunk hashes while this browser tab was open
+        if (typeof window !== 'undefined' && window.location?.origin) {
+          const fallbackUrl = `${window.location.origin}/assets/mupdf.js?v=${Date.now()}`;
+          cachedMuPDF = await import(/* @vite-ignore */ fallbackUrl);
+          return cachedMuPDF!;
+        }
+        throw err;
+      } finally {
+        loadingMuPDFPromise = null;
+      }
+    })();
   }
-  return cachedMuPDF;
+  return loadingMuPDFPromise;
 }
 
 export interface EncryptOptions {
@@ -26,6 +44,14 @@ export interface CompressionResult {
 }
 
 export const securityService = {
+  /**
+   * Pre-warms the MuPDF WebAssembly engine in the background so Protect/Unlock/Compress are instant
+   * and never fail across live web deployments.
+   */
+  preload(): void {
+    getMuPDF().catch(() => {});
+  },
+
   /**
    * Encrypts a PDF Uint8Array with AES-256 and custom permissions (100% client-side)
    */
@@ -211,3 +237,9 @@ export const securityService = {
     };
   },
 };
+
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    securityService.preload();
+  }, 1200);
+}
