@@ -534,9 +534,13 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       </button>
                     </div>
 
-                    {/* Mandatory Apple Guideline 3.1.2: Terms of Use & Privacy Policy */}
+                    {/* Terms of Service** & Privacy Policy (Apple EULA only on iOS) */}
                     <div className="flex justify-center items-center space-x-3 text-[9.5px] text-slate-500 pt-1">
-                      <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Service** (EULA)</a>
+                      {isIOSPlatform() ? (
+                        <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Service** (EULA)</a>
+                      ) : (
+                        <a href="https://isasecuredpdf.com/#terms" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Terms of Service**</a>
+                      )}
                       <span>•</span>
                       <a href="https://isasecuredpdf.com/privacy.html" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 underline">Privacy Policy</a>
                     </div>

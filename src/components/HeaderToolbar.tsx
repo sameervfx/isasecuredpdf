@@ -531,17 +531,13 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     disabled={!hasDocument}
                     onClick={() => {
                       setIsFileMenuOpen(false);
-                      if (!isProActive) {
-                        if (onOpenCheckout) onOpenCheckout();
-                        return;
-                      }
                       onOpenSaveMultipleModal();
                     }}
                     className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-white hover:bg-slate-800 rounded-xl transition disabled:opacity-40"
                   >
                     <div className="flex items-center space-x-2.5">
                       <FolderArchive className="w-4 h-4 text-purple-400" />
-                      <span>Save Multiple PDFs (ZIP)... {!isProActive && <span className="text-[9px] font-extrabold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 ml-1">PRO</span>}</span>
+                      <span>Split / Save Multiple PDFs (ZIP)... {!isProActive && <span className="text-[9px] font-extrabold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20 ml-1">5/MO FREE</span>}</span>
                     </div>
                   </button>
 
@@ -651,7 +647,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 <input type="file" ref={imageFileInputRef} onChange={handleImageFileSelect} accept="image/png, image/jpeg, image/jpg" className="hidden" />
                 <button
                   onClick={onGoToLandingPage}
-                  className="hidden 2xl:inline-block px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition shrink-0"
+                  className="inline-flex items-center px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shrink-0 shadow-sm"
                   title="Return to Landing Page"
                 >
                   Home
@@ -659,7 +655,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               </>
             )}
 
-            <span className="hidden 2xl:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+            <span className={`${hasDocument ? 'hidden sm:inline-flex' : 'inline-flex'} items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0`}>
               <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
               100% Offline
             </span>
