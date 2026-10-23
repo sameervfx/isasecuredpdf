@@ -29,11 +29,180 @@ interface ScannedPage {
   cropRight: number;
   cropTop: number;
   cropBottom: number;
+  corners?: { tl: Point; tr: Point; br: Point; bl: Point };
 }
 
 interface Point {
   x: number; // percentage 0 - 100
   y: number; // percentage 0 - 100
+}
+
+/**
+ * Intelligent client-side document corner & paper edge detector (0-100%).
+ * Uses Otsu thresholding + extremal quad search on downsampled canvas. Runs in < 10ms.
+ */
+function autoDetectDocumentCorners(
+  source: HTMLCanvasElement | HTMLImageElement
+): { tl: Point; tr: Point; br: Point; bl: Point } {
+  try {
+    const origW = 'naturalWidth' in source ? (source.naturalWidth || source.width) : source.width;
+    const origH = 'naturalHeight' in source ? (source.naturalHeight || source.height) : source.height;
+    if (!origW || !origH) {
+      return { tl: { x: 0, y: 0 }, tr: { x: 100, y: 0 }, br: { x: 100, y: 100 }, bl: { x: 0, y: 100 } };
+    }
+
+    // Downsample to max dimension 250px for fast <10ms client-side processing
+    const maxDim = 250;
+    const scale = Math.min(1, maxDim / Math.max(origW, origH));
+    const w = Math.max(30, Math.round(origW * scale));
+    const h = Math.max(30, Math.round(origH * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) {
+      return { tl: { x: 0, y: 0 }, tr: { x: 100, y: 0 }, br: { x: 100, y: 100 }, bl: { x: 0, y: 100 } };
+    }
+
+    ctx.drawImage(source, 0, 0, w, h);
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    // 1. Calculate luminance map
+    const lums = new Uint8Array(w * h);
+    let totalLum = 0;
+    for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+      const lum = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+      lums[p] = lum;
+      totalLum += lum;
+    }
+
+    // 2. Otsu thresholding to distinguish document from background
+    const hist = new Int32Array(256);
+    for (let i = 0; i < lums.length; i++) hist[lums[i]]++;
+
+    let sumB = 0;
+    let wB = 0;
+    let maxVariance = 0;
+    let threshold = 128;
+    const totalPixels = lums.length;
+
+    for (let t = 0; t < 256; t++) {
+      wB += hist[t];
+      if (wB === 0) continue;
+      const wF = totalPixels - wB;
+      if (wF === 0) break;
+
+      sumB += t * hist[t];
+      const mB = sumB / wB;
+      const mF = (totalLum - sumB) / wF;
+      const between = wB * wF * (mB - mF) * (mB - mF);
+      if (between > maxVariance) {
+        maxVariance = between;
+        threshold = t;
+      }
+    }
+
+    // Compare center vs border to detect paper vs darker desk
+    let borderLumSum = 0;
+    let borderCount = 0;
+    for (let x = 0; x < w; x++) {
+      borderLumSum += lums[x] + lums[(h - 1) * w + x];
+      borderCount += 2;
+    }
+    for (let y = 1; y < h - 1; y++) {
+      borderLumSum += lums[y * w] + lums[y * w + (w - 1)];
+      borderCount += 2;
+    }
+    const avgBorder = borderLumSum / borderCount;
+
+    let centerLumSum = 0;
+    let centerCount = 0;
+    const cxStart = Math.floor(w * 0.25), cxEnd = Math.floor(w * 0.75);
+    const cyStart = Math.floor(h * 0.25), cyEnd = Math.floor(h * 0.75);
+    for (let y = cyStart; y < cyEnd; y++) {
+      for (let x = cxStart; x < cxEnd; x++) {
+        centerLumSum += lums[y * w + x];
+        centerCount++;
+      }
+    }
+    const avgCenter = centerLumSum / centerCount;
+
+    const isDocBrighter = avgCenter >= avgBorder;
+    const isDocumentPixel = (val: number) => (isDocBrighter ? val >= threshold - 12 : val <= threshold + 12);
+
+    // 3. Find bounding box of the document
+    let minX = w, maxX = 0, minY = h, maxY = 0;
+    let docCount = 0;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (isDocumentPixel(lums[y * w + x])) {
+          docCount++;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    const coverage = docCount / totalPixels;
+    // If detected document covers almost full frame (> 94%) or is negligible (< 12%), default to 0% corners
+    if (coverage > 0.94 || coverage < 0.12 || minX >= maxX || minY >= maxY) {
+      return { tl: { x: 0, y: 0 }, tr: { x: 100, y: 0 }, br: { x: 100, y: 100 }, bl: { x: 0, y: 100 } };
+    }
+
+    // 4. Find the 4 extremal corners closest to the 4 corners of the frame
+    let bestTL = { x: minX, y: minY }, minScoreTL = Infinity;
+    let bestTR = { x: maxX, y: minY }, minScoreTR = Infinity;
+    let bestBR = { x: maxX, y: maxY }, minScoreBR = Infinity;
+    let bestBL = { x: minX, y: maxY }, minScoreBL = Infinity;
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (isDocumentPixel(lums[y * w + x])) {
+          const sTL = x + y;
+          if (sTL < minScoreTL) { minScoreTL = sTL; bestTL = { x, y }; }
+
+          const sTR = (w - x) + y;
+          if (sTR < minScoreTR) { minScoreTR = sTR; bestTR = { x, y }; }
+
+          const sBR = (w - x) + (h - y);
+          if (sBR < minScoreBR) { minScoreBR = sBR; bestBR = { x, y }; }
+
+          const sBL = x + (h - y);
+          if (sBL < minScoreBL) { minScoreBL = sBL; bestBL = { x, y }; }
+        }
+      }
+    }
+
+    const toPct = (pt: { x: number; y: number }) => ({
+      x: Math.max(0, Math.min(100, Math.round((pt.x / w) * 100))),
+      y: Math.max(0, Math.min(100, Math.round((pt.y / h) * 100))),
+    });
+
+    const cTL = toPct(bestTL);
+    const cTR = toPct(bestTR);
+    const cBR = toPct(bestBR);
+    const cBL = toPct(bestBL);
+
+    // Validate quad shape (must have width and height > 15%)
+    if (cTR.x - cTL.x >= 15 && cBR.x - cBL.x >= 15 && cBL.y - cTL.y >= 15 && cBR.y - cTR.y >= 15) {
+      return { tl: cTL, tr: cTR, br: cBR, bl: cBL };
+    }
+
+    // Fallback to bounding box percentages
+    return {
+      tl: { x: Math.max(0, Math.round((minX / w) * 100)), y: Math.max(0, Math.round((minY / h) * 100)) },
+      tr: { x: Math.min(100, Math.round((maxX / w) * 100)), y: Math.max(0, Math.round((minY / h) * 100)) },
+      br: { x: Math.min(100, Math.round((maxX / w) * 100)), y: Math.min(100, Math.round((maxY / h) * 100)) },
+      bl: { x: Math.max(0, Math.round((minX / w) * 100)), y: Math.min(100, Math.round((maxY / h) * 100)) },
+    };
+  } catch (e) {
+    return { tl: { x: 0, y: 0 }, tr: { x: 100, y: 0 }, br: { x: 100, y: 100 }, bl: { x: 0, y: 100 } };
+  }
 }
 
 const LoupeCanvas: React.FC<{
@@ -548,12 +717,21 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const cT = page.cropTop !== undefined ? page.cropTop : 0;
     const cB = page.cropBottom !== undefined ? page.cropBottom : 0;
 
-    setCorners({
-      tl: { x: cL, y: cT },
-      tr: { x: 100 - cR, y: cT },
-      br: { x: 100 - cR, y: 100 - cB },
-      bl: { x: cL, y: 100 - cB },
-    });
+    if (page.corners) {
+      setCorners(page.corners);
+    } else {
+      const cL = page.cropLeft !== undefined ? page.cropLeft : 0;
+      const cR = page.cropRight !== undefined ? page.cropRight : 0;
+      const cT = page.cropTop !== undefined ? page.cropTop : 0;
+      const cB = page.cropBottom !== undefined ? page.cropBottom : 0;
+
+      setCorners({
+        tl: { x: cL, y: cT },
+        tr: { x: 100 - cR, y: cT },
+        br: { x: 100 - cR, y: 100 - cB },
+        bl: { x: cL, y: 100 - cB },
+      });
+    }
 
     setCurrentStep('edit');
   };
@@ -579,6 +757,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     ctx.drawImage(video, 0, 0, w, h);
     const rawDataUrl = canvas.toDataURL('image/png', 1.0);
 
+    // Auto-detect document paper edges & corners
+    const detectedCorners = autoDetectDocumentCorners(canvas);
+
     const newPage: ScannedPage = {
       id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       dataUrl: rawDataUrl,
@@ -588,10 +769,11 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       brightness: 0,
       contrast: 0,
       midTone: 0,
-      cropLeft: 0,
-      cropRight: 0,
-      cropTop: 0,
-      cropBottom: 0,
+      cropLeft: Math.round(Math.min(detectedCorners.tl.x, detectedCorners.bl.x)),
+      cropRight: Math.round(100 - Math.max(detectedCorners.tr.x, detectedCorners.br.x)),
+      cropTop: Math.round(Math.min(detectedCorners.tl.y, detectedCorners.tr.y)),
+      cropBottom: Math.round(100 - Math.max(detectedCorners.bl.y, detectedCorners.br.y)),
+      corners: detectedCorners,
     };
 
     stopCamera();
@@ -619,34 +801,39 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       reader.onload = (evt) => {
         const rawDataUrl = evt.target?.result as string;
         if (rawDataUrl) {
-          const newPage: ScannedPage = {
-            id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${idx}`,
-            dataUrl: rawDataUrl,
-            originalDataUrl: rawDataUrl,
-            filter: 'none',
-            rotation: 0,
-            brightness: 0,
-            contrast: 0,
-            midTone: 0,
-            cropLeft: 0,
-            cropRight: 0,
-            cropTop: 0,
-            cropBottom: 0,
+          const img = new Image();
+          img.onload = () => {
+            const detectedCorners = autoDetectDocumentCorners(img);
+            const newPage: ScannedPage = {
+              id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${idx}`,
+              dataUrl: rawDataUrl,
+              originalDataUrl: rawDataUrl,
+              filter: 'none',
+              rotation: 0,
+              brightness: 0,
+              contrast: 0,
+              midTone: 0,
+              cropLeft: Math.round(Math.min(detectedCorners.tl.x, detectedCorners.bl.x)),
+              cropRight: Math.round(100 - Math.max(detectedCorners.tr.x, detectedCorners.br.x)),
+              cropTop: Math.round(Math.min(detectedCorners.tl.y, detectedCorners.tr.y)),
+              cropBottom: Math.round(100 - Math.max(detectedCorners.bl.y, detectedCorners.br.y)),
+              corners: detectedCorners,
+            };
+            newPagesToAppend.push(newPage);
+            processedCount++;
+            if (processedCount === fileList.length && newPagesToAppend.length > 0) {
+              setPages((prev) => {
+                const updated = [...prev, ...newPagesToAppend];
+                const firstNewIndex = prev.length;
+                const firstNewPage = newPagesToAppend[0];
+                setTimeout(() => {
+                  openEditStepForPage(firstNewPage, firstNewIndex);
+                }, 50);
+                return updated;
+              });
+            }
           };
-          newPagesToAppend.push(newPage);
-        }
-
-        processedCount++;
-        if (processedCount === fileList.length && newPagesToAppend.length > 0) {
-          setPages((prev) => {
-            const updated = [...prev, ...newPagesToAppend];
-            const firstNewIndex = prev.length;
-            const firstNewPage = newPagesToAppend[0];
-            setTimeout(() => {
-              openEditStepForPage(firstNewPage, firstNewIndex);
-            }, 50);
-            return updated;
-          });
+          img.src = rawDataUrl;
         }
       };
       reader.readAsDataURL(file);
@@ -1072,61 +1259,85 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
           {/* Bottom Floating Control Toolbar - Pushed Down Inside Phone Safety Area */}
           {activeTab === 'camera' && (
-            <div className="relative z-40 pt-4 px-4 sm:px-8 pb-[max(2.5rem,env(safe-area-inset-bottom)+1.5rem)] bg-slate-950/90 border-t border-slate-800/80 backdrop-blur-md flex items-center justify-around">
-              {/* Flip Camera */}
-              <button
-                onClick={toggleCameraFacing}
-                className="p-3.5 sm:p-4 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-full border border-slate-700 shadow-xl backdrop-blur-md transition transform active:scale-90 flex flex-col items-center justify-center"
-                title="Switch Camera"
-              >
-                <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-300" />
-              </button>
+            <div className="relative z-40 pt-3 px-2 sm:px-6 pb-[max(2rem,env(safe-area-inset-bottom)+1.25rem)] bg-slate-950/95 border-t border-slate-800/80 backdrop-blur-md flex flex-col space-y-2">
+              {/* Guidance / Feature Banner */}
+              <p className="text-[11px] text-slate-400 text-center font-medium">
+                Auto-detects paper corners. Tap <span className="text-purple-400 font-bold">Image to PDF</span> to import JPG/PNG files.
+              </p>
 
-              {/* Native Phone Camera 4K Launcher Button */}
-              <button
-                onClick={() => cameraInputRef.current?.click()}
-                className="p-3.5 sm:p-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-full border border-emerald-300/50 shadow-xl shadow-emerald-500/30 backdrop-blur-md transition transform active:scale-90 flex flex-col items-center justify-center group"
-                title="Snap Photo with Phone's Native 4K Camera App"
-              >
-                <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </button>
+              <div className="flex items-end justify-around w-full max-w-lg mx-auto">
+                {/* 1. Flip Camera */}
+                <button
+                  onClick={toggleCameraFacing}
+                  className="flex flex-col items-center justify-center space-y-1 group active:scale-95 transition"
+                  title="Switch between front and back camera"
+                >
+                  <div className="p-3 sm:p-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-2xl border border-slate-700 shadow-xl backdrop-blur-md">
+                    <RefreshCw className="w-5 h-5 text-cyan-300 group-hover:rotate-180 transition-transform duration-300" />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-300 tracking-tight">Flip Cam</span>
+                </button>
 
-              {/* Main Glowing Web Shutter Snap Button */}
-              <button
-                onClick={triggerShutterCapture}
-                disabled={!isCameraActive || steadyCountdown !== null}
-                className="p-5 sm:p-6 bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white rounded-full shadow-2xl shadow-cyan-500/60 border-4 border-white transition transform active:scale-85 disabled:opacity-50 flex items-center justify-center relative"
-                title={isSteadyMode ? "Snap Steady 2s Focused Photo" : "Snap Document Page"}
-              >
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-3 border-white bg-white/30" />
-              </button>
+                {/* 2. HD Camera Launcher */}
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center space-y-1 group active:scale-95 transition"
+                  title="Capture high-resolution photo with device native camera"
+                >
+                  <div className="p-3 sm:p-3.5 bg-gradient-to-tr from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-2xl border border-emerald-300/50 shadow-xl shadow-emerald-500/25 backdrop-blur-md">
+                    <Camera className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-400 tracking-tight">HD Cam</span>
+                </button>
 
-              {/* Steady Focus Mode Toggle Button */}
-              <button
-                onClick={() => setIsSteadyMode((prev) => !prev)}
-                className={`p-3.5 sm:p-4 rounded-full border shadow-xl backdrop-blur-md transition transform active:scale-90 flex flex-col items-center justify-center ${
-                  isSteadyMode
-                    ? 'bg-amber-500 text-slate-950 border-amber-300 ring-2 ring-amber-400/50'
-                    : 'bg-slate-900/90 text-slate-400 hover:text-white border-slate-700'
-                }`}
-                title="Toggle Steady 2s Focus Delay Mode"
-              >
-                <Timer className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
+                {/* 3. Main Shutter Snap Button */}
+                <button
+                  onClick={triggerShutterCapture}
+                  disabled={!isCameraActive || steadyCountdown !== null}
+                  className="flex flex-col items-center justify-center space-y-1 group active:scale-90 transition disabled:opacity-50"
+                  title={isSteadyMode ? "Snap Steady 2s Focused Photo" : "Snap Document Page"}
+                >
+                  <div className="p-4 sm:p-5 bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white rounded-full shadow-2xl shadow-cyan-500/60 border-4 border-white">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-3 border-white bg-white/30" />
+                  </div>
+                  <span className="text-[11px] font-black text-white tracking-wider uppercase">Snap</span>
+                </button>
 
-              {/* Upload Gallery Button */}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="p-3.5 sm:p-4 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-full border border-slate-700 shadow-xl backdrop-blur-md transition transform active:scale-90 relative"
-                title="Upload Photo Files"
-              >
-                <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-300" />
-                {pages.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-full flex items-center justify-center shadow">
-                    {pages.length}
+                {/* 4. Steady Focus Timer */}
+                <button
+                  onClick={() => setIsSteadyMode((prev) => !prev)}
+                  className="flex flex-col items-center justify-center space-y-1 group active:scale-95 transition"
+                  title="Toggle 2-second steady focus timer before snap"
+                >
+                  <div className={`p-3 sm:p-3.5 rounded-2xl border shadow-xl backdrop-blur-md transition ${
+                    isSteadyMode
+                      ? 'bg-amber-500 text-slate-950 border-amber-300 ring-2 ring-amber-400/50'
+                      : 'bg-slate-900/90 text-slate-400 hover:text-white border-slate-700'
+                  }`}>
+                    <Timer className="w-5 h-5" />
+                  </div>
+                  <span className={`text-[10px] font-bold tracking-tight ${isSteadyMode ? 'text-amber-400' : 'text-slate-400'}`}>
+                    Steady 2s
                   </span>
-                )}
-              </button>
+                </button>
+
+                {/* 5. Image to PDF (Load JPG / PNG from phone) */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center space-y-1 group active:scale-95 transition relative"
+                  title="Image to PDF: Import JPG or PNG images from phone gallery to convert into PDF"
+                >
+                  <div className="p-3 sm:p-3.5 bg-gradient-to-tr from-purple-600/90 to-blue-600/90 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl border border-purple-400/40 shadow-xl shadow-purple-500/20 backdrop-blur-md relative">
+                    <ImageIcon className="w-5 h-5 text-purple-200" />
+                    {pages.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-full flex items-center justify-center shadow">
+                        {pages.length}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-black text-purple-300 tracking-tight">Image to PDF</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
