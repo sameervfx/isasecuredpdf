@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { pdfRenderer } from '../services/pdfRenderer';
 import { PDFDocumentState, ToolMode, TextAnnotation, SignatureAnnotation, StampAnnotation, StrikeoutAnnotation, FreehandDrawing } from '../types/pdf';
 import { AcroFormOverlay } from './AcroFormOverlay';
@@ -261,30 +261,60 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
     container.addEventListener('wheel', handleWheel, { passive: false });
     return () => container.removeEventListener('wheel', handleWheel);
-  }, [zoom, onZoomChange]);
+  }, [zoom, onZoomChange, Boolean(state.fileBytes)]);
 
   // Keep ref for smooth zoom scaling without stale closure issues
   const zoomRef = useRef(zoom);
+  const prevZoomRef = useRef(zoom);
+  const pinchFocalRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
+  const [pinchRenderTrigger, setPinchRenderTrigger] = useState(0);
+
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);
 
+  // Synchronously anchor scroll position to the pinch midpoint right after React updates page width/height in DOM
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const prevZoom = prevZoomRef.current;
+    prevZoomRef.current = zoom;
+    if (!container || Math.abs(zoom - prevZoom) < 0.001) return;
+
+    if (pinchFocalRef.current.active && prevZoom > 0) {
+      const ratio = zoom / prevZoom;
+      const focalX = pinchFocalRef.current.x;
+      const focalY = pinchFocalRef.current.y;
+      container.scrollLeft = Math.max(0, (container.scrollLeft + focalX) * ratio - focalX);
+      container.scrollTop = Math.max(0, (container.scrollTop + focalY) * ratio - focalY);
+    }
+  }, [zoom]);
+
   // Touch Pinch-to-Zoom & 1-Finger Drag Panning with clamped 15% floor & focal-point stability
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
     let initialTouchDist = 0;
     let initialZoom = zoomRef.current;
-    let pinchStartMidX = 0;
-    let pinchStartMidY = 0;
-    let pinchStartScrollLeft = 0;
-    let pinchStartScrollTop = 0;
     let isPanning = false;
     let startX = 0;
     let startY = 0;
+    let lastPanX = 0;
+    let lastPanY = 0;
+    let lastPanTime = 0;
+    let velX = 0;
+    let velY = 0;
+    let inertiaRafId: number | null = null;
+    let pinchRafId: number | null = null;
+    let pendingZoom: number | null = null;
     let startScrollLeft = 0;
     let startScrollTop = 0;
+
+    const stopInertia = () => {
+      if (inertiaRafId !== null) {
+        cancelAnimationFrame(inertiaRafId);
+        inertiaRafId = null;
+      }
+      velX = 0;
+      velY = 0;
+    };
 
     const getTouchDist = (e: TouchEvent) => {
       if (e.touches.length < 2) return 0;
@@ -293,7 +323,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       return Math.hypot(dx, dy);
     };
 
-    const getTouchMidpoint = (e: TouchEvent) => {
+    const getTouchMidpoint = (e: TouchEvent, container: HTMLElement) => {
       const rect = container.getBoundingClientRect();
       const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
       const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
@@ -309,14 +339,20 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       );
     };
 
-    const beginPinch = (e: TouchEvent) => {
+    const isDrawingToolActive =
+      toolMode === 'draw' ||
+      toolMode === 'highlight' ||
+      toolMode === 'eraser' ||
+      toolMode === 'line' ||
+      toolMode === 'rectangle' ||
+      toolMode === 'oval';
+
+    const beginPinch = (e: TouchEvent, container: HTMLElement) => {
+      stopInertia();
       initialTouchDist = getTouchDist(e);
       initialZoom = zoomRef.current;
-      const { midX, midY } = getTouchMidpoint(e);
-      pinchStartMidX = midX;
-      pinchStartMidY = midY;
-      pinchStartScrollLeft = container.scrollLeft;
-      pinchStartScrollTop = container.scrollTop;
+      const { midX, midY } = getTouchMidpoint(e, container);
+      pinchFocalRef.current = { x: midX, y: midY, active: true };
       isPanning = false;
       isPinchingRef.current = true;
       didTouchMoveRef.current = true;
@@ -325,9 +361,11 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     };
 
     const handleTouchStart = (e: TouchEvent) => {
+      const container = containerRef.current;
       const target = e.target as HTMLElement | null;
-      // Only handle touches inside the PDF viewer container
-      if (!target || !container.contains(target)) return;
+      if (!container || !target || !container.contains(target)) return;
+
+      stopInertia();
 
       if (e.touches.length >= 2) {
         // If user is 2-finger pinching directly on a selected image stamp, let ImageStampOverlay handle image resize
@@ -337,13 +375,17 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           return;
         }
         if (e.cancelable) e.preventDefault();
-        beginPinch(e);
+        beginPinch(e, container);
       } else if (e.touches.length === 1) {
         didTouchMoveRef.current = false;
-        if (toolMode === 'select' && !isInteractiveOverlayTarget(target)) {
+        pinchFocalRef.current.active = false;
+        if (!isDrawingToolActive && !isInteractiveOverlayTarget(target)) {
           isPanning = true;
           startX = e.touches[0].clientX;
           startY = e.touches[0].clientY;
+          lastPanX = startX;
+          lastPanY = startY;
+          lastPanTime = performance.now();
           startScrollLeft = container.scrollLeft;
           startScrollTop = container.scrollTop;
         } else {
@@ -353,8 +395,9 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      const container = containerRef.current;
       const target = e.target as HTMLElement | null;
-      if (!target || !container.contains(target)) return;
+      if (!container || !target || !container.contains(target)) return;
 
       if (e.touches.length >= 2) {
         lastMultiTouchTimeRef.current = Date.now();
@@ -367,7 +410,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
         // If 2nd finger joined mid-gesture, initialize pinch baseline smoothly from current zoom
         if (initialTouchDist <= 0 || !isPinchingRef.current) {
-          beginPinch(e);
+          beginPinch(e, container);
           return;
         }
 
@@ -375,45 +418,90 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         if (currentDist > 8 && initialTouchDist > 8) {
           const scaleRatio = currentDist / initialTouchDist;
           const rawZoom = initialZoom * scaleRatio;
-          const newZoom = Math.max(0.15, Math.min(5.0, Math.round(rawZoom * 100) / 100));
+          const newZoom = Math.max(0.2, Math.min(4.0, Math.round(rawZoom * 100) / 100));
+          const { midX, midY } = getTouchMidpoint(e, container);
+          pinchFocalRef.current = { x: midX, y: midY, active: true };
 
           if (Math.abs(newZoom - zoomRef.current) >= 0.01) {
-            const effectiveRatio = newZoom / initialZoom;
-            const { midX, midY } = getTouchMidpoint(e);
             zoomRef.current = newZoom;
-            onZoomChange(newZoom);
-
-            // Keep the pinched focal point stable under the user's two fingers
-            requestAnimationFrame(() => {
-              const docPointX = pinchStartScrollLeft + pinchStartMidX;
-              const docPointY = pinchStartScrollTop + pinchStartMidY;
-              container.scrollLeft = Math.max(0, docPointX * effectiveRatio - midX);
-              container.scrollTop = Math.max(0, docPointY * effectiveRatio - midY);
-            });
+            pendingZoom = newZoom;
+            if (pinchRafId === null) {
+              pinchRafId = requestAnimationFrame(() => {
+                pinchRafId = null;
+                if (pendingZoom !== null) {
+                  onZoomChange(pendingZoom);
+                }
+              });
+            }
           }
         }
-      } else if (isPanning && e.touches.length === 1 && toolMode === 'select') {
-        if (Date.now() - lastMultiTouchTimeRef.current < 250) return;
-        const dx = e.touches[0].clientX - startX;
-        const dy = e.touches[0].clientY - startY;
-        if (Math.hypot(dx, dy) > 8) {
+      } else if (isPanning && e.touches.length === 1 && !isDrawingToolActive) {
+        if (Date.now() - lastMultiTouchTimeRef.current < 220) return;
+        const curX = e.touches[0].clientX;
+        const curY = e.touches[0].clientY;
+        const dx = curX - startX;
+        const dy = curY - startY;
+
+        if (Math.hypot(dx, dy) > 6) {
           didTouchMoveRef.current = true;
+          if (e.cancelable) e.preventDefault();
         }
+
+        const now = performance.now();
+        const dt = Math.max(1, now - lastPanTime);
+        velX = (lastPanX - curX) / dt;
+        velY = (lastPanY - curY) / dt;
+        lastPanX = curX;
+        lastPanY = curY;
+        lastPanTime = now;
+
         container.scrollLeft = startScrollLeft - dx;
         container.scrollTop = startScrollTop - dy;
       }
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      if (isPinchingRef.current || e.touches.length >= 1) {
+      const container = containerRef.current;
+      const wasPinching = isPinchingRef.current;
+
+      if (wasPinching || e.touches.length >= 1) {
         lastMultiTouchTimeRef.current = Date.now();
       }
+
       if (e.touches.length < 2) {
         initialTouchDist = 0;
         isPinchingRef.current = false;
+        if (wasPinching) {
+          // Prevent the remaining 1 finger from jerking the scroll position
+          isPanning = false;
+          pinchFocalRef.current.active = false;
+          setPinchRenderTrigger((prev) => prev + 1);
+        }
       }
+
       if (e.touches.length === 0) {
+        if (isPanning && didTouchMoveRef.current && container && !wasPinching) {
+          const timeSinceLastMove = performance.now() - lastPanTime;
+          if (timeSinceLastMove < 80 && Math.hypot(velX, velY) > 0.15) {
+            let stepVx = velX * 16;
+            let stepVy = velY * 16;
+            const runInertia = () => {
+              if (!containerRef.current) return;
+              containerRef.current.scrollLeft += stepVx;
+              containerRef.current.scrollTop += stepVy;
+              stepVx *= 0.92;
+              stepVy *= 0.92;
+              if (Math.hypot(stepVx, stepVy) > 0.5) {
+                inertiaRafId = requestAnimationFrame(runInertia);
+              } else {
+                inertiaRafId = null;
+              }
+            };
+            inertiaRafId = requestAnimationFrame(runInertia);
+          }
+        }
         isPanning = false;
+        pinchFocalRef.current.active = false;
       }
     };
 
@@ -421,25 +509,27 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       e.preventDefault();
     };
 
-    container.addEventListener('gesturestart', preventSafariGesture, { passive: false });
-    container.addEventListener('gesturechange', preventSafariGesture, { passive: false });
-    container.addEventListener('gestureend', preventSafariGesture, { passive: false });
+    window.addEventListener('gesturestart', preventSafariGesture, { passive: false });
+    window.addEventListener('gesturechange', preventSafariGesture, { passive: false });
+    window.addEventListener('gestureend', preventSafariGesture, { passive: false });
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: false });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('gesturestart', preventSafariGesture);
-      container.removeEventListener('gesturechange', preventSafariGesture);
-      container.removeEventListener('gestureend', preventSafariGesture);
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
-      container.removeEventListener('touchcancel', handleTouchEnd);
+      stopInertia();
+      if (pinchRafId !== null) cancelAnimationFrame(pinchRafId);
+      window.removeEventListener('gesturestart', preventSafariGesture);
+      window.removeEventListener('gesturechange', preventSafariGesture);
+      window.removeEventListener('gestureend', preventSafariGesture);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [toolMode, onZoomChange]);
+  }, [toolMode, onZoomChange, Boolean(state.fileBytes)]);
 
   // Track pages currently visible in viewport via IntersectionObserver without React state thrashing
   useEffect(() => {
@@ -478,7 +568,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     pageElements.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [activePages, zoom]);
+  }, [activePages, Boolean(state.fileBytes)]);
 
   // LAZY PAGE RENDERING:
   // Renders the currently visible page and adjacent pages, prioritizing current page (< 200ms)
@@ -488,11 +578,16 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       return;
     }
 
+    // While user is actively pinching with 2 fingers, let CSS scale the existing canvas at 60fps
+    // and wait until fingers pause or lift to run the heavy high-DPI PDF.js render
+    const isActivelyPinching = isPinchingRef.current;
+
     let cancelled = false;
     renderingRef.current = true;
 
-    // Immediately cancel in-flight render tasks on zoom or document change
-    pdfRenderer.cancelAllRenders();
+    if (!isActivelyPinching) {
+      pdfRenderer.cancelAllRenders();
+    }
 
     const renderVisiblePages = async () => {
       // 1. Determine active window of pages to render: current page + immediate adjacent pages
@@ -548,7 +643,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       }
     };
 
-    const debounceMs = isPinchingRef.current ? 90 : 20;
+    const debounceMs = isActivelyPinching ? 160 : 20;
     const debounceTimer = setTimeout(() => {
       renderVisiblePages().finally(() => { renderingRef.current = false; });
     }, debounceMs);
@@ -556,9 +651,11 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     return () => {
       clearTimeout(debounceTimer);
       cancelled = true;
-      pdfRenderer.cancelAllRenders();
+      if (!isPinchingRef.current) {
+        pdfRenderer.cancelAllRenders();
+      }
     };
-  }, [state.fileBytes, state.pageOrder, state.deletedPages, state.pageRotations, zoom, currentPage, visibleTrigger]);
+  }, [state.fileBytes, state.pageOrder, state.deletedPages, state.pageRotations, zoom, currentPage, visibleTrigger, pinchRenderTrigger]);
 
   // Scroll to page when currentPage changes
   useEffect(() => {
@@ -783,7 +880,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       <main
         ref={containerRef}
         tabIndex={0}
-        style={{ touchAction: 'pan-x pan-y' }}
+        style={{ touchAction: 'none' }}
         className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative focus:outline-none min-w-0 transition-colors duration-500`}
       >
 
@@ -808,7 +905,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
             onTouchEnd={handlePageTouchEnd}
             onDoubleClick={handlePageDoubleClick}
             className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0 cursor-default"
-            style={{ width: `${w}px`, height: `${h}px`, touchAction: 'pan-x pan-y' }}
+            style={{ width: `${w}px`, height: `${h}px`, touchAction: 'none' }}
           >
             <canvas
               ref={(el) => {

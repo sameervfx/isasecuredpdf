@@ -141,8 +141,8 @@
   </head>
   <body style="background-color: #020617; color: #f8fafc;" class="w-full h-full min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-cyan-500 selection:text-white">
     <div id="root">
-      <!-- Semantic HTML content for Search Engine Crawlers prior to JS hydration -->
-      <header>
+      <!-- Semantic HTML content for Search Engine Crawlers prior to JS hydration (visually hidden so it never flashes on startup) -->
+      <header style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;opacity:0;pointer-events:none;">
         <h1>ISA Secured: PDF Editor Scanner (ISASecuredPDF Suite)</h1>
         <p>ISA Secured PDF is the 100% on-device, offline PDF editor and AI camera document scanner. Edit PDF text directly, sign contracts, scan paper to PDF, compress, merge, and fill AcroForms locally in your browser or Android app with zero server uploads.</p>
         <h2>Core Features of ISA Secured PDF</h2>
