@@ -177,8 +177,8 @@ export class PDFRendererService {
       // 1. Extract RGB & Gray fill colors from operator list with graphics state stack tracking
       const OPS = (pdfjsLib as any).OPS || {};
       const stateStack: { fillRGB: number[]; isRGB: boolean; fillGray: number }[] = [];
-      let curState = { fillRGB: [88, 89, 91], isRGB: true, fillGray: 0 };
-      const opColors: { text: string; color: string }[] = [];
+      let curState = { fillRGB: [0, 0, 0], isRGB: true, fillGray: 0 };
+      const opChars: { char: string; color: string }[] = [];
 
       for (let i = 0; i < opList.fnArray.length; i++) {
         const fn = opList.fnArray[i];
@@ -194,18 +194,22 @@ export class PDFRendererService {
           curState.fillGray = args[0];
           curState.isRGB = false;
         } else if (fn === OPS.showText || fn === OPS.showSpans) {
-          const str = Array.isArray(args[0])
-            ? (args[0] as any[]).map((x) => x?.unicode || (typeof x === 'string' ? x : '')).join('').trim()
-            : String(args[0] || '').trim();
-          if (str) {
-            let col = '#58595b';
-            if (curState.isRGB) {
-              col = '#' + curState.fillRGB.map((x) => x.toString(16).padStart(2, '0')).join('');
-            } else {
-              const g = Math.round(curState.fillGray * 255);
-              col = '#' + [g, g, g].map((x) => x.toString(16).padStart(2, '0')).join('');
+          let col = '#000000';
+          if (curState.isRGB) {
+            col = '#' + curState.fillRGB.map((x) => x.toString(16).padStart(2, '0')).join('');
+          } else {
+            const g = Math.round(curState.fillGray * 255);
+            col = '#' + [g, g, g].map((x) => x.toString(16).padStart(2, '0')).join('');
+          }
+
+          const glyphs = Array.isArray(args[0]) ? args[0] : [args[0]];
+          for (const g of glyphs) {
+            const char = typeof g === 'string' ? g : (g?.unicode || '');
+            for (const c of char) {
+              if (c && c.trim()) {
+                opChars.push({ char: c, color: col });
+              }
             }
-            opColors.push({ text: str, color: col });
           }
         }
       }
@@ -252,23 +256,41 @@ export class PDFRendererService {
           cleanFamily = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
         }
 
-        const ascent = typeof style.ascent === 'number' && style.ascent > 0 ? style.ascent : 0.88;
+        // CSS line-box ascent ratio calibrated to HTML textarea rendering (line-height: 1)
+        // Standard digital typographic ascent to baseline is ~0.83 for sans-serif, 0.84 for monospace, 0.80 for serif
+        let cssAscent = 0.83;
+        if (/courier|mono|consolas/i.test(cleanFamily)) {
+          cssAscent = 0.84;
+        } else if (/times|georgia|serif/i.test(cleanFamily)) {
+          cssAscent = 0.80;
+        }
+
+        const ascent = cssAscent;
         const descent = typeof style.descent === 'number' && style.descent < 0 ? style.descent : -0.22;
 
         fontInfoMap.set(fontId, { fontFamily: cleanFamily, fontWeight: weight, ascent, descent });
       }
 
-      // 3. Match items and group lines with exact sub-pixel decimal precision
+      // 3. Match items and group lines with exact sub-pixel decimal precision and vector color
       const lines: DetectedPDFTextLine[] = [];
+      let opIdx = 0;
+
       for (const item of rawItems) {
         const rawFontSize = Math.hypot(item.transform[0], item.transform[1]) || item.height || 12;
         const itemFontSize = parseFloat(rawFontSize.toFixed(2));
         const fontMeta = fontInfoMap.get(item.fontName) || {
           fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           fontWeight: 'normal',
-          ascent: 0.88,
+          ascent: 0.83,
           descent: -0.22,
         };
+
+        const cleanStr = item.str.replace(/\s+/g, '');
+        let itemColor = '#000000';
+        if (opIdx < opChars.length) {
+          itemColor = opChars[opIdx].color;
+          opIdx += cleanStr.length;
+        }
 
         const baselineY = parseFloat((vp.height - item.transform[5]).toFixed(2));
         const topY = parseFloat((baselineY - (fontMeta.ascent * itemFontSize)).toFixed(2));
@@ -301,6 +323,7 @@ export class PDFRendererService {
             fontSize: itemFontSize,
             fontFamily: fontMeta.fontFamily,
             fontWeight: fontMeta.fontWeight,
+            color: itemColor,
           });
         }
       }

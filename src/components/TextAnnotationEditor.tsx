@@ -369,6 +369,28 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
     const screenH = line.height * scaleY;
     const { inkColor, bgHex } = sampleCanvasTextAndBg(screenX, screenY, screenW, screenH);
 
+    // Prefer exact vector color from PDF operator stream; fallback to canvas-sampled inkColor
+    let chosenInkColor = line.color || inkColor || '#000000';
+
+    // Strict contrast protection: Never allow invisible / low-contrast text
+    try {
+      const bgR = parseInt(bgHex.slice(1, 3), 16);
+      const bgG = parseInt(bgHex.slice(3, 5), 16);
+      const bgB = parseInt(bgHex.slice(5, 7), 16);
+      const bgLum = 0.299 * bgR + 0.587 * bgG + 0.114 * bgB;
+
+      const inkR = parseInt(chosenInkColor.slice(1, 3), 16);
+      const inkG = parseInt(chosenInkColor.slice(3, 5), 16);
+      const inkB = parseInt(chosenInkColor.slice(5, 7), 16);
+      const inkLum = 0.299 * inkR + 0.587 * inkG + 0.114 * inkB;
+
+      if (bgLum >= 128 && inkLum > 180) {
+        chosenInkColor = '#17172f';
+      } else if (bgLum < 128 && inkLum < 80) {
+        chosenInkColor = '#ffffff';
+      }
+    } catch (e) {}
+
     // Measure exact rendered font width to prevent any words wrapping or disappearing
     const measuredInitialW = measureTextWidth(
       line.text,
@@ -387,7 +409,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       fontSize: line.fontSize,
       fontFamily: line.fontFamily,
       fontWeight: line.fontWeight || 'normal',
-      color: inkColor,
+      color: chosenInkColor,
       backgroundColor: bgHex,
       isRedact: true, // Seamlessly masks original text using the EXACT sampled page background color!
       isUnderline: textIsUnderline || false,
@@ -418,7 +440,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   const handleStartToolbarDrag = (clientX: number, clientY: number, annId: string) => {
     if (!containerRef.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
-    const currentOffset = toolbarOffsets[annId] || { x: 0, y: 35 };
+    const currentOffset = toolbarOffsets[annId] || { x: 0, y: 4 };
 
     const mouseX = clientX - containerRect.left;
     const mouseY = clientY - containerRect.top;
@@ -527,7 +549,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         const dynamicW = measureTextWidth(ann.text, ann.fontSize, ann.fontFamily || textFontFamily, ann.fontWeight);
         const effectiveWidth = Math.max(ann.width || 0, dynamicW);
         const effectiveHeight = ann.height ? ann.height * scaleY : undefined;
-        const tbOffset = toolbarOffsets[ann.id] || { x: 0, y: 35 };
+        const tbOffset = toolbarOffsets[ann.id] || { x: 0, y: 4 };
 
         return (
           <div

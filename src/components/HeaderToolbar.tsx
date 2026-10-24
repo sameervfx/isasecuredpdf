@@ -713,21 +713,32 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             </button>
 
             {/* Edit / Redact Text Dropdown */}
-            <div className="relative shrink-0" ref={textDropdownRef}>
+            <div className="relative shrink-0 flex items-center" ref={textDropdownRef}>
               <button
-                onClick={() => {
-                  handleToolSelect('text');
-                  toggleDropdown('text', textDropdownRef, 208);
-                }}
+                onClick={() => handleToolSelect('text')}
                 title="Edit Existing Text & Type on PDF (T) - Hover any text to edit in-place, or click anywhere to type"
-                className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  toolMode === 'text' || (isTextDropdownOpen && popoverPos.name === 'text')
+                className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-l-lg text-xs font-semibold transition-all ${
+                  toolMode === 'text'
                     ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
                 }`}
               >
                 <Type className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Text</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToolSelect('text');
+                  toggleDropdown('text', textDropdownRef, 208);
+                }}
+                title="Text style & formatting options"
+                className={`px-1 py-1.5 rounded-r-lg text-xs font-semibold transition-all border-l border-slate-700/60 ${
+                  toolMode === 'text' || (isTextDropdownOpen && popoverPos.name === 'text')
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
