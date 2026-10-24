@@ -210,11 +210,11 @@ export class PDFRendererService {
         }
       }
 
-      // 2. Resolve font family & weight from commonObjs and tc.styles
-      const fontInfoMap = new Map<string, { fontFamily: string; fontWeight: string }>();
+      // 2. Resolve font family, weight, ascent & descent from commonObjs and tc.styles
+      const fontInfoMap = new Map<string, { fontFamily: string; fontWeight: string; ascent: number; descent: number }>();
       const styles = (textContent as any).styles || {};
       for (const [fontId, style] of Object.entries<any>(styles)) {
-        let cleanFamily = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+        let cleanFamily = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
         let weight = 'normal';
 
         let postscriptName = '';
@@ -229,80 +229,78 @@ export class PDFRendererService {
         } else if (/semibold|demi|w6/i.test(nameLower)) {
           weight = '600';
         } else if (/light|thin|w2|w3/i.test(nameLower)) {
-          // In geometric rounded display fonts, "Light" corresponds to CSS 600 to match VAG Rounded Light's substantial stroke density
-          weight = /rounded|vag/i.test(nameLower) ? '600' : 'normal';
+          weight = '300';
         } else {
-          weight = /rounded|vag/i.test(nameLower) ? '600' : 'normal';
+          weight = 'normal';
         }
 
-        if (/rounded|vag/i.test(nameLower)) {
+        // Comprehensive worldwide font family detection
+        // Receipts & Point of Sale (POS) / Dot Matrix / Monospace
+        if (/courier|mono|consolas|monaco|ocr|receipt|thermal|typewriter/i.test(nameLower) || style.fontFamily === 'monospace') {
+          cleanFamily = "'Courier New', Courier, 'Roboto Mono', Consolas, Monaco, monospace";
+        }
+        // Formal / Legal / Accounting / Classic serif
+        else if (/times|georgia|garamond|serif|cambria|palatino|baskerville/i.test(nameLower) || style.fontFamily === 'serif') {
+          cleanFamily = "'Times New Roman', Times, Georgia, Garamond, serif";
+        }
+        // Friendly / Rounded / Creative
+        else if (/rounded|vag/i.test(nameLower)) {
           cleanFamily = "'Nunito', 'VAG Rounded', 'Arial Rounded MT Bold', sans-serif";
-        } else if (/arial/i.test(nameLower)) {
-          cleanFamily = "Arial, 'Helvetica Neue', Helvetica, sans-serif";
-        } else if (/helv/i.test(nameLower)) {
-          cleanFamily = "'Helvetica Neue', Helvetica, Arial, sans-serif";
-        } else if (/calibri/i.test(nameLower)) {
-          cleanFamily = "Calibri, Candara, 'Segoe UI', Arial, sans-serif";
-        } else if (/roboto/i.test(nameLower)) {
-          cleanFamily = "'Roboto', 'Segoe UI', Arial, sans-serif";
-        } else if (/times/i.test(nameLower)) {
-          cleanFamily = "'Times New Roman', Times, Georgia, serif";
-        } else if (/courier|mono/i.test(nameLower)) {
-          cleanFamily = "'Courier New', Courier, monospace";
-        } else if (style.fontFamily === 'serif') {
-          cleanFamily = "'Times New Roman', Times, Georgia, serif";
-        } else if (style.fontFamily === 'monospace') {
-          cleanFamily = "'Courier New', Courier, monospace";
+        }
+        // Corporate / Invoice / SaaS / Banking standard sans-serif (Inter, Helvetica, Arial, Roboto, Open Sans)
+        else {
+          cleanFamily = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
         }
 
-        fontInfoMap.set(fontId, { fontFamily: cleanFamily, fontWeight: weight });
+        const ascent = typeof style.ascent === 'number' && style.ascent > 0 ? style.ascent : 0.88;
+        const descent = typeof style.descent === 'number' && style.descent < 0 ? style.descent : -0.22;
+
+        fontInfoMap.set(fontId, { fontFamily: cleanFamily, fontWeight: weight, ascent, descent });
       }
 
-      // 3. Match items and group lines with precise color, font, weight, dimensions
+      // 3. Match items and group lines with exact sub-pixel decimal precision
       const lines: DetectedPDFTextLine[] = [];
       for (const item of rawItems) {
-        const itemFontSize = Math.round(Math.hypot(item.transform[0], item.transform[1]) || item.height || 12);
-        const itemH = item.height || itemFontSize;
-        const itemX = item.transform[4];
-        const itemY = vp.height - item.transform[5] - itemH;
+        const rawFontSize = Math.hypot(item.transform[0], item.transform[1]) || item.height || 12;
+        const itemFontSize = parseFloat(rawFontSize.toFixed(2));
         const fontMeta = fontInfoMap.get(item.fontName) || {
-          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           fontWeight: 'normal',
+          ascent: 0.88,
+          descent: -0.22,
         };
 
-        // Find matched color
-        let itemColor = '#000000';
-        const trimmedStr = item.str.trim();
-        for (const op of opColors) {
-          if (op.text === trimmedStr || trimmedStr.includes(op.text) || op.text.includes(trimmedStr)) {
-            itemColor = op.color;
-            break;
-          }
-        }
+        const baselineY = parseFloat((vp.height - item.transform[5]).toFixed(2));
+        const topY = parseFloat((baselineY - (fontMeta.ascent * itemFontSize)).toFixed(2));
+        const itemH = parseFloat(((fontMeta.ascent - fontMeta.descent) * itemFontSize).toFixed(2));
+        const itemX = parseFloat(item.transform[4].toFixed(2));
+        const itemW = parseFloat((item.width || itemFontSize * item.str.length * 0.5).toFixed(2));
 
         const lastLine = lines[lines.length - 1];
         if (
           lastLine &&
-          Math.abs(itemY - lastLine.y) < 4 &&
-          Math.abs(itemFontSize - lastLine.fontSize) < 2 &&
-          itemX - (lastLine.x + lastLine.width) < itemFontSize * 2
+          Math.abs(baselineY - lastLine.baselineY) < 2.5 &&
+          Math.abs(itemFontSize - lastLine.fontSize) < 1.5 &&
+          itemX - (lastLine.x + lastLine.width) < itemFontSize * 2.2
         ) {
           lastLine.text += (lastLine.text.endsWith(' ') ? '' : ' ') + item.str;
-          lastLine.width = Math.round(itemX + (item.width || 0) - lastLine.x);
+          lastLine.width = parseFloat((itemX + itemW - lastLine.x).toFixed(2));
           lastLine.height = Math.max(lastLine.height, itemH);
         } else {
           lines.push({
-            id: `line_${pageIndex}_${lines.length}_${Math.round(itemX)}_${Math.round(itemY)}`,
+            id: `line_${pageIndex}_${lines.length}_${Math.round(itemX)}_${Math.round(topY)}`,
             pageIndex,
             text: item.str,
-            x: Math.round(itemX),
-            y: Math.round(itemY),
-            width: Math.round(item.width || itemFontSize * item.str.length * 0.5),
-            height: Math.round(itemH),
+            x: itemX,
+            y: topY,
+            baselineY,
+            ascent: fontMeta.ascent,
+            descent: fontMeta.descent,
+            width: itemW,
+            height: itemH,
             fontSize: itemFontSize,
             fontFamily: fontMeta.fontFamily,
             fontWeight: fontMeta.fontWeight,
-            color: itemColor,
           });
         }
       }
@@ -341,6 +339,9 @@ export interface DetectedPDFTextLine {
   text: string;
   x: number;
   y: number;
+  baselineY: number;
+  ascent: number;
+  descent: number;
   width: number;
   height: number;
   fontSize: number;
@@ -351,3 +352,4 @@ export interface DetectedPDFTextLine {
 }
 
 export const pdfRenderer = new PDFRendererService();
+

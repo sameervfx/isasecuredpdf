@@ -307,8 +307,8 @@ export class PDFEngineService {
       const textColor = parseHexColor(textAnn.color || '#000000');
 
       const lines = (textAnn.text || '').split(/\r?\n/);
-      const lineHeight = textAnn.fontSize * 1.3;
-      const totalHeight = textAnn.height || Math.max(lines.length * lineHeight + 8, textAnn.fontSize * 1.4 + 8);
+      const lineHeight = textAnn.fontSize * 1.15;
+      const totalHeight = textAnn.height || Math.max(lines.length * lineHeight, textAnn.fontSize * 1.15);
       const totalWidth = textAnn.width || 320;
       const pdfY = pageH - textAnn.y - totalHeight;
 
@@ -330,8 +330,8 @@ export class PDFEngineService {
       for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
         const cleanLine = isCustomFont ? lines[lineIdx] : lines[lineIdx].replace(/[^\x00-\x7F]/g, '');
         if (cleanLine) {
-          let drawX = textAnn.x + 2;
-          let drawY = pageH - textAnn.y - (lineIdx * lineHeight) - textAnn.fontSize * 0.85;
+          let drawX = textAnn.x;
+          let drawY = pageH - textAnn.y - (textAnn.fontSize * 0.88) - (lineIdx * lineHeight);
 
           if (textAnn.rotation && textAnn.rotation !== 0) {
             const rotDeg = -textAnn.rotation;

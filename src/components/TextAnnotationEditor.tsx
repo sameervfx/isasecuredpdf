@@ -73,17 +73,20 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   const scaleX = originalWidth > 0 ? canvasWidth / originalWidth : 1;
   const scaleY = originalHeight > 0 ? canvasHeight / originalHeight : 1;
 
-  // Dynamic color palette: extracts all detected text colors from current page + brand accents
+  // Dynamic color palette: extracts all detected text colors from current page + universal receipt/invoice colors
   const availableColors = useMemo(() => {
     const set = new Set<string>();
-    // Add all detected text colors from this page first
+    // Add all detected text colors from page annotations and lines
+    pageAnnotations.forEach((a) => {
+      if (a.color && a.color.startsWith('#')) set.add(a.color.toLowerCase());
+    });
     detectedLines.forEach((l) => {
       if (l.color && l.color.startsWith('#')) set.add(l.color.toLowerCase());
     });
-    // Curated brand brochure accents (Reliance Cyan, Reliance Magenta, Charcoal, Navy, etc.)
-    ['#58595b', '#0094c1', '#aa258d', '#034ea2', '#000000', '#dc2626', '#16a34a', '#2563eb', '#ffffff'].forEach((c) => set.add(c.toLowerCase()));
+    // Universal Invoice, Receipt, Statement & Brand Colors (Navy, Charcoal, Deep Black, Gray, Cyan, etc.)
+    ['#000000', '#17172f', '#555555', '#888888', '#1b365d', '#0094c1', '#aa258d', '#034ea2', '#dc2626', '#16a34a', '#2563eb', '#ffffff'].forEach((c) => set.add(c.toLowerCase()));
     return Array.from(set);
-  }, [detectedLines]);
+  }, [detectedLines, pageAnnotations]);
 
   const handlePickColorEyeDropper = async (annId: string) => {
     try {
@@ -201,29 +204,88 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
 
   if (originalWidth <= 0 || originalHeight <= 0) return null;
 
-  const sampleCanvasBg = (screenX: number, screenY: number, screenW: number, screenH: number): string => {
+  const sampleCanvasTextAndBg = (
+    screenX: number,
+    screenY: number,
+    screenW: number,
+    screenH: number
+  ): { inkColor: string; bgHex: string } => {
     try {
       const canvas = containerRef.current?.parentElement?.querySelector('canvas');
       if (canvas) {
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (ctx) {
-          // Margin test points directly adjacent to text bounding box
-          const testPoints = [
-            { x: Math.max(1, screenX - 4), y: Math.max(1, screenY + screenH / 2) },
+          // 1. Precise background margin sampling (check 4 points adjacent to bounding box)
+          const testMarginPoints = [
+            { x: Math.max(1, screenX - 3), y: Math.max(1, screenY + screenH / 2) },
+            { x: Math.min(canvas.width - 2, screenX + screenW + 3), y: Math.max(1, screenY + screenH / 2) },
             { x: Math.max(1, screenX + screenW / 2), y: Math.max(1, screenY - 3) },
-            { x: Math.min(canvas.width - 2, screenX + screenW + 4), y: Math.max(1, screenY + screenH / 2) },
-            { x: Math.max(1, screenX - 3), y: Math.max(1, screenY - 2) },
+            { x: Math.max(1, screenX + screenW / 2), y: Math.min(canvas.height - 2, screenY + screenH + 3) },
           ];
-          for (const pt of testPoints) {
+
+          let bgHex = '#ffffff';
+          let bgLum = 255;
+          for (const pt of testMarginPoints) {
             const p = ctx.getImageData(Math.round(pt.x), Math.round(pt.y), 1, 1).data;
-            if (p[3] > 0) {
-              return '#' + [p[0], p[1], p[2]].map((c) => c.toString(16).padStart(2, '0')).join('');
+            if (p[3] > 100) {
+              bgLum = 0.299 * p[0] + 0.587 * p[1] + 0.114 * p[2];
+              bgHex = '#' + [p[0], p[1], p[2]].map((c) => c.toString(16).padStart(2, '0')).join('');
+              break;
             }
           }
+
+          // 2. Sample all pixels inside the text bounding box to find the true ink color
+          const clampX = Math.max(0, Math.min(canvas.width - 1, Math.floor(screenX)));
+          const clampY = Math.max(0, Math.min(canvas.height - 1, Math.floor(screenY)));
+          const clampW = Math.max(1, Math.min(canvas.width - clampX, Math.ceil(screenW)));
+          const clampH = Math.max(1, Math.min(canvas.height - clampY, Math.ceil(screenH)));
+
+          const imgData = ctx.getImageData(clampX, clampY, clampW, clampH);
+          const pixels = imgData.data;
+
+          const candidates: { r: number; g: number; b: number; lum: number }[] = [];
+          for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const a = pixels[i + 3];
+            if (a > 100) {
+              const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+              candidates.push({ r, g, b, lum });
+            }
+          }
+
+          // Contrast-aware sort:
+          // If dark background (e.g. Navy table header), text is LIGHT (descending lum)
+          // If light background (standard paper), text is DARK (ascending lum)
+          if (bgLum < 128) {
+            candidates.sort((a, b) => b.lum - a.lum);
+          } else {
+            candidates.sort((a, b) => a.lum - b.lum);
+          }
+
+          let inkColor = bgLum < 128 ? '#ffffff' : '#000000';
+          if (candidates.length > 0) {
+            const sampleCount = Math.max(1, Math.min(15, Math.floor(candidates.length * 0.08)));
+            let sumR = 0;
+            let sumG = 0;
+            let sumB = 0;
+            for (let k = 0; k < sampleCount; k++) {
+              sumR += candidates[k].r;
+              sumG += candidates[k].g;
+              sumB += candidates[k].b;
+            }
+            const avgR = Math.round(sumR / sampleCount);
+            const avgG = Math.round(sumG / sampleCount);
+            const avgB = Math.round(sumB / sampleCount);
+            inkColor = '#' + [avgR, avgG, avgB].map((c) => c.toString(16).padStart(2, '0')).join('');
+          }
+
+          return { inkColor, bgHex };
         }
       }
     } catch (e) {}
-    return '#ffffff';
+    return { inkColor: '#000000', bgHex: '#ffffff' };
   };
 
   const measureTextWidth = (
@@ -240,12 +302,12 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         ctx.font = `${fontWeight || 'normal'} ${fontSize}px ${fontFamily || 'sans-serif'}`;
         const lines = text.split('\n');
         const maxW = Math.max(...lines.map((l) => ctx.measureText(l).width), 0);
-        return Math.round(maxW + 8);
+        return Math.round(maxW + 4);
       }
     } catch (e) {}
     const lines = text.split('\n');
     const maxChars = Math.max(...lines.map((l) => l.length), 1);
-    return Math.round(maxChars * fontSize * 0.55 + 8);
+    return Math.round(maxChars * fontSize * 0.55 + 4);
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -255,17 +317,17 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = (e.clientX - rect.left) / scaleX;
     const clickY = (e.clientY - rect.top) / scaleY;
-    const sampledBg = sampleCanvasBg(e.clientX - rect.left, e.clientY - rect.top, 50, 20);
+    const { bgHex } = sampleCanvasTextAndBg(e.clientX - rect.left, e.clientY - rect.top, 50, 20);
 
     onAddAnnotation({
       pageIndex,
-      x: Math.round(clickX),
-      y: Math.round(clickY),
+      x: parseFloat(clickX.toFixed(2)),
+      y: parseFloat(clickY.toFixed(2)),
       text: '',
       fontSize: textFontSize || 14,
-      fontFamily: textFontFamily || "'Nunito', 'VAG Rounded', sans-serif",
-      color: textColor || '#58595b',
-      backgroundColor: sampledBg,
+      fontFamily: textFontFamily || "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      color: textColor || '#000000',
+      backgroundColor: bgHex,
       isRedact: textIsRedact || false,
       isUnderline: textIsUnderline || false,
       width: 40,
@@ -279,7 +341,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
     const screenY = line.y * scaleY;
     const screenW = line.width * scaleX;
     const screenH = line.height * scaleY;
-    const detectedBg = sampleCanvasBg(screenX, screenY, screenW, screenH);
+    const { inkColor, bgHex } = sampleCanvasTextAndBg(screenX, screenY, screenW, screenH);
 
     // Measure exact rendered font width to prevent any words wrapping or disappearing
     const measuredInitialW = measureTextWidth(
@@ -289,26 +351,22 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       line.fontWeight
     );
 
-    // 2px safety padding so mask seamlessly conceals original printed text
-    const padX = 2;
-    const padY = 2;
-    const totalW = Math.max(line.width + padX * 2, measuredInitialW + 4);
-    const totalH = Math.max(line.height + padY * 2, line.fontSize * 1.35);
+    const totalW = Math.max(line.width + 4, measuredInitialW + 4);
 
     onAddAnnotation({
       pageIndex,
-      x: Math.max(0, line.x - padX),
-      y: Math.max(0, line.y - padY),
+      x: line.x,
+      y: line.y, // ZERO padY: Exact line.topY anchored to baseline - (ascent * fontSize)
       text: line.text,
       fontSize: line.fontSize,
       fontFamily: line.fontFamily,
       fontWeight: line.fontWeight || 'normal',
-      color: line.color || '#58595b',
-      backgroundColor: detectedBg,
+      color: inkColor,
+      backgroundColor: bgHex,
       isRedact: true, // Seamlessly masks original text using the EXACT sampled page background color!
       isUnderline: textIsUnderline || false,
-      width: Math.round(totalW),
-      height: Math.round(totalH),
+      width: parseFloat(totalW.toFixed(2)),
+      height: line.height,
     });
   };
 
@@ -493,15 +551,17 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
               }}
               placeholder="Type text..."
               rows={lineCount}
-              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none p-0 m-0 w-full overflow-hidden resize-none select-text"
+              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none p-0 m-0 w-full overflow-hidden resize-none select-text block"
               style={{
                 fontSize: `${ann.fontSize * scaleY}px`,
-                fontFamily: ann.fontFamily || textFontFamily || "'Nunito', 'VAG Rounded', sans-serif",
+                fontFamily: ann.fontFamily || textFontFamily || "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
                 fontWeight: ann.fontWeight || 'normal',
                 color: ann.color || '#000000',
                 caretColor: ann.color || '#000000',
                 textDecoration: ann.isUnderline ? 'underline' : 'none',
-                lineHeight: '1.25',
+                lineHeight: '1',
+                padding: '0',
+                margin: '0',
                 letterSpacing: 'normal',
                 width: '100%',
                 whiteSpace: 'pre',
