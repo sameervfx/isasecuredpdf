@@ -215,12 +215,21 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       if (canvas) {
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (ctx) {
-          // 1. Precise background margin sampling (check 4 points adjacent to bounding box)
+          // Device pixel ratio (DPR) adjustment between CSS display size and internal pixel buffer
+          const dprX = canvas.width / (canvas.clientWidth || canvasWidth || 1);
+          const dprY = canvas.height / (canvas.clientHeight || canvasHeight || 1);
+
+          const bufX = Math.round(screenX * dprX);
+          const bufY = Math.round(screenY * dprY);
+          const bufW = Math.max(1, Math.round(screenW * dprX));
+          const bufH = Math.max(1, Math.round(screenH * dprY));
+
+          // 1. Precise background margin sampling in buffer coordinates
           const testMarginPoints = [
-            { x: Math.max(1, screenX - 3), y: Math.max(1, screenY + screenH / 2) },
-            { x: Math.min(canvas.width - 2, screenX + screenW + 3), y: Math.max(1, screenY + screenH / 2) },
-            { x: Math.max(1, screenX + screenW / 2), y: Math.max(1, screenY - 3) },
-            { x: Math.max(1, screenX + screenW / 2), y: Math.min(canvas.height - 2, screenY + screenH + 3) },
+            { x: Math.max(1, bufX - Math.round(4 * dprX)), y: Math.max(1, bufY + bufH / 2) },
+            { x: Math.min(canvas.width - 2, bufX + bufW + Math.round(4 * dprX)), y: Math.max(1, bufY + bufH / 2) },
+            { x: Math.max(1, bufX + bufW / 2), y: Math.max(1, bufY - Math.round(4 * dprY)) },
+            { x: Math.max(1, bufX + bufW / 2), y: Math.min(canvas.height - 2, bufY + bufH + Math.round(4 * dprY)) },
           ];
 
           let bgHex = '#ffffff';
@@ -234,11 +243,11 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
             }
           }
 
-          // 2. Sample all pixels inside the text bounding box to find the true ink color
-          const clampX = Math.max(0, Math.min(canvas.width - 1, Math.floor(screenX)));
-          const clampY = Math.max(0, Math.min(canvas.height - 1, Math.floor(screenY)));
-          const clampW = Math.max(1, Math.min(canvas.width - clampX, Math.ceil(screenW)));
-          const clampH = Math.max(1, Math.min(canvas.height - clampY, Math.ceil(screenH)));
+          // 2. Sample all pixels inside the text bounding box in buffer coordinates
+          const clampX = Math.max(0, Math.min(canvas.width - 1, bufX));
+          const clampY = Math.max(0, Math.min(canvas.height - 1, bufY));
+          const clampW = Math.max(1, Math.min(canvas.width - clampX, bufW));
+          const clampH = Math.max(1, Math.min(canvas.height - clampY, bufH));
 
           const imgData = ctx.getImageData(clampX, clampY, clampW, clampH);
           const pixels = imgData.data;
@@ -266,7 +275,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
 
           let inkColor = bgLum < 128 ? '#ffffff' : '#000000';
           if (candidates.length > 0) {
-            const sampleCount = Math.max(1, Math.min(15, Math.floor(candidates.length * 0.08)));
+            const sampleCount = Math.max(1, Math.min(20, Math.floor(candidates.length * 0.08)));
             let sumR = 0;
             let sumG = 0;
             let sumB = 0;
@@ -278,7 +287,24 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
             const avgR = Math.round(sumR / sampleCount);
             const avgG = Math.round(sumG / sampleCount);
             const avgB = Math.round(sumB / sampleCount);
-            inkColor = '#' + [avgR, avgG, avgB].map((c) => c.toString(16).padStart(2, '0')).join('');
+            const sampledLum = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+
+            // Strict contrast guardrail: NEVER allow low contrast / invisible text
+            if (bgLum >= 128) {
+              // On light paper, text MUST be dark! If sampled luminance is light, force dark ink
+              if (sampledLum > 180) {
+                inkColor = '#17172f';
+              } else {
+                inkColor = '#' + [avgR, avgG, avgB].map((c) => c.toString(16).padStart(2, '0')).join('');
+              }
+            } else {
+              // On dark background, text MUST be light! If sampled luminance is dark, force white
+              if (sampledLum < 80) {
+                inkColor = '#ffffff';
+              } else {
+                inkColor = '#' + [avgR, avgG, avgB].map((c) => c.toString(16).padStart(2, '0')).join('');
+              }
+            }
           }
 
           return { inkColor, bgHex };
