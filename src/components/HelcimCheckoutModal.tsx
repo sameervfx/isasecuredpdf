@@ -362,27 +362,47 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               </div>
 
               {/* Condition 1: Native Mobile App (Google Play Billing / Apple In-App Purchase) */}
-              {/* Condition 1: Native Mobile App (Google Play Billing / Apple In-App Purchase) */}
               {isNativeApp ? (
                 <div className="space-y-3.5 my-3">
-                  {/* Clean 4 Pro Feature Highlights */}
-                  <div className="bg-slate-950/70 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
+                  {/* Pro Feature Highlights */}
+                  <div className="bg-slate-950/70 p-3 sm:p-3.5 rounded-2xl border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
+                      <span className="text-[11px] font-bold text-white flex items-center space-x-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>{selectedPlan === 'monthly' ? 'Monthly Pass Includes:' : selectedPlan === 'annual' ? 'Annual Pass Includes:' : 'Lifetime VIP Includes:'}</span>
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                        Unlimited Access
+                      </span>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Direct Text & Typo Editing in PDFs</span>
+                        <span>Unlimited Watermark & Add password AES-128 Security</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Unlimited Digital Signatures & Stamps</span>
+                        <span>Unlimited Digital Signatures, save multiple signature as jpg png & Stamps</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Export to Word, Excel, PPTX & Images</span>
+                        <span>Unlimited Export to Word, Excel, PowerPoint</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>100% Offline Air-Gapped Privacy • No Ads</span>
+                        <span>Unlimited Split PDF & Add Image / Logo</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Unlimited Redact, Overwrite & AcroForm Fill</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>Unlimited PDF Exports & Conversions</span>
+                      </div>
+                      <div className="flex items-center space-x-2 sm:col-span-2 text-cyan-300 font-semibold pt-0.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>No ads and possible new features</span>
                       </div>
                     </div>
                   </div>
