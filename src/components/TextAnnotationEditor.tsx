@@ -620,10 +620,14 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
               }}
             />
 
-            {/* Movable & Draggable Compact Floating Action Toolbar - Placed BELOW Text Box */}
+            {/* Movable & Draggable Compact Floating Action Toolbar - Placed ABOVE Text Box when in lower area */}
             {isSelected && (
               <div
-                className="absolute top-[calc(100%+8px)] left-0 flex items-center gap-1 bg-slate-900/50 backdrop-blur-md text-white rounded-lg px-2 py-1 shadow-2xl z-50 select-none border border-slate-700/80 whitespace-nowrap ring-1 ring-cyan-500/40 animate-fadeIn"
+                className={`absolute ${
+                  scaledY > 52 ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]'
+                } ${
+                  scaledX > canvasWidth - 280 ? 'right-0' : 'left-0'
+                } flex items-center gap-1 bg-slate-900/95 backdrop-blur-md text-white rounded-xl px-2 py-1 shadow-2xl z-50 select-none border border-slate-700/80 ring-1 ring-cyan-500/40 animate-fadeIn max-w-[calc(100vw-24px)] w-max`}
                 style={{ transform: `translate(${tbOffset.x}px, ${tbOffset.y}px)` }}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -638,20 +642,19 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                     handleTouchStartTextDrag(e, ann);
                   }}
                   title="Touch & Drag to Move Text Anywhere over PDF Page"
-                  className="p-1 bg-cyan-500/20 hover:bg-cyan-500/40 rounded text-cyan-300 cursor-grab active:cursor-grabbing transition flex items-center space-x-1 border border-cyan-500/30"
+                  className="p-1 bg-cyan-500/20 hover:bg-cyan-500/40 rounded text-cyan-300 cursor-grab active:cursor-grabbing transition flex items-center border border-cyan-500/30 shrink-0"
                 >
                   <Move className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-bold">Move</span>
                 </div>
 
-                <div className="w-[1px] h-3.5 bg-slate-700" />
+                <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
 
-                {/* Sub-Point Decimal Font Size Stepper (0.2pt precision) & Direct Numeric Input */}
-                <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700">
+                {/* Sub-Point Decimal Font Size Stepper & Direct Numeric Input */}
+                <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
                   <button
                     type="button"
-                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: parseFloat(Math.max(4, ann.fontSize - 0.2).toFixed(1)) })}
-                    title="Decrease Font Size (-0.2pt)"
+                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: parseFloat(Math.max(4, ann.fontSize - 0.5).toFixed(1)) })}
+                    title="Decrease Font Size (-0.5pt)"
                     className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                   >
                     <Minus className="w-3 h-3" />
@@ -660,7 +663,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                   <div className="flex items-center">
                     <input
                       type="number"
-                      step="0.1"
+                      step="0.5"
                       min="4"
                       max="120"
                       value={ann.fontSize}
@@ -670,16 +673,16 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                           onUpdateAnnotation(ann.id, { fontSize: parseFloat(val.toFixed(2)) });
                         }
                       }}
-                      className="w-9 bg-transparent text-[10px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      title="Direct Font Size (e.g. 13.2, 13.4, 9.75)"
+                      className="w-7 bg-transparent text-[10px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      title="Direct Font Size (pt)"
                     />
                     <span className="text-[9px] font-mono text-slate-400 select-none">pt</span>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: parseFloat(Math.min(120, ann.fontSize + 0.2).toFixed(1)) })}
-                    title="Increase Font Size (+0.2pt)"
+                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: parseFloat(Math.min(120, ann.fontSize + 0.5).toFixed(1)) })}
+                    title="Increase Font Size (+0.5pt)"
                     className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                   >
                     <Plus className="w-3 h-3" />
@@ -698,7 +701,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                     onUpdateAnnotation(ann.id, { fontWeight: isCurrentlyBold ? 'normal' : 'bold' });
                   }}
                   title="Toggle Bold"
-                  className={`p-1 rounded transition ${
+                  className={`p-1 rounded transition shrink-0 ${
                     ann.fontWeight === 'bold' ||
                     ann.fontWeight === '700' ||
                     ann.fontWeight === 700 ||
@@ -715,52 +718,54 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                   type="button"
                   onClick={() => onUpdateAnnotation(ann.id, { isUnderline: !ann.isUnderline })}
                   title="Toggle Underline"
-                  className={`p-1 rounded transition ${
+                  className={`p-1 rounded transition shrink-0 ${
                     ann.isUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
                   }`}
                 >
                   <Underline className="w-3.5 h-3.5" />
                 </button>
 
-                {/* Comprehensive Color Palette with Exact Page Color Matching */}
-                <div className="flex items-center space-x-1 pl-0.5">
-                  {/* EyeDropper Tool to sample exact pixel color from brochure */}
+                {/* Color Palette */}
+                <div className="flex items-center space-x-1 pl-0.5 shrink-0">
+                  {/* EyeDropper Tool to sample exact pixel color */}
                   <button
                     type="button"
                     onClick={() => handlePickColorEyeDropper(ann.id)}
-                    title="EyeDropper: Sample exact color from anywhere on page"
-                    className="p-1 hover:bg-cyan-500/30 text-cyan-300 hover:text-white rounded transition flex items-center"
+                    title="EyeDropper: Sample color from page"
+                    className="p-1 hover:bg-cyan-500/30 text-cyan-300 hover:text-white rounded transition flex items-center shrink-0"
                   >
                     <Droplet className="w-3 h-3" />
                   </button>
 
-                  {/* Dynamic Color Swatches */}
-                  {Array.from(new Set([ann.color || '#000000', ...availableColors]))
-                    .filter((c): c is string => typeof c === 'string' && c.startsWith('#'))
-                    .slice(0, 9)
-                    .map((color) => {
-                      const currentColor = (ann.color || '#000000').toLowerCase();
-                      const isSelected = currentColor === color.toLowerCase();
-                      return (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => onUpdateAnnotation(ann.id, { color })}
-                          className={`w-3.5 h-3.5 rounded-full border transition ${
-                            isSelected
-                              ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
-                              : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
-                          }`}
-                          style={{ backgroundColor: color }}
-                          title={`Select ${color}`}
-                        />
-                      );
-                    })}
+                  {/* Dynamic Color Swatches (scrollable on mobile) */}
+                  <div className="flex items-center space-x-1 max-w-[100px] sm:max-w-[140px] overflow-x-auto scrollbar-none py-0.5 shrink-0">
+                    {Array.from(new Set([ann.color || '#000000', ...availableColors]))
+                      .filter((c): c is string => typeof c === 'string' && c.startsWith('#'))
+                      .slice(0, 6)
+                      .map((color) => {
+                        const currentColor = (ann.color || '#000000').toLowerCase();
+                        const isSelected = currentColor === color.toLowerCase();
+                        return (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => onUpdateAnnotation(ann.id, { color })}
+                            className={`w-3.5 h-3.5 rounded-full border transition shrink-0 ${
+                              isSelected
+                                ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
+                                : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
+                            }`}
+                            style={{ backgroundColor: color }}
+                            title={`Select ${color}`}
+                          />
+                        );
+                      })}
+                  </div>
 
                   {/* Native Color Picker for custom Hex/RGB colors */}
                   <label
                     title="Custom Color Spectrum Picker"
-                    className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white"
+                    className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white shrink-0"
                   >
                     <Palette className="w-3 h-3" />
                     <input
@@ -773,14 +778,14 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                   </label>
                 </div>
 
-                <div className="w-[1px] h-3.5 bg-slate-700" />
+                <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
 
                 {/* Quick Paste Button */}
                 <button
                   type="button"
                   onClick={() => handlePasteClipboard(ann.id)}
                   title="Paste Clipboard Text"
-                  className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition shrink-0"
                 >
                   <Clipboard className="w-3 h-3" />
                 </button>
@@ -793,7 +798,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                     onDeleteAnnotation(ann.id);
                   }}
                   title="Delete Text"
-                  className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition"
+                  className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition shrink-0"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>

@@ -15,6 +15,8 @@ interface DrawingCanvasOverlayProps {
   shapeStrokeColor?: string;
   shapeFillColor?: string;
   shapeStrokeWidth?: number;
+  showToolbar?: boolean;
+  getPageCanvas?: () => HTMLCanvasElement | undefined | null;
   onAddDrawing: (drawing: Omit<FreehandDrawing, 'id'>) => void;
   onDeleteDrawing: (id: string) => void;
   onAddStamp: (stamp: Omit<StampAnnotation, 'id'>) => void;
@@ -40,6 +42,8 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   shapeStrokeColor,
   shapeFillColor,
   shapeStrokeWidth,
+  showToolbar = true,
+  getPageCanvas,
   onAddDrawing,
   onDeleteDrawing,
   onAddStamp,
@@ -58,8 +62,28 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   const [highlightMode, setHighlightMode] = useState<'line' | 'box' | 'freehand'>('line'); // Default to Straight Line Text Highlight
   const [thickness, setThickness] = useState<number>(3); // Pen Scale
   const [highlightThickness, setHighlightThickness] = useState<number>(18); // Highlighter Scale
-  const [eraserThickness, setEraserThickness] = useState<number>(8); // Default 8px Fine Precision Eraser
+  const [eraserThickness, setEraserThickness] = useState<number>(12); // Default 12px Fine Precision Eraser
+  const [eraserColor, setEraserColor] = useState<string>('#ffffff'); // Dynamic adopted PDF background color
   const [hoverPt, setHoverPt] = useState<{ x: number; y: number } | null>(null);
+
+  // Sample exact underlying PDF background color from page canvas
+  const samplePageColor = (pt: { x: number; y: number }): string => {
+    if (!getPageCanvas) return '#ffffff';
+    const canvas = getPageCanvas();
+    if (!canvas) return '#ffffff';
+    try {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true }) || canvas.getContext('2d');
+      if (!ctx) return '#ffffff';
+      const px = Math.max(0, Math.min(canvas.width - 1, Math.round((pt.x / originalWidth) * canvas.width)));
+      const py = Math.max(0, Math.min(canvas.height - 1, Math.round((pt.y / originalHeight) * canvas.height)));
+      const pixel = ctx.getImageData(px, py, 1, 1).data;
+      if (pixel[3] < 10) return '#ffffff'; // Transparent pixel fallback
+      const toHex = (n: number) => n.toString(16).padStart(2, '0');
+      return `#${toHex(pixel[0])}${toHex(pixel[1])}${toHex(pixel[2])}`;
+    } catch {
+      return '#ffffff';
+    }
+  };
 
   // Shape Drag-to-Draw State
   const [isDrawingShape, setIsDrawingShape] = useState(false);
@@ -102,11 +126,10 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
 
   const eraseDrawingsNearPoint = (pt: { x: number; y: number }, radius: number) => {
     for (const d of pageDrawings) {
-      if (d.color === '#ffffff') continue; // Don't auto-delete whiteouts
       for (const p of d.points) {
         const dx = p.x - pt.x;
         const dy = p.y - pt.y;
-        if (dx * dx + dy * dy <= radius * radius) {
+        if (dx * dx + dy * dy <= (radius + (d.thickness || 4)) * (radius + (d.thickness || 4))) {
           onDeleteDrawing(d.id);
           break;
         }
@@ -164,6 +187,8 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       setIsDrawing(true);
       setCurrentPoints([pt]);
       if (toolMode === 'eraser') {
+        const sampled = samplePageColor(pt);
+        setEraserColor(sampled);
         eraseDrawingsNearPoint(pt, eraserThickness);
       }
     } else if (toolMode === 'line' || toolMode === 'rectangle' || toolMode === 'oval') {
@@ -336,7 +361,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         onAddDrawing({
           pageIndex,
           points: pts,
-          color: isEraser ? '#ffffff' : isHighlight ? highlightColor : drawColor,
+          color: isEraser ? eraserColor : isHighlight ? highlightColor : drawColor,
           thickness: isEraser ? eraserThickness : isHighlight ? highlightThickness : thickness,
           opacity: isHighlight ? 0.45 : 1.0,
         });
@@ -371,6 +396,8 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       setIsDrawing(true);
       setCurrentPoints([pt]);
       if (toolMode === 'eraser') {
+        const sampled = samplePageColor(pt);
+        setEraserColor(sampled);
         eraseDrawingsNearPoint(pt, eraserThickness);
       }
     } else if (toolMode === 'line' || toolMode === 'rectangle' || toolMode === 'oval') {
@@ -406,130 +433,184 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}>
-      {/* Floating Brush & Pencil Scale Toolbar Overlay */}
-      {(toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') && (
-        <div className="absolute top-2 right-2 bg-slate-900/95 border border-slate-700/80 backdrop-blur rounded-2xl p-2 flex items-center space-x-3 shadow-2xl pointer-events-auto z-40 text-xs">
+      {/* Sleek Centered Floating Toolbar Overlay for Draw / Highlight / Eraser */}
+      {showToolbar && (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] w-max bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl sm:rounded-full px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl pointer-events-auto z-40 text-xs select-none animate-fadeIn">
           {toolMode === 'eraser' ? (
             <>
-              <span className="text-[10px] font-extrabold uppercase text-amber-400">Precision Eraser</span>
-              <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
+              <div className="flex items-center gap-1 text-[10px] font-bold text-amber-400 shrink-0">
+                <span>🧹</span>
+                <span>Eraser</span>
+              </div>
+
+              {/* Adopted PDF Background Color */}
+              <div className="flex items-center gap-1 pl-1 border-l border-slate-700 shrink-0" title={`Erasing with PDF color: ${eraserColor}`}>
+                <span className="text-[9px] text-slate-400">Color:</span>
+                <span
+                  className="w-4 h-4 rounded-full border border-white/70 shadow-sm shrink-0"
+                  style={{ backgroundColor: eraserColor }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEraserColor('#ffffff')}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition ${
+                    eraserColor.toLowerCase() === '#ffffff'
+                      ? 'bg-amber-500 text-slate-950 shadow'
+                      : 'bg-slate-800 text-slate-300 hover:text-white'
+                  }`}
+                  title="Force White Erase"
+                >
+                  White
+                </button>
+              </div>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Eraser Stroke Thickness Presets */}
+              <div className="flex items-center gap-1 shrink-0">
                 {[
-                  { label: 'Micro', size: 4 },
-                  { label: 'Fine', size: 8 },
-                  { label: 'Medium', size: 16 },
-                  { label: 'Large', size: 32 },
-                  { label: 'Heavy Block', size: 64 },
+                  { label: '4px', size: 4 },
+                  { label: '8px', size: 8 },
+                  { label: '16px', size: 16 },
+                  { label: '32px', size: 32 },
                 ].map((s) => (
                   <button
                     key={s.size}
+                    type="button"
                     onClick={() => setEraserThickness(s.size)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                      eraserThickness === s.size ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition flex items-center gap-1 ${
+                      eraserThickness === s.size
+                        ? 'bg-amber-500 text-slate-950 shadow'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
-                    {s.label} ({s.size}px)
+                    <span>{s.label}</span>
                   </button>
                 ))}
               </div>
             </>
           ) : toolMode === 'draw' ? (
             <>
-              <span className="text-[10px] font-extrabold uppercase text-cyan-400">Pencil Scale</span>
-              {/* Pencil Colors */}
-              <div className="flex items-center space-x-1">
+              {/* Pencil Palette Colors */}
+              <div className="flex items-center gap-1 shrink-0">
                 {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#000000'].map((c) => (
                   <button
                     key={c}
+                    type="button"
                     onClick={() => setDrawColor(c)}
-                    className={`w-5 h-5 rounded-full border-2 transition ${drawColor === c ? 'scale-125 border-white shadow-md' : 'border-transparent opacity-80'}`}
+                    className={`w-4 h-4 rounded-full border transition shrink-0 ${
+                      drawColor === c
+                        ? 'scale-125 border-white ring-2 ring-cyan-400 shadow'
+                        : 'border-white/30 opacity-80 hover:opacity-100 hover:scale-110'
+                    }`}
                     style={{ backgroundColor: c }}
+                    title={`Color ${c}`}
                   />
                 ))}
               </div>
 
-              {/* Stroke Scale presets */}
-              <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Stroke Thickness Presets */}
+              <div className="flex items-center gap-1 shrink-0">
                 {[
-                  { label: 'Fine', size: 2 },
-                  { label: 'Medium', size: 5 },
-                  { label: 'Bold', size: 10 },
-                  { label: 'Heavy', size: 16 },
+                  { label: '2px', size: 2 },
+                  { label: '5px', size: 5 },
+                  { label: '10px', size: 10 },
+                  { label: '16px', size: 16 },
                 ].map((s) => (
                   <button
                     key={s.size}
+                    type="button"
                     onClick={() => setThickness(s.size)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                      thickness === s.size ? 'bg-cyan-500 text-white shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition flex items-center gap-1 ${
+                      thickness === s.size
+                        ? 'bg-cyan-500 text-white shadow'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
-                    {s.label} ({s.size}px)
+                    <span
+                      className="rounded-full inline-block"
+                      style={{
+                        width: `${Math.min(6, Math.max(2, s.size / 2))}px`,
+                        height: `${Math.min(6, Math.max(2, s.size / 2))}px`,
+                        backgroundColor: drawColor,
+                      }}
+                    />
+                    <span>{s.label}</span>
                   </button>
                 ))}
               </div>
             </>
           ) : (
             <>
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={() => setHighlightMode('line')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition ${
-                    highlightMode === 'line' ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                  title="Straight Horizontal Text Line Highlight (Follows cursor horizontally along text line)"
-                >
-                  <span>📏 Straight Line</span>
-                </button>
-                <button
-                  onClick={() => setHighlightMode('box')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition ${
-                    highlightMode === 'box' ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                  title="Text Passage Box Highlight (Drag Bounding Box)"
-                >
-                  <span>📦 Passage Box</span>
-                </button>
-                <button
-                  onClick={() => setHighlightMode('freehand')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center space-x-1 transition ${
-                    highlightMode === 'freehand' ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                  title="Freehand Curve Highlighter"
-                >
-                  <span>✏️ Freehand</span>
-                </button>
+              {/* Highlighter Mode Buttons */}
+              <div className="flex items-center gap-1 shrink-0">
+                {[
+                  { mode: 'line' as const, label: 'Line', icon: '📏' },
+                  { mode: 'box' as const, label: 'Box', icon: '📦' },
+                  { mode: 'freehand' as const, label: 'Pen', icon: '✏️' },
+                ].map((m) => (
+                  <button
+                    key={m.mode}
+                    type="button"
+                    onClick={() => setHighlightMode(m.mode)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition ${
+                      highlightMode === m.mode
+                        ? 'bg-yellow-500 text-slate-950 shadow'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span>{m.icon}</span>
+                    <span>{m.label}</span>
+                  </button>
+                ))}
               </div>
 
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
               {/* Highlighter Colors */}
-              <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
+              <div className="flex items-center gap-1 shrink-0">
                 {['#facc15', '#4ade80', '#38bdf8', '#f472b6', '#fb923c', '#c084fc'].map((c) => (
                   <button
                     key={c}
+                    type="button"
                     onClick={() => setHighlightColor(c)}
-                    className={`w-5 h-5 rounded-full border-2 transition ${highlightColor === c ? 'scale-125 border-white shadow-md' : 'border-transparent opacity-80'}`}
+                    className={`w-4 h-4 rounded-full border transition shrink-0 ${
+                      highlightColor === c
+                        ? 'scale-125 border-white ring-2 ring-yellow-400 shadow'
+                        : 'border-white/30 opacity-80 hover:opacity-100 hover:scale-110'
+                    }`}
                     style={{ backgroundColor: c }}
                   />
                 ))}
               </div>
 
-              {/* Highlighter Thickness presets */}
+              {/* Highlighter Thickness (freehand mode) */}
               {highlightMode === 'freehand' && (
-                <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
-                  {[
-                    { label: 'Fine', size: 10 },
-                    { label: 'Standard', size: 18 },
-                    { label: 'Broad Bar', size: 28 },
-                  ].map((s) => (
-                    <button
-                      key={s.size}
-                      onClick={() => setHighlightThickness(s.size)}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
-                        highlightThickness === s.size ? 'bg-yellow-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {s.label} ({s.size}px)
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+                  <div className="flex items-center gap-1 shrink-0">
+                    {[
+                      { label: '10px', size: 10 },
+                      { label: '18px', size: 18 },
+                      { label: '28px', size: 28 },
+                    ].map((s) => (
+                      <button
+                        key={s.size}
+                        type="button"
+                        onClick={() => setHighlightThickness(s.size)}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
+                          highlightThickness === s.size
+                            ? 'bg-yellow-500 text-slate-950 shadow'
+                            : 'bg-slate-800 text-slate-300 hover:text-white'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </>
           )}
@@ -551,44 +632,6 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       >
         {/* Existing Finished Drawings */}
         {pageDrawings.map((drawing) => {
-          const isWhiteout = drawing.color === '#ffffff' || drawing.color?.toLowerCase() === '#fff';
-          if (isWhiteout && drawing.points.length > 0) {
-            let minX = drawing.points[0].x;
-            let minY = drawing.points[0].y;
-            let maxX = drawing.points[0].x;
-            let maxY = drawing.points[0].y;
-
-            for (const p of drawing.points) {
-              if (p.x < minX) minX = p.x;
-              if (p.y < minY) minY = p.y;
-              if (p.x > maxX) maxX = p.x;
-              if (p.y > maxY) maxY = p.y;
-            }
-
-            const th = drawing.thickness || 8;
-            const pad = th / 2;
-            const rx = Math.max(0, minX - pad) * scaleX;
-            const ry = Math.max(0, minY - pad) * scaleY;
-            const rw = ((maxX - minX) + th) * scaleX;
-            const rh = ((maxY - minY) + th) * scaleY;
-
-            return (
-              <rect
-                key={drawing.id}
-                x={rx}
-                y={ry}
-                width={rw}
-                height={rh}
-                fill="#ffffff"
-                className="pointer-events-auto cursor-pointer hover:stroke-cyan-400"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm('Delete this whiteout erasure block?')) onDeleteDrawing(drawing.id);
-                }}
-              />
-            );
-          }
-
           const dPath = drawing.points
             .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`)
             .join(' ');
@@ -609,7 +652,9 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
               className="pointer-events-auto hover:stroke-cyan-400 cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm('Delete this drawn stroke?')) onDeleteDrawing(drawing.id);
+                if (toolMode === 'eraser' || confirm('Delete this drawing / erasure?')) {
+                  onDeleteDrawing(drawing.id);
+                }
               }}
             />
           );
@@ -664,7 +709,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
           ) : (
             <path
               d={currentPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`).join(' ')}
-              stroke={toolMode === 'eraser' ? '#ffffff' : toolMode === 'highlight' ? highlightColor : drawColor}
+              stroke={toolMode === 'eraser' ? eraserColor : toolMode === 'highlight' ? highlightColor : drawColor}
               strokeWidth={(toolMode === 'eraser' ? eraserThickness : toolMode === 'highlight' ? highlightThickness : thickness) * scaleY}
               strokeOpacity={toolMode === 'highlight' ? 0.45 : 1.0}
               strokeLinecap="round"
@@ -723,7 +768,8 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
               cx={hoverPt.x * scaleX}
               cy={hoverPt.y * scaleY}
               r={Math.max(3, (eraserThickness * scaleY) / 2)}
-              fill="rgba(255, 255, 255, 0.4)"
+              fill={eraserColor}
+              fillOpacity="0.45"
               stroke="#f59e0b"
               strokeWidth="1.5"
               strokeDasharray="3 3"

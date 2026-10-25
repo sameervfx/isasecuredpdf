@@ -1080,6 +1080,8 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                       originalWidth={origW}
                       originalHeight={origH}
                       toolMode={toolMode}
+                      showToolbar={seqIdx === Math.max(0, currentPage - 1) || activePages.length === 1}
+                      getPageCanvas={() => canvasRefs.current.get(origIdx)}
                       pendingSignatureDataUrl={pendingSignatureDataUrl}
                       drawings={state.drawings}
                       stamps={state.stamps}
