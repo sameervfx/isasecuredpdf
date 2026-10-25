@@ -423,7 +423,12 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                         <span>100% Client-Side Air-Gapped Privacy</span>
                       </div>
-                      {selectedPlan === 'monthly' ? (
+                      {isIOSPlatform() ? (
+                        <div className="flex items-center space-x-2 sm:col-span-2 pt-0.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span className="font-semibold text-emerald-300">Unlimited Document Pages & Batch Processing</span>
+                        </div>
+                      ) : selectedPlan === 'monthly' ? (
                         <div className="flex items-center space-x-2 sm:col-span-2 text-slate-400 pt-0.5">
                           <span className="text-[10.5px] text-amber-300/90 font-medium flex items-center space-x-1.5">
                             <span className="shrink-0">🔒</span>
@@ -491,13 +496,13 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     {isIOSPlatform() ? (
                       <div className="space-y-1.5 text-left text-[10.5px]">
                         <p className="font-bold text-slate-200">
-                          Subscription Details & Terms**:
+                          Subscription Details & Terms:
                         </p>
                         <ul className="space-y-0.5 text-slate-300 list-disc list-inside">
                           <li><span className="font-semibold text-white">Title of Service:</span> {selectedPlan === 'monthly' ? 'Pro Monthly Pass' : selectedPlan === 'annual' ? 'Pro Annual Pass' : 'Lifetime VIP Access'}</li>
                           <li><span className="font-semibold text-white">Length of Subscription:</span> {selectedPlan === 'monthly' ? '1 Month (Auto-Renewable)' : selectedPlan === 'annual' ? '1 Year (Auto-Renewable)' : 'Permanent Lifetime License (One-Time)'}</li>
                           <li><span className="font-semibold text-white">Price:</span> {selectedPlan === 'monthly' ? `${livePrices[PLAY_PRODUCT_IDS.monthly] || initialPricing.monthly} per month` : selectedPlan === 'annual' ? `${livePrices[PLAY_PRODUCT_IDS.annual] || initialPricing.annual} per year` : `${livePrices[PLAY_PRODUCT_IDS.lifetime] || initialPricing.lifetime} one-time`}</li>
-                          <li><span className="font-semibold text-white">Included Access:</span> {selectedPlan === 'monthly' ? 'Unlimited Sign, Split PDF & Add Image/Logo (iOS & Web)' : 'Unlimited Sign, Split & Image/Logo + Windows & Mac Offline Desktop Apps Included'}</li>
+                          <li><span className="font-semibold text-white">Included Access:</span> {selectedPlan === 'monthly' ? 'Unlimited PDF Editing, Signatures, Page Split & Exports (1 Month)' : selectedPlan === 'annual' ? 'Unlimited PDF Editing, Signatures, Page Split & Exports (1 Year)' : 'Permanent Lifetime VIP Document Access'}</li>
                         </ul>
                         <p className="text-[10px] text-slate-400 pt-1 leading-normal">
                           Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless auto-renew is cancelled at least 24 hours before the end of the current billing period. Your account will be charged for renewal within 24 hours prior to the end of the current period. Manage or cancel anytime in your <a href="https://apps.apple.com/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Apple Account Settings</a>.
@@ -535,16 +540,29 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       </button>
                     </div>
 
-                    {/* Terms of Service** & Privacy Policy (In-App Modal) */}
-                    <div className="flex justify-center items-center space-x-3 text-[10px] text-slate-400 pt-1">
+                    {/* Terms of Use (EULA) & Privacy Policy */}
+                    <div className="flex flex-wrap justify-center items-center gap-x-2.5 gap-y-1 text-[10px] text-slate-400 pt-1">
                       <button
                         type="button"
                         onClick={() => setActiveLegalModal('terms')}
                         className="hover:text-cyan-400 underline font-medium transition"
                       >
-                        Terms of Service**
+                        Terms of Use (EULA)
                       </button>
                       <span>•</span>
+                      {isIOSPlatform() && (
+                        <>
+                          <a
+                            href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-cyan-400 underline font-medium transition text-slate-400"
+                          >
+                            Apple Standard EULA
+                          </a>
+                          <span>•</span>
+                        </>
+                      )}
                       <button
                         type="button"
                         onClick={() => setActiveLegalModal('privacy')}
@@ -731,7 +749,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   <ShieldCheck className="w-5 h-5 text-cyan-400" />
                   <span>
                     {activeLegalModal === 'privacy' && 'Privacy Policy'}
-                    {activeLegalModal === 'terms' && 'Terms of Service**'}
+                    {activeLegalModal === 'terms' && (isIOSPlatform() ? 'Terms of Use (EULA)' : 'Terms of Service')}
                   </span>
                 </div>
                 <button
@@ -786,28 +804,28 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                 {activeLegalModal === 'terms' && (
                   <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
                     <div>
-                      <h4 className="font-bold text-white mb-1">1. Acceptance of Terms of Service**</h4>
+                      <h4 className="font-bold text-white mb-1">1. Acceptance of Terms of Use (EULA)</h4>
                       <p>
-                        By downloading, installing, accessing, or using ISASecuredPDF (PDF Engine Studio), you agree to be bound by these Terms of Service**. The software is provided "as-is" without warranties of any kind. You are granted a non-exclusive, non-transferable license to use the software for personal or commercial document editing in accordance with your selected plan tier. You agree not to reverse engineer or illegally redistribute licensed binaries.
+                        By downloading, installing, accessing, or using ISASecuredPDF, you agree to be bound by these Terms of Use (EULA). The software is provided "as-is" without warranties of any kind. You are granted a non-exclusive, non-transferable license to use the software for personal or commercial document editing in accordance with your selected plan tier. For iOS users, your license is also governed by Apple's Standard End User License Agreement: <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</a>.
                       </p>
                     </div>
 
                     <div>
-                      <h4 className="font-bold text-white mb-1">2. Free Starter Monthly Usage Limit (5 Documents / Month)**</h4>
+                      <h4 className="font-bold text-white mb-1">2. Free Starter Monthly Usage Limit (5 Documents / Month)</h4>
                       <p>
                         Free Starter tier users are permitted to use <b>Sign Document (Digital Signatures)</b>, <b>Split PDF / Extract Multiple PDFs</b>, and <b>Add Image / Logo</b> on up to <b>5 documents per calendar month</b> across the web and mobile app. Once the 5-document monthly limit is reached, an active <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> license is required to continue using unlimited signatures, document splitting, image/logo placement, and advanced Pro tools.
                       </p>
                     </div>
 
                     <div>
-                      <h4 className="font-bold text-white mb-1">3. Pro Subscriptions, Desktop Apps & Lifetime VIP**</h4>
+                      <h4 className="font-bold text-white mb-1">3. Pro Subscriptions & Lifetime VIP</h4>
                       <p>
-                        <b>Pro Monthly</b> unlocks unlimited web and mobile PDF editing, signing, splitting, image/logo insertion, watermarking, password protection, and Office format exports. <b>Pro Annual</b> and <b>Lifetime VIP</b> plans additionally include access to the standalone <b>Windows & Mac Offline Desktop Apps</b>.
+                        <b>Pro Monthly</b> and <b>Pro Annual</b> unlock unlimited mobile & web PDF editing, signing, splitting, image/logo insertion, watermarking, password protection, and Office format exports. Subscriptions auto-renew unless cancelled in account settings at least 24 hours prior to the renewal date.
                       </p>
                     </div>
 
                     <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-[11px] text-amber-300/90">
-                      <b>** Right to Modify Terms, Usage Limits & Pricing:</b> Please note that these <b>Terms of Service**</b>, free-tier monthly document limits, included features, and subscription or lifetime pricing are subject to change, update, or modification at any time at our sole discretion. Continued use of the software following any changes constitutes acceptance of the revised Terms of Service**.
+                      <b>Right to Modify Terms, Usage Limits & Pricing:</b> Please note that these Terms of Use, free-tier monthly document limits, included features, and subscription pricing are subject to change in accordance with applicable store policies. Continued use of the software constitutes acceptance of the revised Terms.
                     </div>
                   </div>
                 )}
