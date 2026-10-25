@@ -261,9 +261,13 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
-      const idealLeft = rect.left + rect.width / 2 - popoverWidth / 2;
-      const left = Math.max(8, Math.min(window.innerWidth - popoverWidth - 8, idealLeft));
-      const top = rect.bottom + 6;
+      const vw = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.width : window.innerWidth;
+      const vLeft = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetLeft : 0;
+      const vTop = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetTop : 0;
+      const effectiveWidth = Math.min(popoverWidth, vw - 16);
+      const idealLeft = rect.left + rect.width / 2 - effectiveWidth / 2;
+      const left = Math.max(vLeft + 8, Math.min(vLeft + vw - effectiveWidth - 8, idealLeft));
+      const top = Math.max(vTop + 8, rect.bottom + 6);
       setPopoverPos({ name, left, top });
     }
 
@@ -274,6 +278,48 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
     setIsMoreToolsOpen(name === 'tools');
     setIsFileMenuOpen(name === 'file');
   };
+
+  // Keep open popover aligned to trigger if viewport scrolls/resizes
+  useEffect(() => {
+    if (!popoverPos.name) return;
+    const handleReposition = () => {
+      let targetRef: React.RefObject<HTMLDivElement> | null = null;
+      let width = 256;
+      if (popoverPos.name === 'text') { targetRef = textDropdownRef; width = 224; }
+      else if (popoverPos.name === 'annotate') { targetRef = annotateDropdownRef; width = 256; }
+      else if (popoverPos.name === 'sign') { targetRef = dropdownRef; width = 224; }
+      else if (popoverPos.name === 'security') { targetRef = securityDropdownRef; width = 288; }
+      else if (popoverPos.name === 'tools') { targetRef = moreToolsRef; width = 280; }
+      else if (popoverPos.name === 'file') { targetRef = fileMenuRef; width = 208; }
+
+      if (targetRef?.current) {
+        const rect = targetRef.current.getBoundingClientRect();
+        const vw = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        const vLeft = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetLeft : 0;
+        const vTop = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetTop : 0;
+        const effectiveWidth = Math.min(width, vw - 16);
+        const idealLeft = rect.left + rect.width / 2 - effectiveWidth / 2;
+        const left = Math.max(vLeft + 8, Math.min(vLeft + vw - effectiveWidth - 8, idealLeft));
+        const top = Math.max(vTop + 8, rect.bottom + 6);
+        setPopoverPos((prev) => ({ ...prev, left, top }));
+      }
+    };
+
+    window.addEventListener('resize', handleReposition, { passive: true });
+    window.addEventListener('scroll', handleReposition, { capture: true, passive: true });
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleReposition);
+      window.visualViewport.addEventListener('scroll', handleReposition);
+    }
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, { capture: true });
+      if (typeof window !== 'undefined' && window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleReposition);
+        window.visualViewport.removeEventListener('scroll', handleReposition);
+      }
+    };
+  }, [popoverPos.name]);
 
   // Sync saved signatures & recent files whenever dropdown opens
   useEffect(() => {
@@ -730,7 +776,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   handleToolSelect('text');
-                  toggleDropdown('text', textDropdownRef, 208);
+                  toggleDropdown('text', textDropdownRef, 224);
                 }}
                 title="Text style & formatting options"
                 className={`px-1 py-1.5 rounded-r-lg text-xs font-semibold transition-all border-l border-slate-700/60 ${
@@ -752,47 +798,31 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     top: `${popoverPos.top}px`,
                     zIndex: 999999,
                   }}
-                  className="w-52 max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-2 animate-fadeIn opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
+                  className="w-56 max-w-[calc(100vw-16px)] bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1.5 animate-fadeIn opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
                 >
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 border-b border-slate-800 pb-1 flex items-center justify-between">
-                    <span>Text Formatting & Style</span>
-                    <span className="text-[9px] text-slate-500 font-mono">Real-time</span>
-                  </div>
+                  {/* Row 1: Font Family Selector */}
+                  <select
+                    value={textFontFamily || "'Times New Roman', Times, serif"}
+                    onChange={(e) => setTextFontFamily && setTextFontFamily(e.target.value)}
+                    className="bg-slate-900 text-slate-100 border border-slate-700 rounded-lg px-2 py-1 text-xs font-semibold hover:border-cyan-500 transition w-full"
+                  >
+                    <option value="'Nunito', 'VAG Rounded', sans-serif">Nunito (Modern)</option>
+                    <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                    <option value="Arial, Helvetica, sans-serif">Arial / Sans</option>
+                    <option value="'Courier New', Courier, monospace">Courier New</option>
+                    <option value="Georgia, serif">Georgia</option>
+                    <option value="Garamond, serif">Garamond</option>
+                    <option value="Verdana, sans-serif">Verdana</option>
+                    <option value="Impact, Charcoal, sans-serif">Impact (Bold)</option>
+                  </select>
 
-                  {/* Font Family / Style */}
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-[10px] font-semibold text-slate-400">Font Family</label>
-                    <select
-                      value={textFontFamily || "'Times New Roman', Times, serif"}
-                      onChange={(e) => setTextFontFamily && setTextFontFamily(e.target.value)}
-                      className="bg-slate-950 text-slate-100 border border-slate-700 rounded-lg px-2 py-1 text-xs font-semibold hover:border-cyan-500 transition w-full"
-                    >
-                      <option value="'Nunito', 'VAG Rounded', 'Arial Rounded MT Bold', sans-serif">Nunito / VAG Rounded (Modern)</option>
-                      <option value="'Times New Roman', Times, serif">Times New Roman (Legal)</option>
-                      <option value="Arial, Helvetica, sans-serif">Arial / Helvetica (Sans)</option>
-                      <option value="'Courier New', Courier, monospace">Courier New (Mono)</option>
-                      <option value="Georgia, serif">Georgia (Serif)</option>
-                      <option value="Garamond, serif">Garamond (Classic)</option>
-                      <option value="Verdana, Geneva, sans-serif">Verdana (Clean)</option>
-                      <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                      <option value="Impact, Charcoal, sans-serif">Impact (Bold)</option>
-                      <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans</option>
-                      <option value="'Palatino Linotype', Palatino, serif">Palatino</option>
-                      <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
-                      <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
-                      <option value="'Brush Script MT', cursive">Brush Script</option>
-                      <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
-                      <option value="'Century Gothic', sans-serif">Century Gothic</option>
-                    </select>
-                  </div>
-
-                  {/* Font Size & Stepper */}
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-semibold text-slate-400">Font Size</label>
-                    <div className="flex items-center space-x-1">
+                  {/* Row 2: Font Size Stepper & Colors Inline */}
+                  <div className="flex items-center justify-between gap-1.5">
+                    {/* Stepper */}
+                    <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-0.5 shrink-0">
                       <button
                         onClick={() => setTextFontSize && setTextFontSize(Math.max(8, (textFontSize || 14) - 2))}
-                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold transition"
+                        className="px-1 text-slate-400 hover:text-white font-bold text-xs"
                         title="Decrease Font Size"
                       >
                         -
@@ -800,74 +830,72 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                       <select
                         value={textFontSize || 14}
                         onChange={(e) => setTextFontSize && setTextFontSize(Number(e.target.value))}
-                        className="bg-slate-950 text-slate-100 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono font-bold hover:border-cyan-500 transition"
+                        className="bg-transparent text-cyan-300 font-mono font-bold text-xs border-0 outline-none p-0 cursor-pointer"
                       >
-                        {[8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48, 64].map((size) => (
-                          <option key={size} value={size}>
-                            {size}pt
+                        {[8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48].map((s) => (
+                          <option key={s} value={s} className="bg-slate-900 text-white">
+                            {s}pt
                           </option>
                         ))}
                       </select>
                       <button
                         onClick={() => setTextFontSize && setTextFontSize(Math.min(72, (textFontSize || 14) + 2))}
-                        className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-bold transition"
+                        className="px-1 text-slate-400 hover:text-white font-bold text-xs"
                         title="Increase Font Size"
                       >
                         +
                       </button>
                     </div>
-                  </div>
 
-                  {/* Color Palette */}
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-[10px] font-semibold text-slate-400">Text Color</label>
-                    <div className="flex items-center space-x-1.5 bg-slate-950 border border-slate-800 rounded-lg p-1.5 justify-between">
-                      {['#58595b', '#0094c1', '#aa258d', '#000000', '#1e3a8a', '#dc2626', '#15803d', '#ffffff'].map((c) => (
+                    {/* Quick Swatches & Color Picker */}
+                    <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-1">
+                      {['#000000', '#1e3a8a', '#dc2626', '#58595b'].map((c) => (
                         <button
                           key={c}
                           onClick={() => setTextColor && setTextColor(c)}
                           style={{ backgroundColor: c }}
-                          className={`w-4 h-4 rounded-full border transition ${
-                            textColor === c ? 'border-cyan-400 scale-110 ring-1 ring-cyan-400' : 'border-slate-600 opacity-80'
+                          className={`w-3.5 h-3.5 rounded-full border transition ${
+                            textColor === c ? 'border-white scale-125 ring-1 ring-cyan-400' : 'border-slate-600 opacity-80'
                           }`}
-                          title={`Color ${c}`}
                         />
                       ))}
-                      <input
-                        type="color"
-                        value={textColor || '#58595b'}
-                        onChange={(e) => setTextColor && setTextColor(e.target.value)}
-                        className="w-4 h-4 rounded cursor-pointer border-0 p-0 bg-transparent"
-                        title="Custom Color Picker"
-                      />
+                      <label className="cursor-pointer flex items-center">
+                        <input
+                          type="color"
+                          value={textColor || '#58595b'}
+                          onChange={(e) => setTextColor && setTextColor(e.target.value)}
+                          className="w-3.5 h-3.5 rounded border-0 p-0 bg-transparent cursor-pointer"
+                          title="Custom Color"
+                        />
+                      </label>
                     </div>
                   </div>
 
-                  {/* Underline Toggle */}
-                  <button
-                    onClick={() => setTextIsUnderline && setTextIsUnderline(!textIsUnderline)}
-                    className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition border ${
-                      textIsUnderline
-                        ? 'bg-cyan-500 text-white border-cyan-400 shadow'
-                        : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
-                    }`}
-                  >
-                    <Underline className="w-3.5 h-3.5" />
-                    <span>{textIsUnderline ? 'Underline Text Active' : 'Normal Text (No Underline)'}</span>
-                  </button>
-
-                  {/* Redact Background Cover Toggle */}
-                  <button
-                    onClick={() => setTextIsRedact && setTextIsRedact(!textIsRedact)}
-                    className={`w-full py-1.5 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition border ${
-                      textIsRedact
-                        ? 'bg-white text-slate-900 border-white shadow'
-                        : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
-                    }`}
-                  >
-                    {textIsRedact ? <EyeOff className="w-3.5 h-3.5 text-red-600" /> : <Eye className="w-3.5 h-3.5 text-cyan-400" />}
-                    <span>{textIsRedact ? 'White Cover Box Active' : 'Plain Transparent Text'}</span>
-                  </button>
+                  {/* Row 3: Underline & Whiteout Buttons Side by Side */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      onClick={() => setTextIsUnderline && setTextIsUnderline(!textIsUnderline)}
+                      className={`py-1 px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center space-x-1 transition border ${
+                        textIsUnderline
+                          ? 'bg-cyan-500 text-white border-cyan-400 shadow'
+                          : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <Underline className="w-3 h-3" />
+                      <span>Underline</span>
+                    </button>
+                    <button
+                      onClick={() => setTextIsRedact && setTextIsRedact(!textIsRedact)}
+                      className={`py-1 px-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center space-x-1 transition border ${
+                        textIsRedact
+                          ? 'bg-white text-slate-900 border-white shadow'
+                          : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {textIsRedact ? <EyeOff className="w-3 h-3 text-red-600" /> : <Eye className="w-3 h-3 text-cyan-400" />}
+                      <span>Whiteout</span>
+                    </button>
+                  </div>
                 </div>,
                 document.body
               )}

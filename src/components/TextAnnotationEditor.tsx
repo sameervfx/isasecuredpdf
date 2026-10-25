@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2, Eye, EyeOff, Move, Clipboard, Minus, Plus, Type, Underline, Bold, Palette, Droplet } from 'lucide-react';
 import { TextAnnotation } from '../types/pdf';
 import { pdfRenderer, DetectedPDFTextLine } from '../services/pdfRenderer';
@@ -42,6 +43,53 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   const [detectedLines, setDetectedLines] = useState<DetectedPDFTextLine[]>([]);
   const [hoveredLineId, setHoveredLineId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Active text box DOM element and screen position for viewport-clamped fixed toolbar
+  const activeBoxRef = useRef<HTMLDivElement | null>(null);
+  const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number; isVisible: boolean }>({
+    left: 0,
+    top: 0,
+    isVisible: false,
+  });
+
+  const updateToolbarPosition = () => {
+    if (!selectedId || !activeBoxRef.current) {
+      setToolbarPos((prev) => (prev.isVisible ? { ...prev, isVisible: false } : prev));
+      return;
+    }
+    const rect = activeBoxRef.current.getBoundingClientRect();
+    const toolbarWidth = 230;
+    const vw = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    const vLeft = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetLeft : 0;
+    const vTop = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetTop : 0;
+    const idealLeft = rect.left + rect.width / 2 - toolbarWidth / 2;
+    const left = Math.max(vLeft + 8, Math.min(vLeft + vw - toolbarWidth - 8, idealLeft));
+    // Position above if room (> 110px from top of viewport), otherwise below text box
+    const top = rect.top > 110 ? Math.max(vTop + 58, rect.top - 42) : Math.min(window.innerHeight - 50, rect.bottom + 8);
+    const isVisible = rect.bottom > 40 && rect.top < window.innerHeight - 20;
+    setToolbarPos({ left, top, isVisible });
+  };
+
+  useEffect(() => {
+    updateToolbarPosition();
+    const handleReposition = () => updateToolbarPosition();
+    window.addEventListener('scroll', handleReposition, { capture: true, passive: true });
+    window.addEventListener('resize', handleReposition, { passive: true });
+    window.addEventListener('touchmove', handleReposition, { passive: true });
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleReposition);
+      window.visualViewport.addEventListener('scroll', handleReposition);
+    }
+    return () => {
+      window.removeEventListener('scroll', handleReposition, { capture: true });
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('touchmove', handleReposition);
+      if (typeof window !== 'undefined' && window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleReposition);
+        window.visualViewport.removeEventListener('scroll', handleReposition);
+      }
+    };
+  }, [selectedId, canvasWidth, canvasHeight]);
 
   useEffect(() => {
     let isMounted = true;
@@ -554,6 +602,11 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         return (
           <div
             key={ann.id}
+            ref={(el) => {
+              if (isSelected) {
+                activeBoxRef.current = el;
+              }
+            }}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedId(ann.id);
@@ -619,194 +672,190 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                 resize: 'none',
               }}
             />
-
-            {/* Movable & Draggable Compact Floating Action Toolbar - Placed ABOVE Text Box when in lower area */}
-            {isSelected && (
-              <div
-                className={`absolute ${
-                  scaledY > 52 ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]'
-                } ${
-                  scaledX > canvasWidth - 280 ? 'right-0' : 'left-0'
-                } flex items-center gap-1 bg-slate-900/95 backdrop-blur-md text-white rounded-xl px-2 py-1 shadow-2xl z-50 select-none border border-slate-700/80 ring-1 ring-cyan-500/40 animate-fadeIn max-w-[calc(100vw-24px)] w-max`}
-                style={{ transform: `translate(${tbOffset.x}px, ${tbOffset.y}px)` }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Drag / Move Handle - Moves Text Box Anywhere on PDF Canvas */}
-                <div
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    handleMouseDownDrag(e, ann);
-                  }}
-                  onTouchStart={(e) => {
-                    e.stopPropagation();
-                    handleTouchStartTextDrag(e, ann);
-                  }}
-                  title="Touch & Drag to Move Text Anywhere over PDF Page"
-                  className="p-1 bg-cyan-500/20 hover:bg-cyan-500/40 rounded text-cyan-300 cursor-grab active:cursor-grabbing transition flex items-center border border-cyan-500/30 shrink-0"
-                >
-                  <Move className="w-3.5 h-3.5" />
-                </div>
-
-                <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
-
-                {/* Sub-Point Decimal Font Size Stepper & Direct Numeric Input */}
-                <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: parseFloat(Math.max(4, ann.fontSize - 0.5).toFixed(1)) })}
-                    title="Decrease Font Size (-0.5pt)"
-                    className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-
-                  <div className="flex items-center">
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="4"
-                      max="120"
-                      value={ann.fontSize}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (!isNaN(val) && val >= 4 && val <= 120) {
-                          onUpdateAnnotation(ann.id, { fontSize: parseFloat(val.toFixed(2)) });
-                        }
-                      }}
-                      className="w-7 bg-transparent text-[10px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      title="Direct Font Size (pt)"
-                    />
-                    <span className="text-[9px] font-mono text-slate-400 select-none">pt</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: parseFloat(Math.min(120, ann.fontSize + 0.5).toFixed(1)) })}
-                    title="Increase Font Size (+0.5pt)"
-                    className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                </div>
-
-                {/* Bold Toggle Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const isCurrentlyBold =
-                      ann.fontWeight === 'bold' ||
-                      ann.fontWeight === '700' ||
-                      ann.fontWeight === 700 ||
-                      ann.fontWeight === '600';
-                    onUpdateAnnotation(ann.id, { fontWeight: isCurrentlyBold ? 'normal' : 'bold' });
-                  }}
-                  title="Toggle Bold"
-                  className={`p-1 rounded transition shrink-0 ${
-                    ann.fontWeight === 'bold' ||
-                    ann.fontWeight === '700' ||
-                    ann.fontWeight === 700 ||
-                    ann.fontWeight === '600'
-                      ? 'bg-cyan-500 text-white font-bold'
-                      : 'hover:bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  <Bold className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Underline Toggle Button */}
-                <button
-                  type="button"
-                  onClick={() => onUpdateAnnotation(ann.id, { isUnderline: !ann.isUnderline })}
-                  title="Toggle Underline"
-                  className={`p-1 rounded transition shrink-0 ${
-                    ann.isUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
-                  }`}
-                >
-                  <Underline className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Color Palette */}
-                <div className="flex items-center space-x-1 pl-0.5 shrink-0">
-                  {/* EyeDropper Tool to sample exact pixel color */}
-                  <button
-                    type="button"
-                    onClick={() => handlePickColorEyeDropper(ann.id)}
-                    title="EyeDropper: Sample color from page"
-                    className="p-1 hover:bg-cyan-500/30 text-cyan-300 hover:text-white rounded transition flex items-center shrink-0"
-                  >
-                    <Droplet className="w-3 h-3" />
-                  </button>
-
-                  {/* Dynamic Color Swatches (scrollable on mobile) */}
-                  <div className="flex items-center space-x-1 max-w-[100px] sm:max-w-[140px] overflow-x-auto scrollbar-none py-0.5 shrink-0">
-                    {Array.from(new Set([ann.color || '#000000', ...availableColors]))
-                      .filter((c): c is string => typeof c === 'string' && c.startsWith('#'))
-                      .slice(0, 6)
-                      .map((color) => {
-                        const currentColor = (ann.color || '#000000').toLowerCase();
-                        const isSelected = currentColor === color.toLowerCase();
-                        return (
-                          <button
-                            key={color}
-                            type="button"
-                            onClick={() => onUpdateAnnotation(ann.id, { color })}
-                            className={`w-3.5 h-3.5 rounded-full border transition shrink-0 ${
-                              isSelected
-                                ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
-                                : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
-                            }`}
-                            style={{ backgroundColor: color }}
-                            title={`Select ${color}`}
-                          />
-                        );
-                      })}
-                  </div>
-
-                  {/* Native Color Picker for custom Hex/RGB colors */}
-                  <label
-                    title="Custom Color Spectrum Picker"
-                    className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white shrink-0"
-                  >
-                    <Palette className="w-3 h-3" />
-                    <input
-                      id={`native-color-${ann.id}`}
-                      type="color"
-                      value={ann.color && ann.color.startsWith('#') ? ann.color : '#000000'}
-                      onChange={(e) => onUpdateAnnotation(ann.id, { color: e.target.value })}
-                      className="sr-only"
-                    />
-                  </label>
-                </div>
-
-                <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
-
-                {/* Quick Paste Button */}
-                <button
-                  type="button"
-                  onClick={() => handlePasteClipboard(ann.id)}
-                  title="Paste Clipboard Text"
-                  className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition shrink-0"
-                >
-                  <Clipboard className="w-3 h-3" />
-                </button>
-
-                {/* Delete Button */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteAnnotation(ann.id);
-                  }}
-                  title="Delete Text"
-                  className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition shrink-0"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            )}
           </div>
         );
       })}
+
+      {/* Viewport-Clamped Floating Action Toolbar - Glides with text box & NEVER goes off screen even when zoomed */}
+      {selectedId && toolbarPos.isVisible && (() => {
+        const activeAnn = pageAnnotations.find((a) => a.id === selectedId);
+        if (!activeAnn) return null;
+        const tbOffset = toolbarOffsets[activeAnn.id] || { x: 0, y: 0 };
+        const vw = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        const vLeft = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetLeft : 0;
+        const currentLeft = Math.max(vLeft + 8, Math.min(vLeft + vw - 240, toolbarPos.left + tbOffset.x));
+        const currentTop = Math.max(50, Math.min(window.innerHeight - 50, toolbarPos.top + tbOffset.y));
+
+        return createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              left: `${currentLeft}px`,
+              top: `${currentTop}px`,
+              zIndex: 99999,
+            }}
+            className="flex items-center gap-1 bg-slate-900/95 backdrop-blur-md text-white rounded-xl px-2 py-1 shadow-2xl select-none border border-slate-700/80 ring-1 ring-cyan-500/40 animate-fadeIn max-w-[calc(100vw-16px)] w-max touch-manipulation pointer-events-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drag / Move Handle - Moves Text Box Anywhere on PDF Canvas */}
+            <div
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                handleMouseDownDrag(e, activeAnn);
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                handleTouchStartTextDrag(e, activeAnn);
+              }}
+              title="Touch & Drag to Move Text Anywhere over PDF Page"
+              className="p-1 bg-cyan-500/20 hover:bg-cyan-500/40 rounded text-cyan-300 cursor-grab active:cursor-grabbing transition flex items-center border border-cyan-500/30 shrink-0"
+            >
+              <Move className="w-3.5 h-3.5" />
+            </div>
+
+            <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
+
+            {/* Sub-Point Decimal Font Size Stepper */}
+            <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
+              <button
+                type="button"
+                onClick={() => onUpdateAnnotation(activeAnn.id, { fontSize: parseFloat(Math.max(4, activeAnn.fontSize - 0.5).toFixed(1)) })}
+                title="Decrease Font Size (-0.5pt)"
+                className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+
+              <div className="flex items-center">
+                <input
+                  type="number"
+                  step="0.5"
+                  min="4"
+                  max="120"
+                  value={activeAnn.fontSize}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val >= 4 && val <= 120) {
+                      onUpdateAnnotation(activeAnn.id, { fontSize: parseFloat(val.toFixed(2)) });
+                    }
+                  }}
+                  className="w-6 bg-transparent text-[10px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  title="Direct Font Size (pt)"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onUpdateAnnotation(activeAnn.id, { fontSize: parseFloat(Math.min(120, activeAnn.fontSize + 0.5).toFixed(1)) })}
+                title="Increase Font Size (+0.5pt)"
+                className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Bold Toggle Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const isCurrentlyBold =
+                  activeAnn.fontWeight === 'bold' ||
+                  activeAnn.fontWeight === '700' ||
+                  activeAnn.fontWeight === 700 ||
+                  activeAnn.fontWeight === '600';
+                onUpdateAnnotation(activeAnn.id, { fontWeight: isCurrentlyBold ? 'normal' : 'bold' });
+              }}
+              title="Toggle Bold"
+              className={`p-1 rounded transition shrink-0 ${
+                activeAnn.fontWeight === 'bold' ||
+                activeAnn.fontWeight === '700' ||
+                activeAnn.fontWeight === 700 ||
+                activeAnn.fontWeight === '600'
+                  ? 'bg-cyan-500 text-white font-bold'
+                  : 'hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <Bold className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Underline Toggle Button */}
+            <button
+              type="button"
+              onClick={() => onUpdateAnnotation(activeAnn.id, { isUnderline: !activeAnn.isUnderline })}
+              title="Toggle Underline"
+              className={`p-1 rounded transition shrink-0 ${
+                activeAnn.isUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
+              }`}
+            >
+              <Underline className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Color Palette (3 quick swatches + native color picker) */}
+            <div className="flex items-center space-x-1 pl-0.5 shrink-0">
+              {['#000000', '#1e3a8a', '#dc2626'].map((color) => {
+                const currentColor = (activeAnn.color || '#000000').toLowerCase();
+                const isColorSelected = currentColor === color.toLowerCase();
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => onUpdateAnnotation(activeAnn.id, { color })}
+                    className={`w-3.5 h-3.5 rounded-full border transition shrink-0 ${
+                      isColorSelected
+                        ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
+                        : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={`Select ${color}`}
+                  />
+                );
+              })}
+
+              {/* Native Color Picker */}
+              <label
+                title="Custom Color Spectrum Picker"
+                className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white shrink-0"
+              >
+                <Palette className="w-3 h-3" />
+                <input
+                  id={`native-color-${activeAnn.id}`}
+                  type="color"
+                  value={activeAnn.color && activeAnn.color.startsWith('#') ? activeAnn.color : '#000000'}
+                  onChange={(e) => onUpdateAnnotation(activeAnn.id, { color: e.target.value })}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+
+            <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
+
+            {/* Quick Paste Button */}
+            <button
+              type="button"
+              onClick={() => handlePasteClipboard(activeAnn.id)}
+              title="Paste Clipboard Text"
+              className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition shrink-0"
+            >
+              <Clipboard className="w-3 h-3" />
+            </button>
+
+            {/* Delete Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteAnnotation(activeAnn.id);
+                setSelectedId(null);
+              }}
+              title="Delete Text"
+              className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition shrink-0"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>,
+          document.body
+        );
+      })()}
     </div>
   );
 };
