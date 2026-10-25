@@ -132,26 +132,6 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     }, 1000);
   };
 
-  // Dynamic In-App Billing Subtext based on selected plan and platform
-  const getNativeSubtext = () => {
-    const isIOS = isIOSPlatform();
-    const storeName = isIOS ? 'App Store' : 'Google Play';
-    const accountName = isIOS ? 'Apple ID account' : 'Google Play account';
-
-    if (selectedPlan === 'monthly') {
-      return isIOS 
-        ? `Pro Monthly Pass • 1 Month Auto-Renewable Subscription. Billed monthly to your Apple ID. Cancel anytime.`
-        : `Billed monthly through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
-    }
-    if (selectedPlan === 'lifetime') {
-      return isIOS
-        ? `Lifetime VIP License • Permanent One-Time Purchase. Charged to your Apple ID.`
-        : `One-time charge through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
-    }
-    return isIOS
-      ? `Pro Annual Pass • 1 Year Auto-Renewable Subscription. Billed annually to your Apple ID. Cancel anytime.`
-      : `Billed annually through your ${accountName}. Local pricing and currency confirmed on the ${storeName}.`;
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
@@ -382,22 +362,11 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               </div>
 
               {/* Condition 1: Native Mobile App (Google Play Billing / Apple In-App Purchase) */}
+              {/* Condition 1: Native Mobile App (Google Play Billing / Apple In-App Purchase) */}
               {isNativeApp ? (
-                <div className="space-y-4 my-3">
-                  {/* Pro Feature Benefits Checklist (Explicitly defines what the user receives per Apple Guideline 3.1.2(c)) */}
-                  <div className="bg-slate-950/90 p-3.5 sm:p-4 rounded-2xl border border-slate-800 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
-                      <div className="flex items-center space-x-1.5 min-w-0">
-                        <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <h5 className="font-bold text-white text-[11px] sm:text-xs tracking-tight whitespace-nowrap">
-                          {selectedPlan === 'monthly' ? 'Monthly Pass Includes:' : selectedPlan === 'annual' ? 'Annual Pass Includes:' : 'Lifetime VIP Includes:'}
-                        </h5>
-                      </div>
-                      <span className="inline-flex items-center justify-center text-[9.5px] sm:text-[10px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 leading-tight">
-                        {selectedPlan === 'monthly' ? 'Full Access • 1 Mo' : selectedPlan === 'annual' ? 'Full Access • 1 Yr' : 'Full Access • VIP'}
-                      </span>
-                    </div>
-
+                <div className="space-y-3.5 my-3">
+                  {/* Clean 4 Pro Feature Highlights */}
+                  <div className="bg-slate-950/70 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -405,45 +374,15 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       </div>
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Export to Word, Excel, PPTX & Images</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                         <span>Unlimited Digital Signatures & Stamps</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Unlimited Split PDF & Add Image / Logo</span>
+                        <span>Export to Word, Excel, PPTX & Images</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>Custom Watermarks & AES-128 Security</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span>100% Client-Side Air-Gapped Privacy</span>
-                      </div>
-                      {isIOSPlatform() ? (
-                        <div className="flex items-center space-x-2 sm:col-span-2 pt-0.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          <span className="font-semibold text-emerald-300">Unlimited Document Pages & Batch Processing</span>
-                        </div>
-                      ) : selectedPlan === 'monthly' ? (
-                        <div className="flex items-center space-x-2 sm:col-span-2 text-slate-400 pt-0.5">
-                          <span className="text-[10.5px] text-amber-300/90 font-medium flex items-center space-x-1.5">
-                            <span className="shrink-0">🔒</span>
-                            <span>Windows & Mac Offline Desktop Apps (Annual & Lifetime Pass only)</span>
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2 sm:col-span-2 pt-0.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          <span className="font-bold text-emerald-300">Windows & Mac Offline Desktop Apps Included</span>
-                        </div>
-                      )}
-                      <div className="flex items-center space-x-2 sm:col-span-2 text-cyan-300 font-semibold pt-0.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <span>Zero Cloud Uploads • No Ads • Unlimited PDF Processing</span>
+                        <span>100% Offline Air-Gapped Privacy • No Ads</span>
                       </div>
                     </div>
                   </div>
@@ -474,7 +413,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         alert('Store connection error. Please try again.');
                       }
                     }}
-                    className="w-full py-4 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2"
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2"
                   >
                     {isProcessing ? (
                       <span className="flex items-center space-x-2 text-slate-950">
@@ -486,91 +425,53 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                     )}
                   </button>
 
-                  {/* Dynamic Subtext below the button based on selection */}
-                  <p className="text-[11px] text-cyan-300 font-semibold text-center leading-normal px-2">
-                    {getNativeSubtext()}
+                  {/* Single Clean Store Billing Subtext */}
+                  <p className="text-[10px] text-slate-400 text-center leading-normal px-2">
+                    {isIOSPlatform()
+                      ? 'Billed to your Apple ID. Auto-renews unless cancelled in Apple Account Settings at least 24h before renewal.'
+                      : 'Billed to your Google Play account. Auto-renews unless cancelled in Play Store settings.'}
                   </p>
 
-                  {/* Mandatory In-App Subscriptions Policy Disclosure & Restore Purchases */}
-                  <div className="text-[10px] text-slate-400 text-center leading-relaxed px-2 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80 space-y-2">
-                    {isIOSPlatform() ? (
-                      <div className="space-y-1.5 text-left text-[10.5px]">
-                        <p className="font-bold text-slate-200">
-                          Subscription Details & Terms:
-                        </p>
-                        <ul className="space-y-0.5 text-slate-300 list-disc list-inside">
-                          <li><span className="font-semibold text-white">Title of Service:</span> {selectedPlan === 'monthly' ? 'Pro Monthly Pass' : selectedPlan === 'annual' ? 'Pro Annual Pass' : 'Lifetime VIP Access'}</li>
-                          <li><span className="font-semibold text-white">Length of Subscription:</span> {selectedPlan === 'monthly' ? '1 Month (Auto-Renewable)' : selectedPlan === 'annual' ? '1 Year (Auto-Renewable)' : 'Permanent Lifetime License (One-Time)'}</li>
-                          <li><span className="font-semibold text-white">Price:</span> {selectedPlan === 'monthly' ? `${livePrices[PLAY_PRODUCT_IDS.monthly] || initialPricing.monthly} per month` : selectedPlan === 'annual' ? `${livePrices[PLAY_PRODUCT_IDS.annual] || initialPricing.annual} per year` : `${livePrices[PLAY_PRODUCT_IDS.lifetime] || initialPricing.lifetime} one-time`}</li>
-                          <li><span className="font-semibold text-white">Included Access:</span> {selectedPlan === 'monthly' ? 'Unlimited PDF Editing, Signatures, Page Split & Exports (1 Month)' : selectedPlan === 'annual' ? 'Unlimited PDF Editing, Signatures, Page Split & Exports (1 Year)' : 'Permanent Lifetime VIP Document Access'}</li>
-                        </ul>
-                        <p className="text-[10px] text-slate-400 pt-1 leading-normal">
-                          Payment will be charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew unless auto-renew is cancelled at least 24 hours before the end of the current billing period. Your account will be charged for renewal within 24 hours prior to the end of the current period. Manage or cancel anytime in your <a href="https://apps.apple.com/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Apple Account Settings</a>.
-                        </p>
-                      </div>
-                    ) : (
-                      <p>
-                        Payment will be charged to your Google Play Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Manage or cancel anytime via <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">Google Play Account Settings</a>.
-                      </p>
-                    )}
-
-                    {/* Mandatory Apple Guideline 3.1.1: Restore Purchases */}
-                    <div className="pt-1.5 border-t border-slate-800/60 flex items-center justify-center">
-                      <button
-                        type="button"
-                        disabled={isProcessing}
-                        onClick={async () => {
-                          setIsProcessing(true);
-                          try {
-                            const res = await restoreNativePurchases();
-                            setIsProcessing(false);
-                            alert(res.message);
-                            if (res.success) {
-                              onPaymentSuccess('Pro');
-                              onClose();
-                            }
-                          } catch (e: any) {
-                            setIsProcessing(false);
-                            alert('Restore check complete.');
+                  {/* Single Row Footer: Restore Purchases • Terms of Use (EULA) • Privacy Policy */}
+                  <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={async () => {
+                        setIsProcessing(true);
+                        try {
+                          const res = await restoreNativePurchases();
+                          setIsProcessing(false);
+                          alert(res.message);
+                          if (res.success) {
+                            onPaymentSuccess('Pro');
+                            onClose();
                           }
-                        }}
-                        className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold underline transition py-1 flex items-center space-x-1"
-                      >
-                        <span>↺ Restore Purchases</span>
-                      </button>
-                    </div>
-
-                    {/* Terms of Use (EULA) & Privacy Policy */}
-                    <div className="flex flex-wrap justify-center items-center gap-x-2.5 gap-y-1 text-[10px] text-slate-400 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setActiveLegalModal('terms')}
-                        className="hover:text-cyan-400 underline font-medium transition"
-                      >
-                        Terms of Use (EULA)
-                      </button>
-                      <span>•</span>
-                      {isIOSPlatform() && (
-                        <>
-                          <a
-                            href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:text-cyan-400 underline font-medium transition text-slate-400"
-                          >
-                            Apple Standard EULA
-                          </a>
-                          <span>•</span>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setActiveLegalModal('privacy')}
-                        className="hover:text-cyan-400 underline font-medium transition"
-                      >
-                        Privacy Policy
-                      </button>
-                    </div>
+                        } catch (e: any) {
+                          setIsProcessing(false);
+                          alert('Restore check complete.');
+                        }
+                      }}
+                      className="text-cyan-400 hover:text-cyan-300 font-medium underline transition"
+                    >
+                      Restore Purchases
+                    </button>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveLegalModal('terms')}
+                      className="hover:text-cyan-400 underline font-medium transition"
+                    >
+                      Terms of Use (EULA)
+                    </button>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveLegalModal('privacy')}
+                      className="hover:text-cyan-400 underline font-medium transition"
+                    >
+                      Privacy Policy
+                    </button>
                   </div>
                 </div>
               ) : !isAndroidPlatform() ? (
@@ -803,24 +704,27 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
 
                 {activeLegalModal === 'terms' && (
                   <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
-                    <div>
-                      <h4 className="font-bold text-white mb-1">1. Acceptance of Terms of Use (EULA)</h4>
-                      <p>
-                        By downloading, installing, accessing, or using ISASecuredPDF, you agree to be bound by these Terms of Use (EULA). The software is provided "as-is" without warranties of any kind. You are granted a non-exclusive, non-transferable license to use the software for personal or commercial document editing in accordance with your selected plan tier. For iOS users, your license is also governed by Apple's Standard End User License Agreement: <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</a>.
+                    <div className="p-3 bg-cyan-950/40 border border-cyan-800/60 rounded-xl space-y-1.5">
+                      <h4 className="font-bold text-cyan-300 text-xs">1. Free Starter Tier — 5 Documents Each Month</h4>
+                      <p className="text-slate-300">
+                        Under the Free Starter tier, users are permitted to edit, sign (digital signatures), split documents, and add images to up to <b>5 documents each calendar month</b> completely free of charge across web and mobile.
+                      </p>
+                      <p className="text-slate-400">
+                        Upgrading to <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> unlocks unlimited document processing without any monthly limits, plus all export formats and premium features.
                       </p>
                     </div>
 
                     <div>
-                      <h4 className="font-bold text-white mb-1">2. Free Starter Monthly Usage Limit (5 Documents / Month)</h4>
+                      <h4 className="font-bold text-white mb-1">2. Pro Subscriptions & Auto-Renewal</h4>
                       <p>
-                        Free Starter tier users are permitted to use <b>Sign Document (Digital Signatures)</b>, <b>Split PDF / Extract Multiple PDFs</b>, and <b>Add Image / Logo</b> on up to <b>5 documents per calendar month</b> across the web and mobile app. Once the 5-document monthly limit is reached, an active <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> license is required to continue using unlimited signatures, document splitting, image/logo placement, and advanced Pro tools.
+                        Pro Monthly and Pro Annual subscriptions provide unlimited PDF editing, signatures, splitting, page reordering, watermarking, and document conversions. Subscriptions automatically renew through your Apple ID or Google Play account unless cancelled at least 24 hours prior to the end of the billing cycle. Manage or cancel anytime in your store account settings.
                       </p>
                     </div>
 
                     <div>
-                      <h4 className="font-bold text-white mb-1">3. Pro Subscriptions & Lifetime VIP</h4>
+                      <h4 className="font-bold text-white mb-1">3. Terms of Use & Apple Standard EULA</h4>
                       <p>
-                        <b>Pro Monthly</b> and <b>Pro Annual</b> unlock unlimited mobile & web PDF editing, signing, splitting, image/logo insertion, watermarking, password protection, and Office format exports. Subscriptions auto-renew unless cancelled in account settings at least 24 hours prior to the renewal date.
+                        By downloading, installing, or using ISASecuredPDF, you agree to be bound by these Terms of Use. On iOS devices, licensing and usage are also governed by Apple's Standard End User License Agreement: <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-semibold">https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</a>.
                       </p>
                     </div>
 
