@@ -10,6 +10,7 @@ import { ImageStampOverlay } from './ImageStampOverlay';
 import { ShapeAnnotation, ImageStampAnnotation } from '../types/pdf';
 import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, XCircle, X, Camera } from 'lucide-react';
 import appLogo from '../assets/app_logo.jpg';
+import { isIOSPlatform } from '../utils/platform';
 
 interface PDFCanvasViewerProps {
   state: PDFDocumentState;
@@ -117,6 +118,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   onToggleFullscreen,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const pagesWrapperRef = useRef<HTMLDivElement>(null);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
   const [pageDims, setPageDims] = useState<Record<number, PageDims>>({});
   const [isDragOver, setIsDragOver] = useState(false);
@@ -277,6 +279,36 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   const pinchFocalRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
   const [pinchRenderTrigger, setPinchRenderTrigger] = useState(0);
 
+  // iOS 120Hz GPU-accelerated pinch-to-zoom state refs
+  const iosPinchStateRef = useRef<{
+    active: boolean;
+    initialZoom: number;
+    initialTouchDist: number;
+    startClientX: number;
+    startClientY: number;
+    startScrollLeft: number;
+    startScrollTop: number;
+    startMidX: number;
+    startMidY: number;
+    lastScaleRatio: number;
+    lastMidX: number;
+    lastMidY: number;
+  }>({
+    active: false,
+    initialZoom: 1,
+    initialTouchDist: 0,
+    startClientX: 0,
+    startClientY: 0,
+    startScrollLeft: 0,
+    startScrollTop: 0,
+    startMidX: 0,
+    startMidY: 0,
+    lastScaleRatio: 1,
+    lastMidX: 0,
+    lastMidY: 0,
+  });
+  const pendingCommitScrollRef = useRef<{ scrollLeft: number; scrollTop: number } | null>(null);
+
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);
@@ -286,7 +318,23 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     const container = containerRef.current;
     const prevZoom = prevZoomRef.current;
     prevZoomRef.current = zoom;
-    if (!container || Math.abs(zoom - prevZoom) < 0.001) return;
+    if (!container) return;
+
+    if (pendingCommitScrollRef.current) {
+      // iOS GPU transform commit: synchronously anchor scroll position before paint
+      container.scrollLeft = pendingCommitScrollRef.current.scrollLeft;
+      container.scrollTop = pendingCommitScrollRef.current.scrollTop;
+      pendingCommitScrollRef.current = null;
+
+      if (pagesWrapperRef.current) {
+        pagesWrapperRef.current.style.transform = '';
+        pagesWrapperRef.current.style.transformOrigin = '';
+        pagesWrapperRef.current.style.willChange = '';
+      }
+      return;
+    }
+
+    if (Math.abs(zoom - prevZoom) < 0.001) return;
 
     if (pinchFocalRef.current.active && prevZoom > 0) {
       const ratio = zoom / prevZoom;
@@ -366,6 +414,34 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       didTouchMoveRef.current = true;
       lastMultiTouchTimeRef.current = Date.now();
       lastTapRef.current = 0;
+
+      if (isIOSPlatform() && pagesWrapperRef.current && e.touches.length >= 2) {
+        const wrapper = pagesWrapperRef.current;
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const midClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+        const originX = midClientX - wrapperRect.left;
+        const originY = midClientY - wrapperRect.top;
+
+        wrapper.style.transformOrigin = `${originX}px ${originY}px`;
+        wrapper.style.willChange = 'transform';
+
+        iosPinchStateRef.current = {
+          active: true,
+          initialZoom: zoomRef.current,
+          initialTouchDist,
+          startClientX: midClientX,
+          startClientY: midClientY,
+          startScrollLeft: container.scrollLeft,
+          startScrollTop: container.scrollTop,
+          startMidX: midX,
+          startMidY: midY,
+          lastScaleRatio: 1,
+          lastMidX: midX,
+          lastMidY: midY,
+        };
+      }
     };
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -422,6 +498,32 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           return;
         }
 
+        // iOS hardware-accelerated 120fps GPU transform path (bypasses React & WebKit layout reflows)
+        if (isIOSPlatform() && iosPinchStateRef.current.active && pagesWrapperRef.current) {
+          const currentDist = getTouchDist(e);
+          if (currentDist > 8 && iosPinchStateRef.current.initialTouchDist > 8) {
+            const rawScale = currentDist / iosPinchStateRef.current.initialTouchDist;
+            const minScale = 0.2 / iosPinchStateRef.current.initialZoom;
+            const maxScale = 4.0 / iosPinchStateRef.current.initialZoom;
+            const scaleRatio = Math.max(minScale, Math.min(maxScale, rawScale));
+
+            const curClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const curClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const dx = curClientX - iosPinchStateRef.current.startClientX;
+            const dy = curClientY - iosPinchStateRef.current.startClientY;
+
+            const { midX, midY } = getTouchMidpoint(e, container);
+
+            iosPinchStateRef.current.lastScaleRatio = scaleRatio;
+            iosPinchStateRef.current.lastMidX = midX;
+            iosPinchStateRef.current.lastMidY = midY;
+
+            pagesWrapperRef.current.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${scaleRatio})`;
+          }
+          return;
+        }
+
+        // Android and desktop pinch handling (untouched)
         const currentDist = getTouchDist(e);
         if (currentDist > 8 && initialTouchDist > 8) {
           const scaleRatio = currentDist / initialTouchDist;
@@ -484,6 +586,49 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           isPanning = false;
           pinchFocalRef.current.active = false;
           setPinchRenderTrigger((prev) => prev + 1);
+
+          if (isIOSPlatform() && iosPinchStateRef.current.active) {
+            const iosState = iosPinchStateRef.current;
+            iosState.active = false;
+
+            const targetZoom = Math.max(
+              0.2,
+              Math.min(4.0, Math.round(iosState.initialZoom * iosState.lastScaleRatio * 100) / 100)
+            );
+
+            const zoomRatio = targetZoom / iosState.initialZoom;
+            const targetContentX = (iosState.startScrollLeft + iosState.startMidX) * zoomRatio;
+            const targetContentY = (iosState.startScrollTop + iosState.startMidY) * zoomRatio;
+
+            const newScrollLeft = Math.max(0, targetContentX - iosState.lastMidX);
+            const newScrollTop = Math.max(0, targetContentY - iosState.lastMidY);
+
+            if (Math.abs(targetZoom - zoomRef.current) < 0.01) {
+              if (pagesWrapperRef.current) {
+                pagesWrapperRef.current.style.transform = '';
+                pagesWrapperRef.current.style.transformOrigin = '';
+                pagesWrapperRef.current.style.willChange = '';
+              }
+              if (container) {
+                container.scrollLeft = newScrollLeft;
+                container.scrollTop = newScrollTop;
+              }
+            } else {
+              pendingCommitScrollRef.current = {
+                scrollLeft: newScrollLeft,
+                scrollTop: newScrollTop,
+              };
+              onZoomChange(targetZoom);
+
+              setTimeout(() => {
+                if (pagesWrapperRef.current && pagesWrapperRef.current.style.transform) {
+                  pagesWrapperRef.current.style.transform = '';
+                  pagesWrapperRef.current.style.transformOrigin = '';
+                  pagesWrapperRef.current.style.willChange = '';
+                }
+              }, 200);
+            }
+          }
         }
       }
 
@@ -889,142 +1034,146 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         ref={containerRef}
         tabIndex={0}
         style={{ touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
-        className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center space-y-4 sm:space-y-8 relative focus:outline-none min-w-0 transition-colors duration-500`}
+        className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center relative focus:outline-none min-w-0 transition-colors duration-500`}
       >
+        <div
+          ref={pagesWrapperRef}
+          className="pdf-pages-wrapper min-w-full flex flex-col items-start sm:items-center space-y-4 sm:space-y-8"
+        >
+          {activePages.map((origIdx, seqIdx) => {
+            const pageNum = seqIdx + 1;
+            const dims = pageDims[origIdx];
+            const rot = state.pageRotations[origIdx] || 0;
+            const isSwapped = rot % 180 !== 0;
+            const pageObj = state.pages[origIdx];
+            const baseW = pageObj?.width || 612;
+            const baseH = pageObj?.height || 792;
+            const origW = dims?.originalWidth ?? (isSwapped ? baseH : baseW);
+            const origH = dims?.originalHeight ?? (isSwapped ? baseW : baseH);
+            // Dynamic zoom sizing: prevents container from lagging behind canvas resolution
+            const w = Math.round(origW * zoom);
+            const h = Math.round(origH * zoom);
 
-      {activePages.map((origIdx, seqIdx) => {
-        const pageNum = seqIdx + 1;
-        const dims = pageDims[origIdx];
-        const rot = state.pageRotations[origIdx] || 0;
-        const isSwapped = rot % 180 !== 0;
-        const pageObj = state.pages[origIdx];
-        const baseW = pageObj?.width || 612;
-        const baseH = pageObj?.height || 792;
-        const origW = dims?.originalWidth ?? (isSwapped ? baseH : baseW);
-        const origH = dims?.originalHeight ?? (isSwapped ? baseW : baseH);
-        // Dynamic zoom sizing: prevents container from lagging behind canvas resolution
-        const w = Math.round(origW * zoom);
-        const h = Math.round(origH * zoom);
+            return (
+              <div
+                key={origIdx}
+                data-orig-idx={origIdx}
+                onTouchEnd={handlePageTouchEnd}
+                onDoubleClick={handlePageDoubleClick}
+                className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0 cursor-default"
+                style={{ width: `${w}px`, height: `${h}px`, touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
+              >
+                <canvas
+                  ref={(el) => {
+                    if (el) canvasRefs.current.set(origIdx, el);
+                    else canvasRefs.current.delete(origIdx);
+                  }}
+                  className="block w-full h-full"
+                />
 
-        return (
-          <div
-            key={origIdx}
-            data-orig-idx={origIdx}
-            onTouchEnd={handlePageTouchEnd}
-            onDoubleClick={handlePageDoubleClick}
-            className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0 cursor-default"
-            style={{ width: `${w}px`, height: `${h}px`, touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
-          >
-            <canvas
-              ref={(el) => {
-                if (el) canvasRefs.current.set(origIdx, el);
-                else canvasRefs.current.delete(origIdx);
-              }}
-              className="block w-full h-full"
-            />
+                {dims && (
+                  <>
+                    <DrawingCanvasOverlay
+                      pageIndex={origIdx}
+                      canvasWidth={w}
+                      canvasHeight={h}
+                      originalWidth={origW}
+                      originalHeight={origH}
+                      toolMode={toolMode}
+                      pendingSignatureDataUrl={pendingSignatureDataUrl}
+                      drawings={state.drawings}
+                      stamps={state.stamps}
+                      strikeouts={state.strikeouts}
+                      shapeStrokeColor={shapeStrokeColor}
+                      shapeFillColor={shapeFillColor}
+                      shapeStrokeWidth={shapeStrokeWidth}
+                      onAddDrawing={onAddDrawing}
+                      onDeleteDrawing={onDeleteDrawing}
+                      onAddStamp={onAddStamp}
+                      onDeleteStamp={onDeleteStamp}
+                      onAddStrikeout={onAddStrikeout}
+                      onDeleteStrikeout={onDeleteStrikeout}
+                      onAddShape={onAddShape}
+                      onAddSignatureAtCoords={onAddSignatureAtCoords}
+                      onOpenSignatureModal={onOpenSignatureModal}
+                    />
+                    <AcroFormOverlay
+                      fields={state.formFields}
+                      pageIndex={origIdx}
+                      canvasWidth={w}
+                      canvasHeight={h}
+                      originalWidth={origW}
+                      originalHeight={origH}
+                      rotation={rot}
+                      unrotatedWidth={baseW}
+                      unrotatedHeight={baseH}
+                      textFontSize={textFontSize}
+                      textFontFamily={textFontFamily}
+                      textColor={textColor}
+                      textIsRedact={textIsRedact}
+                      pendingSignatureDataUrl={pendingSignatureDataUrl}
+                      onUpdateFieldValue={onUpdateFieldValue}
+                      onAddSignatureAtCoords={onAddSignatureAtCoords}
+                      onFocusFormField={onFocusFormField}
+                    />
+                    <TextAnnotationEditor
+                      annotations={state.textAnnotations}
+                      pageIndex={origIdx}
+                      canvasWidth={w}
+                      canvasHeight={h}
+                      originalWidth={origW}
+                      originalHeight={origH}
+                      onUpdateAnnotation={onUpdateAnnotation}
+                      onDeleteAnnotation={onDeleteAnnotation}
+                      onAddAnnotation={onAddAnnotation}
+                      isTextMode={toolMode === 'text'}
+                      textColor={textColor}
+                      textFontSize={textFontSize}
+                      textFontFamily={textFontFamily}
+                      textIsRedact={textIsRedact}
+                      textIsUnderline={textIsUnderline}
+                    />
+                    <SignatureOverlay
+                      signatures={state.signatures}
+                      pageIndex={origIdx}
+                      canvasWidth={w}
+                      canvasHeight={h}
+                      originalWidth={origW}
+                      originalHeight={origH}
+                      onUpdateSignature={onUpdateSignature}
+                      onDeleteSignature={onDeleteSignature}
+                    />
+                    <ShapeOverlay
+                      shapes={state.shapes}
+                      pageIndex={origIdx}
+                      canvasWidth={w}
+                      canvasHeight={h}
+                      originalWidth={origW}
+                      originalHeight={origH}
+                      onUpdateShape={onUpdateShape || (() => {})}
+                      onDeleteShape={onDeleteShape || (() => {})}
+                    />
+                    <ImageStampOverlay
+                      imageStamps={state.imageStamps}
+                      pageIndex={origIdx}
+                      canvasWidth={w}
+                      canvasHeight={h}
+                      originalWidth={origW}
+                      originalHeight={origH}
+                      onUpdateImageStamp={onUpdateImageStamp || (() => {})}
+                      onDeleteImageStamp={onDeleteImageStamp || (() => {})}
+                    />
+                  </>
+                )}
 
-            {dims && (
-              <>
-                <DrawingCanvasOverlay
-                  pageIndex={origIdx}
-                  canvasWidth={w}
-                  canvasHeight={h}
-                  originalWidth={origW}
-                  originalHeight={origH}
-                  toolMode={toolMode}
-                  pendingSignatureDataUrl={pendingSignatureDataUrl}
-                  drawings={state.drawings}
-                  stamps={state.stamps}
-                  strikeouts={state.strikeouts}
-                  shapeStrokeColor={shapeStrokeColor}
-                  shapeFillColor={shapeFillColor}
-                  shapeStrokeWidth={shapeStrokeWidth}
-                  onAddDrawing={onAddDrawing}
-                  onDeleteDrawing={onDeleteDrawing}
-                  onAddStamp={onAddStamp}
-                  onDeleteStamp={onDeleteStamp}
-                  onAddStrikeout={onAddStrikeout}
-                  onDeleteStrikeout={onDeleteStrikeout}
-                  onAddShape={onAddShape}
-                  onAddSignatureAtCoords={onAddSignatureAtCoords}
-                  onOpenSignatureModal={onOpenSignatureModal}
-                />
-                <AcroFormOverlay
-                  fields={state.formFields}
-                  pageIndex={origIdx}
-                  canvasWidth={w}
-                  canvasHeight={h}
-                  originalWidth={origW}
-                  originalHeight={origH}
-                  rotation={rot}
-                  unrotatedWidth={baseW}
-                  unrotatedHeight={baseH}
-                  textFontSize={textFontSize}
-                  textFontFamily={textFontFamily}
-                  textColor={textColor}
-                  textIsRedact={textIsRedact}
-                  pendingSignatureDataUrl={pendingSignatureDataUrl}
-                  onUpdateFieldValue={onUpdateFieldValue}
-                  onAddSignatureAtCoords={onAddSignatureAtCoords}
-                  onFocusFormField={onFocusFormField}
-                />
-                <TextAnnotationEditor
-                  annotations={state.textAnnotations}
-                  pageIndex={origIdx}
-                  canvasWidth={w}
-                  canvasHeight={h}
-                  originalWidth={origW}
-                  originalHeight={origH}
-                  onUpdateAnnotation={onUpdateAnnotation}
-                  onDeleteAnnotation={onDeleteAnnotation}
-                  onAddAnnotation={onAddAnnotation}
-                  isTextMode={toolMode === 'text'}
-                  textColor={textColor}
-                  textFontSize={textFontSize}
-                  textFontFamily={textFontFamily}
-                  textIsRedact={textIsRedact}
-                  textIsUnderline={textIsUnderline}
-                />
-                <SignatureOverlay
-                  signatures={state.signatures}
-                  pageIndex={origIdx}
-                  canvasWidth={w}
-                  canvasHeight={h}
-                  originalWidth={origW}
-                  originalHeight={origH}
-                  onUpdateSignature={onUpdateSignature}
-                  onDeleteSignature={onDeleteSignature}
-                />
-                <ShapeOverlay
-                  shapes={state.shapes}
-                  pageIndex={origIdx}
-                  canvasWidth={w}
-                  canvasHeight={h}
-                  originalWidth={origW}
-                  originalHeight={origH}
-                  onUpdateShape={onUpdateShape || (() => {})}
-                  onDeleteShape={onDeleteShape || (() => {})}
-                />
-                <ImageStampOverlay
-                  imageStamps={state.imageStamps}
-                  pageIndex={origIdx}
-                  canvasWidth={w}
-                  canvasHeight={h}
-                  originalWidth={origW}
-                  originalHeight={origH}
-                  onUpdateImageStamp={onUpdateImageStamp || (() => {})}
-                  onDeleteImageStamp={onDeleteImageStamp || (() => {})}
-                />
-              </>
-            )}
-
-            {/* Page number badge: 50% transparent */}
-            <div className="absolute left-2 sm:-left-14 top-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800/50 text-cyan-300/70 sm:text-slate-400/70 text-[10px] sm:text-[11px] font-mono font-bold px-2 py-0.5 sm:py-1 rounded-full sm:rounded shadow z-30 opacity-50">
-              P.{pageNum}
-            </div>
-          </div>
-        );
-      })}
+                {/* Page number badge: 50% transparent */}
+                <div className="absolute left-2 sm:-left-14 top-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800/50 text-cyan-300/70 sm:text-slate-400/70 text-[10px] sm:text-[11px] font-mono font-bold px-2 py-0.5 sm:py-1 rounded-full sm:rounded shadow z-30 opacity-50">
+                  P.{pageNum}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
       {/* Real-Time Signature Mouse Follower */}
       {toolMode === 'sign' && pendingSignatureDataUrl && mousePos && (
