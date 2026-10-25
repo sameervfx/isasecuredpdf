@@ -724,13 +724,10 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
 
                 {activeLegalModal === 'terms' && (
                   <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
-                    <div className="p-3 bg-cyan-950/40 border border-cyan-800/60 rounded-xl space-y-1.5">
-                      <h4 className="font-bold text-cyan-300 text-xs">1. Free Starter Tier — 5 Documents Each Month</h4>
-                      <p className="text-slate-300">
-                        Under the Free Starter tier, users are permitted to edit, sign (digital signatures), split documents, and add images to up to <b>5 documents each calendar month</b> completely free of charge across web and mobile.
-                      </p>
-                      <p className="text-slate-400">
-                        Upgrading to <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> unlocks unlimited document processing without any monthly limits, plus all export formats and premium features.
+                    <div>
+                      <h4 className="font-bold text-white mb-1">1. Free Starter Tier — 5 Documents Each Month</h4>
+                      <p>
+                        Under the Free Starter tier, users are permitted to edit, sign (digital signatures), split documents, and add images to up to <b>5 documents each calendar month</b> completely free of charge across web and mobile. Upgrading to <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> unlocks unlimited document processing without any monthly limits, plus all export formats and premium features.
                       </p>
                     </div>
 
