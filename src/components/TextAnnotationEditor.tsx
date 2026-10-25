@@ -646,25 +646,40 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
 
                 <div className="w-[1px] h-3.5 bg-slate-700" />
 
-                {/* Font Size Stepper */}
-                <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1 py-0.5 border border-slate-700">
+                {/* Sub-Point Decimal Font Size Stepper (0.2pt precision) & Direct Numeric Input */}
+                <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700">
                   <button
                     type="button"
-                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: Math.max(6, ann.fontSize - 1) })}
-                    title="Decrease Font Size (-1pt)"
+                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: parseFloat(Math.max(4, ann.fontSize - 0.2).toFixed(1)) })}
+                    title="Decrease Font Size (-0.2pt)"
                     className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
 
-                  <span className="text-[10px] font-extrabold font-mono text-cyan-300 min-w-[24px] text-center">
-                    {ann.fontSize}pt
-                  </span>
+                  <div className="flex items-center">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="4"
+                      max="120"
+                      value={ann.fontSize}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val) && val >= 4 && val <= 120) {
+                          onUpdateAnnotation(ann.id, { fontSize: parseFloat(val.toFixed(2)) });
+                        }
+                      }}
+                      className="w-9 bg-transparent text-[10px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      title="Direct Font Size (e.g. 13.2, 13.4, 9.75)"
+                    />
+                    <span className="text-[9px] font-mono text-slate-400 select-none">pt</span>
+                  </div>
 
                   <button
                     type="button"
-                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: Math.min(120, ann.fontSize + 1) })}
-                    title="Increase Font Size (+1pt)"
+                    onClick={() => onUpdateAnnotation(ann.id, { fontSize: parseFloat(Math.min(120, ann.fontSize + 0.2).toFixed(1)) })}
+                    title="Increase Font Size (+0.2pt)"
                     className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
                   >
                     <Plus className="w-3 h-3" />

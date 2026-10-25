@@ -299,11 +299,16 @@ export class PDFRendererService {
         const itemW = parseFloat((item.width || itemFontSize * item.str.length * 0.5).toFixed(2));
 
         const lastLine = lines[lines.length - 1];
+        const gap = lastLine ? itemX - (lastLine.x + lastLine.width) : 999;
+
+        // Only group text if on the exact same baseline AND within a normal intra-word/phrase space (< 0.45 * fontSize)
+        // Keeps table columns, amounts, labels, and separate fields independently selectable and editable!
         if (
           lastLine &&
-          Math.abs(baselineY - lastLine.baselineY) < 2.5 &&
-          Math.abs(itemFontSize - lastLine.fontSize) < 1.5 &&
-          itemX - (lastLine.x + lastLine.width) < itemFontSize * 2.2
+          Math.abs(baselineY - lastLine.baselineY) < 2.0 &&
+          Math.abs(itemFontSize - lastLine.fontSize) < 1.0 &&
+          gap >= -1 &&
+          gap < itemFontSize * 0.45
         ) {
           lastLine.text += (lastLine.text.endsWith(' ') ? '' : ' ') + item.str;
           lastLine.width = parseFloat((itemX + itemW - lastLine.x).toFixed(2));
