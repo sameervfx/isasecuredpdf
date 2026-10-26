@@ -8,9 +8,8 @@ import { DrawingCanvasOverlay } from './DrawingCanvasOverlay';
 import { ShapeOverlay } from './ShapeOverlay';
 import { ImageStampOverlay } from './ImageStampOverlay';
 import { ShapeAnnotation, ImageStampAnnotation } from '../types/pdf';
-import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, XCircle, X, Camera } from 'lucide-react';
+import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, XCircle, X, Camera, Minus, Plus, Bold, Underline, Type, Palette, Eye, EyeOff, Trash2 } from 'lucide-react';
 import appLogo from '../assets/app_logo.jpg';
-import { isIOSPlatform } from '../utils/platform';
 
 interface PDFCanvasViewerProps {
   state: PDFDocumentState;
@@ -163,6 +162,75 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     toolMode === 'rectangle' ||
     toolMode === 'oval';
 
+  // Lifted Drawing, Highlighter & Eraser Tool Options States
+  const [drawColor, setDrawColor] = useState<string>('#ef4444');
+  const [drawThickness, setDrawThickness] = useState<number>(3);
+  const [highlightColor, setHighlightColor] = useState<string>('#facc15');
+  const [highlightMode, setHighlightMode] = useState<'line' | 'box' | 'freehand'>('line');
+  const [highlightThickness, setHighlightThickness] = useState<number>(18);
+  const [eraserThickness, setEraserThickness] = useState<number>(12);
+  const [eraserColor, setEraserColor] = useState<string>('#ffffff');
+
+  // Text Tool Formatting States
+  const [selectedTextAnnId, setSelectedTextAnnId] = useState<string | null>(null);
+  const activeTextAnn = selectedTextAnnId ? state.textAnnotations.find((a) => a.id === selectedTextAnnId) : null;
+  const currentTextFontSize = activeTextAnn ? activeTextAnn.fontSize : (textFontSize || 14);
+  const currentTextTextColor = activeTextAnn ? (activeTextAnn.color || '#000000') : (textColor || '#000000');
+  const currentTextIsBold = activeTextAnn ? (activeTextAnn.fontWeight === 'bold' || activeTextAnn.fontWeight === '700' || activeTextAnn.fontWeight === 700 || activeTextAnn.fontWeight === '600') : false;
+  const currentTextIsUnderline = activeTextAnn ? !!activeTextAnn.isUnderline : !!textIsUnderline;
+  const currentTextIsRedact = activeTextAnn ? !!activeTextAnn.isRedact : !!textIsRedact;
+
+  const [textSizeInput, setTextSizeInput] = useState<string>(String(currentTextFontSize));
+  useEffect(() => {
+    setTextSizeInput(String(currentTextFontSize));
+  }, [currentTextFontSize]);
+
+  const handleApplyTextFontSize = (val: number) => {
+    const clamped = Math.max(4, Math.min(150, val));
+    if (selectedTextAnnId) {
+      onUpdateAnnotation(selectedTextAnnId, { fontSize: clamped });
+    }
+    if (setTextFontSize) {
+      setTextFontSize(clamped);
+    }
+  };
+
+  const handleApplyTextTextColor = (color: string) => {
+    if (selectedTextAnnId) {
+      onUpdateAnnotation(selectedTextAnnId, { color });
+    }
+    if (setTextColor) {
+      setTextColor(color);
+    }
+  };
+
+  const handleToggleTextBold = () => {
+    const next = currentTextIsBold ? 'normal' : 'bold';
+    if (selectedTextAnnId) {
+      onUpdateAnnotation(selectedTextAnnId, { fontWeight: next });
+    }
+  };
+
+  const handleToggleTextUnderline = () => {
+    const next = !currentTextIsUnderline;
+    if (selectedTextAnnId) {
+      onUpdateAnnotation(selectedTextAnnId, { isUnderline: next });
+    }
+    if (setTextIsUnderline) {
+      setTextIsUnderline(next);
+    }
+  };
+
+  const handleToggleTextRedact = () => {
+    const next = !currentTextIsRedact;
+    if (selectedTextAnnId) {
+      onUpdateAnnotation(selectedTextAnnId, { isRedact: next });
+    }
+    if (setTextIsRedact) {
+      setTextIsRedact(next);
+    }
+  };
+
   // True Fit to Screen: calculates actual viewport bounds subtracting headers/paddings
   const handleFitToScreen = useCallback(() => {
     const container = containerRef.current;
@@ -289,60 +357,12 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   const pinchFocalRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
   const [pinchRenderTrigger, setPinchRenderTrigger] = useState(0);
 
-  // iOS 120Hz GPU-accelerated pinch-to-zoom state refs
-  const iosPinchStateRef = useRef<{
-    active: boolean;
-    initialZoom: number;
-    initialTouchDist: number;
-    startClientX: number;
-    startClientY: number;
-    startScrollLeft: number;
-    startScrollTop: number;
-    startMidX: number;
-    startMidY: number;
-    lastScaleRatio: number;
-    lastMidX: number;
-    lastMidY: number;
-  }>({
-    active: false,
-    initialZoom: 1,
-    initialTouchDist: 0,
-    startClientX: 0,
-    startClientY: 0,
-    startScrollLeft: 0,
-    startScrollTop: 0,
-    startMidX: 0,
-    startMidY: 0,
-    lastScaleRatio: 1,
-    lastMidX: 0,
-    lastMidY: 0,
-  });
-  const pendingCommitScrollRef = useRef<{ scrollLeft: number; scrollTop: number } | null>(null);
-
-  useEffect(() => {
-    zoomRef.current = zoom;
-  }, [zoom]);
-
   // Synchronously anchor scroll position to the pinch midpoint right after React updates page width/height in DOM
   useLayoutEffect(() => {
     const container = containerRef.current;
     const prevZoom = prevZoomRef.current;
     prevZoomRef.current = zoom;
     if (!container) return;
-
-    if (pendingCommitScrollRef.current) {
-      // iOS GPU transform commit: synchronously anchor scroll position before paint
-      container.scrollLeft = pendingCommitScrollRef.current.scrollLeft;
-      container.scrollTop = pendingCommitScrollRef.current.scrollTop;
-      pendingCommitScrollRef.current = null;
-
-      if (pagesWrapperRef.current) {
-        pagesWrapperRef.current.style.transform = '';
-        pagesWrapperRef.current.style.transformOrigin = '';
-        pagesWrapperRef.current.style.willChange = '';
-      }
-      return;
-    }
 
     if (Math.abs(zoom - prevZoom) < 0.001) return;
 
@@ -424,34 +444,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       didTouchMoveRef.current = true;
       lastMultiTouchTimeRef.current = Date.now();
       lastTapRef.current = 0;
-
-      if (isIOSPlatform() && pagesWrapperRef.current && e.touches.length >= 2) {
-        const wrapper = pagesWrapperRef.current;
-        const wrapperRect = wrapper.getBoundingClientRect();
-        const midClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        const midClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-
-        const originX = midClientX - wrapperRect.left;
-        const originY = midClientY - wrapperRect.top;
-
-        wrapper.style.transformOrigin = `${originX}px ${originY}px`;
-        wrapper.style.willChange = 'transform';
-
-        iosPinchStateRef.current = {
-          active: true,
-          initialZoom: zoomRef.current,
-          initialTouchDist,
-          startClientX: midClientX,
-          startClientY: midClientY,
-          startScrollLeft: container.scrollLeft,
-          startScrollTop: container.scrollTop,
-          startMidX: midX,
-          startMidY: midY,
-          lastScaleRatio: 1,
-          lastMidX: midX,
-          lastMidY: midY,
-        };
-      }
     };
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -508,32 +500,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           return;
         }
 
-        // iOS hardware-accelerated 120fps GPU transform path (bypasses React & WebKit layout reflows)
-        if (isIOSPlatform() && iosPinchStateRef.current.active && pagesWrapperRef.current) {
-          const currentDist = getTouchDist(e);
-          if (currentDist > 8 && iosPinchStateRef.current.initialTouchDist > 8) {
-            const rawScale = currentDist / iosPinchStateRef.current.initialTouchDist;
-            const minScale = 0.2 / iosPinchStateRef.current.initialZoom;
-            const maxScale = 4.0 / iosPinchStateRef.current.initialZoom;
-            const scaleRatio = Math.max(minScale, Math.min(maxScale, rawScale));
-
-            const curClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            const curClientY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            const dx = curClientX - iosPinchStateRef.current.startClientX;
-            const dy = curClientY - iosPinchStateRef.current.startClientY;
-
-            const { midX, midY } = getTouchMidpoint(e, container);
-
-            iosPinchStateRef.current.lastScaleRatio = scaleRatio;
-            iosPinchStateRef.current.lastMidX = midX;
-            iosPinchStateRef.current.lastMidY = midY;
-
-            pagesWrapperRef.current.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(${scaleRatio})`;
-          }
-          return;
-        }
-
-        // Android and desktop pinch handling (untouched)
         const currentDist = getTouchDist(e);
         if (currentDist > 8 && initialTouchDist > 8) {
           const scaleRatio = currentDist / initialTouchDist;
@@ -597,48 +563,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           pinchFocalRef.current.active = false;
           setPinchRenderTrigger((prev) => prev + 1);
 
-          if (isIOSPlatform() && iosPinchStateRef.current.active) {
-            const iosState = iosPinchStateRef.current;
-            iosState.active = false;
-
-            const targetZoom = Math.max(
-              0.2,
-              Math.min(4.0, Math.round(iosState.initialZoom * iosState.lastScaleRatio * 100) / 100)
-            );
-
-            const zoomRatio = targetZoom / iosState.initialZoom;
-            const targetContentX = (iosState.startScrollLeft + iosState.startMidX) * zoomRatio;
-            const targetContentY = (iosState.startScrollTop + iosState.startMidY) * zoomRatio;
-
-            const newScrollLeft = Math.max(0, targetContentX - iosState.lastMidX);
-            const newScrollTop = Math.max(0, targetContentY - iosState.lastMidY);
-
-            if (Math.abs(targetZoom - zoomRef.current) < 0.01) {
-              if (pagesWrapperRef.current) {
-                pagesWrapperRef.current.style.transform = '';
-                pagesWrapperRef.current.style.transformOrigin = '';
-                pagesWrapperRef.current.style.willChange = '';
-              }
-              if (container) {
-                container.scrollLeft = newScrollLeft;
-                container.scrollTop = newScrollTop;
-              }
-            } else {
-              pendingCommitScrollRef.current = {
-                scrollLeft: newScrollLeft,
-                scrollTop: newScrollTop,
-              };
-              onZoomChange(targetZoom);
-
-              setTimeout(() => {
-                if (pagesWrapperRef.current && pagesWrapperRef.current.style.transform) {
-                  pagesWrapperRef.current.style.transform = '';
-                  pagesWrapperRef.current.style.transformOrigin = '';
-                  pagesWrapperRef.current.style.willChange = '';
-                }
-              }, 200);
-            }
-          }
         }
       }
 
@@ -1040,6 +964,379 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         )}
       </div>
 
+      {/* Floating Secondary Tool Options Bar - Pinned Directly Under HeaderToolbar in Viewport */}
+      {(toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser' || toolMode === 'text') && (
+        <div
+          className="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-auto max-w-[calc(100vw-16px)] sm:max-w-2xl bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl text-xs select-none animate-fadeIn overflow-x-auto scrollbar-none"
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          {toolMode === 'eraser' && (
+            <>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-amber-400 shrink-0">
+                <span>🧹</span>
+                <span>Eraser</span>
+              </div>
+
+              {/* Adopted PDF Background Color */}
+              <div className="flex items-center gap-1 pl-1 border-l border-slate-700 shrink-0" title={`Erasing with PDF color: ${eraserColor}`}>
+                <span className="text-[9px] text-slate-400">Color:</span>
+                <span
+                  className="w-4 h-4 rounded-full border border-white/70 shadow-sm shrink-0"
+                  style={{ backgroundColor: eraserColor }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setEraserColor('#ffffff')}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition ${
+                    eraserColor.toLowerCase() === '#ffffff'
+                      ? 'bg-amber-500 text-slate-950 shadow'
+                      : 'bg-slate-800 text-slate-300 hover:text-white'
+                  }`}
+                  title="Force White Erase"
+                >
+                  White
+                </button>
+              </div>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Eraser Stroke Thickness Presets */}
+              <div className="flex items-center gap-1 shrink-0">
+                {[
+                  { label: '4px', size: 4 },
+                  { label: '8px', size: 8 },
+                  { label: '16px', size: 16 },
+                  { label: '32px', size: 32 },
+                ].map((s) => (
+                  <button
+                    key={s.size}
+                    type="button"
+                    onClick={() => setEraserThickness(s.size)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition flex items-center gap-1 ${
+                      eraserThickness === s.size
+                        ? 'bg-amber-500 text-slate-950 shadow'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {toolMode === 'draw' && (
+            <>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 shrink-0">
+                <span>✏️</span>
+                <span>Pen</span>
+              </div>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Pencil Palette Colors */}
+              <div className="flex items-center gap-1 shrink-0">
+                {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#000000'].map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setDrawColor(c)}
+                    className={`w-4 h-4 rounded-full border transition shrink-0 ${
+                      drawColor === c
+                        ? 'scale-125 border-white ring-2 ring-cyan-400 shadow'
+                        : 'border-white/30 opacity-80 hover:opacity-100 hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: c }}
+                    title={`Color ${c}`}
+                  />
+                ))}
+              </div>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Stroke Thickness Presets */}
+              <div className="flex items-center gap-1 shrink-0">
+                {[
+                  { label: '2px', size: 2 },
+                  { label: '5px', size: 5 },
+                  { label: '10px', size: 10 },
+                  { label: '16px', size: 16 },
+                ].map((s) => (
+                  <button
+                    key={s.size}
+                    type="button"
+                    onClick={() => setDrawThickness(s.size)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition flex items-center gap-1 ${
+                      drawThickness === s.size
+                        ? 'bg-cyan-500 text-white shadow'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span
+                      className="rounded-full inline-block"
+                      style={{
+                        width: `${Math.min(6, Math.max(2, s.size / 2))}px`,
+                        height: `${Math.min(6, Math.max(2, s.size / 2))}px`,
+                        backgroundColor: drawColor,
+                      }}
+                    />
+                    <span>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {toolMode === 'highlight' && (
+            <>
+              {/* Highlighter Mode Buttons */}
+              <div className="flex items-center gap-1 shrink-0">
+                {[
+                  { mode: 'line' as const, label: 'Line', icon: '📏' },
+                  { mode: 'box' as const, label: 'Box', icon: '📦' },
+                  { mode: 'freehand' as const, label: 'Pen', icon: '✏️' },
+                ].map((m) => (
+                  <button
+                    key={m.mode}
+                    type="button"
+                    onClick={() => setHighlightMode(m.mode)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition ${
+                      highlightMode === m.mode
+                        ? 'bg-yellow-500 text-slate-950 shadow'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    <span>{m.icon}</span>
+                    <span>{m.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Highlighter Colors */}
+              <div className="flex items-center gap-1 shrink-0">
+                {['#facc15', '#4ade80', '#38bdf8', '#f472b6', '#fb923c', '#c084fc'].map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setHighlightColor(c)}
+                    className={`w-4 h-4 rounded-full border transition shrink-0 ${
+                      highlightColor === c
+                        ? 'scale-125 border-white ring-2 ring-yellow-400 shadow'
+                        : 'border-white/30 opacity-80 hover:opacity-100 hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+
+              {/* Highlighter Thickness (freehand mode) */}
+              {highlightMode === 'freehand' && (
+                <>
+                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+                  <div className="flex items-center gap-1 shrink-0">
+                    {[
+                      { label: '10px', size: 10 },
+                      { label: '18px', size: 18 },
+                      { label: '28px', size: 28 },
+                    ].map((s) => (
+                      <button
+                        key={s.size}
+                        type="button"
+                        onClick={() => setHighlightThickness(s.size)}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
+                          highlightThickness === s.size
+                            ? 'bg-yellow-500 text-slate-950 shadow'
+                            : 'bg-slate-800 text-slate-300 hover:text-white'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {toolMode === 'text' && (
+            <>
+              {/* Label */}
+              <div className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 shrink-0">
+                <Type className="w-3.5 h-3.5" />
+                <span>Text</span>
+              </div>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Unfrozen Direct Number Font Size Input & Stepper */}
+              <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = Math.max(4, Math.round((currentTextFontSize - 1) * 2) / 2);
+                    setTextSizeInput(String(next));
+                    handleApplyTextFontSize(next);
+                  }}
+                  title="Decrease Font Size (-1pt)"
+                  className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={textSizeInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setTextSizeInput(val);
+                      const n = parseFloat(val);
+                      if (!isNaN(n) && n > 0 && n <= 150) {
+                        handleApplyTextFontSize(n);
+                      }
+                    }}
+                    onBlur={() => {
+                      const n = parseFloat(textSizeInput);
+                      if (isNaN(n) || n < 1) {
+                        setTextSizeInput(String(currentTextFontSize));
+                      } else {
+                        const clamped = Math.max(4, Math.min(150, n));
+                        setTextSizeInput(String(clamped));
+                        handleApplyTextFontSize(clamped);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    className="w-8 bg-transparent text-[11px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 select-text"
+                    title="Direct Font Size (pt) - Type numbers directly"
+                  />
+                  <span className="text-[9px] font-mono text-slate-400 select-none pr-0.5">pt</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = Math.min(150, Math.round((currentTextFontSize + 1) * 2) / 2);
+                    setTextSizeInput(String(next));
+                    handleApplyTextFontSize(next);
+                  }}
+                  title="Increase Font Size (+1pt)"
+                  className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Bold Toggle */}
+              <button
+                type="button"
+                onClick={handleToggleTextBold}
+                title="Toggle Bold"
+                className={`p-1 rounded transition shrink-0 ${
+                  currentTextIsBold
+                    ? 'bg-cyan-500 text-white font-bold'
+                    : 'hover:bg-slate-800 text-slate-300'
+                }`}
+              >
+                <Bold className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Underline Toggle */}
+              <button
+                type="button"
+                onClick={handleToggleTextUnderline}
+                title="Toggle Underline"
+                className={`p-1 rounded transition shrink-0 ${
+                  currentTextIsUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
+                }`}
+              >
+                <Underline className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Color Swatches */}
+              <div className="flex items-center gap-1 shrink-0">
+                {['#000000', '#1e3a8a', '#dc2626', '#58595b'].map((color) => {
+                  const isSelected = currentTextTextColor.toLowerCase() === color.toLowerCase();
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => handleApplyTextTextColor(color)}
+                      className={`w-3.5 h-3.5 rounded-full border transition shrink-0 ${
+                        isSelected
+                          ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
+                          : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title={`Select ${color}`}
+                    />
+                  );
+                })}
+
+                {/* Custom Palette Picker */}
+                <label
+                  title="Custom Color Picker"
+                  className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white shrink-0"
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                  <input
+                    type="color"
+                    value={currentTextTextColor && currentTextTextColor.startsWith('#') ? currentTextTextColor : '#000000'}
+                    onChange={(e) => handleApplyTextTextColor(e.target.value)}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
+
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+              {/* Whiteout / Redact Toggle */}
+              <button
+                type="button"
+                onClick={handleToggleTextRedact}
+                title={currentTextIsRedact ? 'White cover box active' : 'Plain transparent text'}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition shrink-0 ${
+                  currentTextIsRedact
+                    ? 'bg-white text-slate-900 shadow'
+                    : 'bg-slate-800 text-slate-300 hover:text-white'
+                }`}
+              >
+                {currentTextIsRedact ? <EyeOff className="w-3 h-3 text-red-600" /> : <Eye className="w-3 h-3 text-cyan-400" />}
+                <span>Whiteout</span>
+              </button>
+
+              {/* Delete Button (when text selected) */}
+              {selectedTextAnnId && (
+                <>
+                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteAnnotation(selectedTextAnnId);
+                      setSelectedTextAnnId(null);
+                    }}
+                    title="Delete Text"
+                    className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <main
         ref={containerRef}
         tabIndex={0}
@@ -1090,7 +1387,14 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                       originalWidth={origW}
                       originalHeight={origH}
                       toolMode={toolMode}
-                      showToolbar={seqIdx === Math.max(0, currentPage - 1) || activePages.length === 1}
+                      drawColor={drawColor}
+                      thickness={drawThickness}
+                      highlightColor={highlightColor}
+                      highlightMode={highlightMode}
+                      highlightThickness={highlightThickness}
+                      eraserThickness={eraserThickness}
+                      eraserColor={eraserColor}
+                      onSampleEraserColor={setEraserColor}
                       getPageCanvas={() => canvasRefs.current.get(origIdx)}
                       pendingSignatureDataUrl={pendingSignatureDataUrl}
                       drawings={state.drawings}
@@ -1139,7 +1443,8 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                       onDeleteAnnotation={onDeleteAnnotation}
                       onAddAnnotation={onAddAnnotation}
                       isTextMode={toolMode === 'text'}
-                      showToolbar={seqIdx === Math.max(0, currentPage - 1) || activePages.length === 1}
+                      selectedAnnotationId={selectedTextAnnId}
+                      onSelectAnnotationId={setSelectedTextAnnId}
                       textColor={textColor}
                       setTextColor={setTextColor}
                       textFontSize={textFontSize}

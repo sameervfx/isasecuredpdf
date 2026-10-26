@@ -14,6 +14,8 @@ interface TextAnnotationEditorProps {
   onDeleteAnnotation: (id: string) => void;
   onAddAnnotation: (ann: Omit<TextAnnotation, 'id'>) => void;
   isTextMode: boolean;
+  selectedAnnotationId?: string | null;
+  onSelectAnnotationId?: (id: string | null) => void;
   showToolbar?: boolean;
   textColor?: string;
   setTextColor?: (color: string) => void;
@@ -38,6 +40,8 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   onDeleteAnnotation,
   onAddAnnotation,
   isTextMode,
+  selectedAnnotationId,
+  onSelectAnnotationId,
   showToolbar = true,
   textColor,
   setTextColor,
@@ -50,7 +54,12 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   textIsUnderline,
   setTextIsUnderline,
 }) => {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
+  const selectedId = selectedAnnotationId !== undefined ? selectedAnnotationId : localSelectedId;
+  const setSelectedId = (id: string | null) => {
+    setLocalSelectedId(id);
+    if (onSelectAnnotationId) onSelectAnnotationId(id);
+  };
   const [detectedLines, setDetectedLines] = useState<DetectedPDFTextLine[]>([]);
   const [hoveredLineId, setHoveredLineId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -694,185 +703,6 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
           </div>
         );
       })}
-
-      {/* Sleek Text Formatting Toolbar Pinned to Top of Page - NEVER Overlaps HeaderToolbar, Never Moves over text */}
-      {isTextMode && (showToolbar || selectedId) && (
-        <div
-          className="absolute top-2 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] w-max bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl sm:rounded-full px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl pointer-events-auto z-40 text-xs select-none animate-fadeIn touch-manipulation overflow-x-auto scrollbar-none"
-          onClick={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-        >
-          {/* Label */}
-          <div className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 shrink-0">
-            <Type className="w-3.5 h-3.5" />
-            <span>Text</span>
-          </div>
-
-          <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
-
-          {/* Unfrozen Direct Number Font Size Input & Stepper */}
-          <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                const next = Math.max(4, Math.round((currentFontSize - 1) * 2) / 2);
-                setSizeInput(String(next));
-                handleApplyFontSize(next);
-              }}
-              title="Decrease Font Size (-1pt)"
-              className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-            >
-              <Minus className="w-3 h-3" />
-            </button>
-
-            <div className="flex items-center">
-              <input
-                type="text"
-                inputMode="decimal"
-                value={sizeInput}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSizeInput(val);
-                  const n = parseFloat(val);
-                  if (!isNaN(n) && n > 0 && n <= 150) {
-                    handleApplyFontSize(n);
-                  }
-                }}
-                onBlur={() => {
-                  const n = parseFloat(sizeInput);
-                  if (isNaN(n) || n < 1) {
-                    setSizeInput(String(currentFontSize));
-                  } else {
-                    const clamped = Math.max(4, Math.min(150, n));
-                    setSizeInput(String(clamped));
-                    handleApplyFontSize(clamped);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }}
-                className="w-8 bg-transparent text-[11px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 select-text"
-                title="Direct Font Size (pt) - Type numbers directly"
-              />
-              <span className="text-[9px] font-mono text-slate-400 select-none pr-0.5">pt</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                const next = Math.min(150, Math.round((currentFontSize + 1) * 2) / 2);
-                setSizeInput(String(next));
-                handleApplyFontSize(next);
-              }}
-              title="Increase Font Size (+1pt)"
-              className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Bold Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleBold}
-            title="Toggle Bold"
-            className={`p-1 rounded transition shrink-0 ${
-              activeAnn && (activeAnn.fontWeight === 'bold' || activeAnn.fontWeight === '700' || activeAnn.fontWeight === 700 || activeAnn.fontWeight === '600')
-                ? 'bg-cyan-500 text-white font-bold'
-                : 'hover:bg-slate-800 text-slate-300'
-            }`}
-          >
-            <Bold className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Underline Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleUnderline}
-            title="Toggle Underline"
-            className={`p-1 rounded transition shrink-0 ${
-              currentIsUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
-            }`}
-          >
-            <Underline className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
-
-          {/* Color Swatches */}
-          <div className="flex items-center gap-1 shrink-0">
-            {['#000000', '#1e3a8a', '#dc2626', '#58595b'].map((color) => {
-              const isSelected = currentTextColor.toLowerCase() === color.toLowerCase();
-              return (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => handleApplyColor(color)}
-                  className={`w-3.5 h-3.5 rounded-full border transition shrink-0 ${
-                    isSelected
-                      ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
-                      : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  title={`Select ${color}`}
-                />
-              );
-            })}
-
-            {/* Custom Palette Picker */}
-            <label
-              title="Custom Color Picker"
-              className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white shrink-0"
-            >
-              <Palette className="w-3.5 h-3.5" />
-              <input
-                type="color"
-                value={currentTextColor && currentTextColor.startsWith('#') ? currentTextColor : '#000000'}
-                onChange={(e) => handleApplyColor(e.target.value)}
-                className="sr-only"
-              />
-            </label>
-          </div>
-
-          <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
-
-          {/* Whiteout / Redact Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleRedact}
-            title={currentIsRedact ? 'White cover box active' : 'Plain transparent text'}
-            className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition shrink-0 ${
-              currentIsRedact
-                ? 'bg-white text-slate-900 shadow'
-                : 'bg-slate-800 text-slate-300 hover:text-white'
-            }`}
-          >
-            {currentIsRedact ? <EyeOff className="w-3 h-3 text-red-600" /> : <Eye className="w-3 h-3 text-cyan-400" />}
-            <span>Whiteout</span>
-          </button>
-
-          {/* Delete Button (when text selected) */}
-          {activeAnn && (
-            <>
-              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteAnnotation(activeAnn.id);
-                  setSelectedId(null);
-                }}
-                title="Delete Text"
-                className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition shrink-0"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 };

@@ -15,7 +15,14 @@ interface DrawingCanvasOverlayProps {
   shapeStrokeColor?: string;
   shapeFillColor?: string;
   shapeStrokeWidth?: number;
-  showToolbar?: boolean;
+  drawColor?: string;
+  thickness?: number;
+  highlightColor?: string;
+  highlightMode?: 'line' | 'box' | 'freehand';
+  highlightThickness?: number;
+  eraserThickness?: number;
+  eraserColor?: string;
+  onSampleEraserColor?: (color: string) => void;
   getPageCanvas?: () => HTMLCanvasElement | undefined | null;
   onAddDrawing: (drawing: Omit<FreehandDrawing, 'id'>) => void;
   onDeleteDrawing: (id: string) => void;
@@ -42,7 +49,14 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   shapeStrokeColor,
   shapeFillColor,
   shapeStrokeWidth,
-  showToolbar = true,
+  drawColor = '#ef4444',
+  thickness = 3,
+  highlightColor = '#facc15',
+  highlightMode = 'line',
+  highlightThickness = 18,
+  eraserThickness = 12,
+  eraserColor = '#ffffff',
+  onSampleEraserColor,
   getPageCanvas,
   onAddDrawing,
   onDeleteDrawing,
@@ -57,13 +71,6 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   // Draw & Highlight Options
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPoints, setCurrentPoints] = useState<{ x: number; y: number }[]>([]);
-  const [drawColor, setDrawColor] = useState<string>('#ef4444'); // Default Red Pen
-  const [highlightColor, setHighlightColor] = useState<string>('#facc15'); // Default Yellow Highlighter
-  const [highlightMode, setHighlightMode] = useState<'line' | 'box' | 'freehand'>('line'); // Default to Straight Line Text Highlight
-  const [thickness, setThickness] = useState<number>(3); // Pen Scale
-  const [highlightThickness, setHighlightThickness] = useState<number>(18); // Highlighter Scale
-  const [eraserThickness, setEraserThickness] = useState<number>(12); // Default 12px Fine Precision Eraser
-  const [eraserColor, setEraserColor] = useState<string>('#ffffff'); // Dynamic adopted PDF background color
   const [hoverPt, setHoverPt] = useState<{ x: number; y: number } | null>(null);
 
   // Sample exact underlying PDF background color from page canvas
@@ -188,7 +195,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       setCurrentPoints([pt]);
       if (toolMode === 'eraser') {
         const sampled = samplePageColor(pt);
-        setEraserColor(sampled);
+        if (onSampleEraserColor) onSampleEraserColor(sampled);
         eraseDrawingsNearPoint(pt, eraserThickness);
       }
     } else if (toolMode === 'line' || toolMode === 'rectangle' || toolMode === 'oval') {
@@ -397,7 +404,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       setCurrentPoints([pt]);
       if (toolMode === 'eraser') {
         const sampled = samplePageColor(pt);
-        setEraserColor(sampled);
+        if (onSampleEraserColor) onSampleEraserColor(sampled);
         eraseDrawingsNearPoint(pt, eraserThickness);
       }
     } else if (toolMode === 'line' || toolMode === 'rectangle' || toolMode === 'oval') {
@@ -433,194 +440,6 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}>
-      {/* Sleek Toolbar Pinned to Top of Page - NEVER Overlaps HeaderToolbar */}
-      {showToolbar && (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') && (
-        <div
-          className="absolute top-2 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] w-max bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl sm:rounded-full px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl pointer-events-auto z-40 text-xs select-none animate-fadeIn touch-manipulation overflow-x-auto scrollbar-none"
-          onClick={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-        >
-          {toolMode === 'eraser' ? (
-            <>
-              <div className="flex items-center gap-1 text-[10px] font-bold text-amber-400 shrink-0">
-                <span>🧹</span>
-                <span>Eraser</span>
-              </div>
-
-              {/* Adopted PDF Background Color */}
-              <div className="flex items-center gap-1 pl-1 border-l border-slate-700 shrink-0" title={`Erasing with PDF color: ${eraserColor}`}>
-                <span className="text-[9px] text-slate-400">Color:</span>
-                <span
-                  className="w-4 h-4 rounded-full border border-white/70 shadow-sm shrink-0"
-                  style={{ backgroundColor: eraserColor }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setEraserColor('#ffffff')}
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition ${
-                    eraserColor.toLowerCase() === '#ffffff'
-                      ? 'bg-amber-500 text-slate-950 shadow'
-                      : 'bg-slate-800 text-slate-300 hover:text-white'
-                  }`}
-                  title="Force White Erase"
-                >
-                  White
-                </button>
-              </div>
-
-              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
-
-              {/* Eraser Stroke Thickness Presets */}
-              <div className="flex items-center gap-1 shrink-0">
-                {[
-                  { label: '4px', size: 4 },
-                  { label: '8px', size: 8 },
-                  { label: '16px', size: 16 },
-                  { label: '32px', size: 32 },
-                ].map((s) => (
-                  <button
-                    key={s.size}
-                    type="button"
-                    onClick={() => setEraserThickness(s.size)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition flex items-center gap-1 ${
-                      eraserThickness === s.size
-                        ? 'bg-amber-500 text-slate-950 shadow'
-                        : 'bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <span>{s.label}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : toolMode === 'draw' ? (
-            <>
-              {/* Pencil Palette Colors */}
-              <div className="flex items-center gap-1 shrink-0">
-                {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#000000'].map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setDrawColor(c)}
-                    className={`w-4 h-4 rounded-full border transition shrink-0 ${
-                      drawColor === c
-                        ? 'scale-125 border-white ring-2 ring-cyan-400 shadow'
-                        : 'border-white/30 opacity-80 hover:opacity-100 hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: c }}
-                    title={`Color ${c}`}
-                  />
-                ))}
-              </div>
-
-              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
-
-              {/* Stroke Thickness Presets */}
-              <div className="flex items-center gap-1 shrink-0">
-                {[
-                  { label: '2px', size: 2 },
-                  { label: '5px', size: 5 },
-                  { label: '10px', size: 10 },
-                  { label: '16px', size: 16 },
-                ].map((s) => (
-                  <button
-                    key={s.size}
-                    type="button"
-                    onClick={() => setThickness(s.size)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition flex items-center gap-1 ${
-                      thickness === s.size
-                        ? 'bg-cyan-500 text-white shadow'
-                        : 'bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <span
-                      className="rounded-full inline-block"
-                      style={{
-                        width: `${Math.min(6, Math.max(2, s.size / 2))}px`,
-                        height: `${Math.min(6, Math.max(2, s.size / 2))}px`,
-                        backgroundColor: drawColor,
-                      }}
-                    />
-                    <span>{s.label}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Highlighter Mode Buttons */}
-              <div className="flex items-center gap-1 shrink-0">
-                {[
-                  { mode: 'line' as const, label: 'Line', icon: '📏' },
-                  { mode: 'box' as const, label: 'Box', icon: '📦' },
-                  { mode: 'freehand' as const, label: 'Pen', icon: '✏️' },
-                ].map((m) => (
-                  <button
-                    key={m.mode}
-                    type="button"
-                    onClick={() => setHighlightMode(m.mode)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition ${
-                      highlightMode === m.mode
-                        ? 'bg-yellow-500 text-slate-950 shadow'
-                        : 'bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <span>{m.icon}</span>
-                    <span>{m.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
-
-              {/* Highlighter Colors */}
-              <div className="flex items-center gap-1 shrink-0">
-                {['#facc15', '#4ade80', '#38bdf8', '#f472b6', '#fb923c', '#c084fc'].map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setHighlightColor(c)}
-                    className={`w-4 h-4 rounded-full border transition shrink-0 ${
-                      highlightColor === c
-                        ? 'scale-125 border-white ring-2 ring-yellow-400 shadow'
-                        : 'border-white/30 opacity-80 hover:opacity-100 hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
-
-              {/* Highlighter Thickness (freehand mode) */}
-              {highlightMode === 'freehand' && (
-                <>
-                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
-                  <div className="flex items-center gap-1 shrink-0">
-                    {[
-                      { label: '10px', size: 10 },
-                      { label: '18px', size: 18 },
-                      { label: '28px', size: 28 },
-                    ].map((s) => (
-                      <button
-                        key={s.size}
-                        type="button"
-                        onClick={() => setHighlightThickness(s.size)}
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${
-                          highlightThickness === s.size
-                            ? 'bg-yellow-500 text-slate-950 shadow'
-                            : 'bg-slate-800 text-slate-300 hover:text-white'
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
       {/* SVG Canvas for Freehand Drawing & Vector Stamps */}
       <svg
         onMouseDown={handleMouseDown}
