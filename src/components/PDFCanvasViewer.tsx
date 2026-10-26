@@ -357,12 +357,56 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   const pinchFocalRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
   const [pinchRenderTrigger, setPinchRenderTrigger] = useState(0);
 
-  // Synchronously anchor scroll position to the pinch midpoint right after React updates page width/height in DOM
+  // 120fps GPU Hardware-Accelerated Pinch-to-Zoom State
+  const pinchStateRef = useRef<{
+    active: boolean;
+    initialZoom: number;
+    initialDist: number;
+    startMidX: number;
+    startMidY: number;
+    startScrollLeft: number;
+    startScrollTop: number;
+    lastScaleRatio: number;
+    lastMidX: number;
+    lastMidY: number;
+  }>({
+    active: false,
+    initialZoom: 1,
+    initialDist: 0,
+    startMidX: 0,
+    startMidY: 0,
+    startScrollLeft: 0,
+    startScrollTop: 0,
+    lastScaleRatio: 1,
+    lastMidX: 0,
+    lastMidY: 0,
+  });
+
+  const pendingCommitScrollRef = useRef<{ scrollLeft: number; scrollTop: number } | null>(null);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  // Synchronously commit scroll position and clear GPU transform right before browser paints the React DOM update
   useLayoutEffect(() => {
     const container = containerRef.current;
     const prevZoom = prevZoomRef.current;
     prevZoomRef.current = zoom;
     if (!container) return;
+
+    if (pendingCommitScrollRef.current) {
+      container.scrollLeft = pendingCommitScrollRef.current.scrollLeft;
+      container.scrollTop = pendingCommitScrollRef.current.scrollTop;
+      pendingCommitScrollRef.current = null;
+
+      if (pagesWrapperRef.current) {
+        pagesWrapperRef.current.style.transform = '';
+        pagesWrapperRef.current.style.transformOrigin = '';
+        pagesWrapperRef.current.style.willChange = '';
+      }
+      return;
+    }
 
     if (Math.abs(zoom - prevZoom) < 0.001) return;
 
@@ -377,8 +421,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
   // Touch Pinch-to-Zoom & 1-Finger Drag Panning with clamped 15% floor & focal-point stability
   useEffect(() => {
-    let initialTouchDist = 0;
-    let initialZoom = zoomRef.current;
     let isPanning = false;
     let startX = 0;
     let startY = 0;
@@ -388,8 +430,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     let velX = 0;
     let velY = 0;
     let inertiaRafId: number | null = null;
-    let pinchRafId: number | null = null;
-    let pendingZoom: number | null = null;
     let startScrollLeft = 0;
     let startScrollTop = 0;
 
@@ -435,10 +475,32 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
     const beginPinch = (e: TouchEvent, container: HTMLElement) => {
       stopInertia();
-      initialTouchDist = getTouchDist(e);
-      initialZoom = zoomRef.current;
+      const dist = getTouchDist(e);
+      if (dist < 5) return;
+
       const { midX, midY } = getTouchMidpoint(e, container);
-      pinchFocalRef.current = { x: midX, y: midY, active: true };
+      const curZoom = zoomRef.current;
+      const curScrollLeft = container.scrollLeft;
+      const curScrollTop = container.scrollTop;
+
+      pinchStateRef.current = {
+        active: true,
+        initialZoom: curZoom,
+        initialDist: dist,
+        startMidX: midX,
+        startMidY: midY,
+        startScrollLeft: curScrollLeft,
+        startScrollTop: curScrollTop,
+        lastScaleRatio: 1,
+        lastMidX: midX,
+        lastMidY: midY,
+      };
+
+      if (pagesWrapperRef.current) {
+        pagesWrapperRef.current.style.transformOrigin = '0 0';
+        pagesWrapperRef.current.style.willChange = 'transform';
+      }
+
       isPanning = false;
       isPinchingRef.current = true;
       didTouchMoveRef.current = true;
@@ -494,35 +556,37 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         }
         if (e.cancelable) e.preventDefault();
 
-        // If 2nd finger joined mid-gesture, initialize pinch baseline smoothly from current zoom
-        if (initialTouchDist <= 0 || !isPinchingRef.current) {
+        // If pinch not yet initialized or baseline dist too small, initialize now
+        if (!pinchStateRef.current.active || pinchStateRef.current.initialDist < 10) {
           beginPinch(e, container);
           return;
         }
 
         const currentDist = getTouchDist(e);
-        if (currentDist > 8 && initialTouchDist > 8) {
-          const scaleRatio = currentDist / initialTouchDist;
-          const rawZoom = initialZoom * scaleRatio;
-          const newZoom = Math.max(0.2, Math.min(4.0, Math.round(rawZoom * 100) / 100));
-          const { midX, midY } = getTouchMidpoint(e, container);
-          pinchFocalRef.current = { x: midX, y: midY, active: true };
+        if (currentDist > 8 && pinchStateRef.current.initialDist > 8) {
+          const rawRatio = currentDist / pinchStateRef.current.initialDist;
+          const s0 = pinchStateRef.current.initialZoom;
+          const minRatio = 0.15 / s0;
+          const maxRatio = 5.0 / s0;
+          const scaleRatio = Math.max(minRatio, Math.min(maxRatio, rawRatio));
 
-          if (Math.abs(newZoom - zoomRef.current) >= 0.01) {
-            zoomRef.current = newZoom;
-            pendingZoom = newZoom;
-            if (pinchRafId === null) {
-              pinchRafId = requestAnimationFrame(() => {
-                pinchRafId = null;
-                if (pendingZoom !== null) {
-                  onZoomChange(pendingZoom);
-                }
-              });
-            }
+          const { midX, midY } = getTouchMidpoint(e, container);
+
+          pinchStateRef.current.lastScaleRatio = scaleRatio;
+          pinchStateRef.current.lastMidX = midX;
+          pinchStateRef.current.lastMidY = midY;
+
+          // Pure 120 FPS GPU hardware transform - ZERO React re-renders or DOM reflows during gesture
+          const tx = midX + pinchStateRef.current.startScrollLeft - (pinchStateRef.current.startScrollLeft + pinchStateRef.current.startMidX) * scaleRatio;
+          const ty = midY + pinchStateRef.current.startScrollTop - (pinchStateRef.current.startScrollTop + pinchStateRef.current.startMidY) * scaleRatio;
+
+          if (pagesWrapperRef.current) {
+            pagesWrapperRef.current.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0) scale(${scaleRatio.toFixed(4)})`;
           }
         }
+        return;
       } else if (isPanning && e.touches.length === 1 && !isDrawingToolActive) {
-        if (Date.now() - lastMultiTouchTimeRef.current < 220) return;
+        if (Date.now() - lastMultiTouchTimeRef.current < 350) return;
         const curX = e.touches[0].clientX;
         const curY = e.touches[0].clientY;
         const dx = curX - startX;
@@ -548,26 +612,62 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
     const handleTouchEnd = (e: TouchEvent) => {
       const container = containerRef.current;
-      const wasPinching = isPinchingRef.current;
+      const wasPinching = pinchStateRef.current.active;
 
       if (wasPinching || e.touches.length >= 1) {
         lastMultiTouchTimeRef.current = Date.now();
       }
 
       if (e.touches.length < 2) {
-        initialTouchDist = 0;
-        isPinchingRef.current = false;
         if (wasPinching) {
-          // Prevent the remaining 1 finger from jerking the scroll position
+          pinchStateRef.current.active = false;
+          isPinchingRef.current = false;
           isPanning = false;
-          pinchFocalRef.current.active = false;
-          setPinchRenderTrigger((prev) => prev + 1);
 
+          const {
+            initialZoom,
+            startMidX,
+            startMidY,
+            startScrollLeft,
+            startScrollTop,
+            lastScaleRatio,
+            lastMidX,
+            lastMidY,
+          } = pinchStateRef.current;
+
+          const finalZoom = Math.max(0.15, Math.min(5.0, Math.round(initialZoom * lastScaleRatio * 100) / 100));
+          const zoomRatio = finalZoom / initialZoom;
+
+          // Compute exact scroll position matching the last transform frame down to the pixel
+          const finalScrollLeft = Math.max(0, Math.round((startScrollLeft + startMidX) * zoomRatio - lastMidX));
+          const finalScrollTop = Math.max(0, Math.round((startScrollTop + startMidY) * zoomRatio - lastMidY));
+
+          if (Math.abs(finalZoom - initialZoom) < 0.005) {
+            // Zoom did not change: clear GPU transform immediately and set final scroll
+            if (pagesWrapperRef.current) {
+              pagesWrapperRef.current.style.transform = '';
+              pagesWrapperRef.current.style.transformOrigin = '';
+              pagesWrapperRef.current.style.willChange = '';
+            }
+            if (container) {
+              container.scrollLeft = finalScrollLeft;
+              container.scrollTop = finalScrollTop;
+            }
+            pendingCommitScrollRef.current = null;
+          } else {
+            // Commit scroll in pendingCommitScrollRef for useLayoutEffect right before next paint
+            pendingCommitScrollRef.current = {
+              scrollLeft: finalScrollLeft,
+              scrollTop: finalScrollTop,
+            };
+            onZoomChange(finalZoom);
+            setPinchRenderTrigger((prev) => prev + 1);
+          }
         }
       }
 
       if (e.touches.length === 0) {
-        if (isPanning && didTouchMoveRef.current && container && !wasPinching) {
+        if (isPanning && didTouchMoveRef.current && container && !wasPinching && Date.now() - lastMultiTouchTimeRef.current > 350) {
           const timeSinceLastMove = performance.now() - lastPanTime;
           if (timeSinceLastMove < 80 && Math.hypot(velX, velY) > 0.15) {
             let stepVx = velX * 16;
@@ -607,7 +707,11 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
     return () => {
       stopInertia();
-      if (pinchRafId !== null) cancelAnimationFrame(pinchRafId);
+      if (pagesWrapperRef.current) {
+        pagesWrapperRef.current.style.transform = '';
+        pagesWrapperRef.current.style.transformOrigin = '';
+        pagesWrapperRef.current.style.willChange = '';
+      }
       window.removeEventListener('gesturestart', preventSafariGesture);
       window.removeEventListener('gesturechange', preventSafariGesture);
       window.removeEventListener('gestureend', preventSafariGesture);
