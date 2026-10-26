@@ -41,10 +41,15 @@ interface PDFCanvasViewerProps {
   onOpenScanModal?: () => void;
   isLoading?: boolean;
   textColor?: string;
+  setTextColor?: (color: string) => void;
   textFontSize?: number;
+  setTextFontSize?: (size: number) => void;
   textFontFamily?: string;
+  setTextFontFamily?: (family: string) => void;
   textIsRedact?: boolean;
+  setTextIsRedact?: (redact: boolean) => void;
   textIsUnderline?: boolean;
+  setTextIsUnderline?: (underline: boolean) => void;
   shapeStrokeColor?: string;
   shapeFillColor?: string;
   shapeStrokeWidth?: number;
@@ -104,10 +109,15 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   onOpenScanModal,
   isLoading = false,
   textColor,
+  setTextColor,
   textFontSize,
+  setTextFontSize,
   textFontFamily,
+  setTextFontFamily,
   textIsRedact,
+  setTextIsRedact,
   textIsUnderline,
+  setTextIsUnderline,
   shapeStrokeColor,
   shapeFillColor,
   shapeStrokeWidth,
@@ -1129,11 +1139,17 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                       onDeleteAnnotation={onDeleteAnnotation}
                       onAddAnnotation={onAddAnnotation}
                       isTextMode={toolMode === 'text'}
+                      showToolbar={seqIdx === Math.max(0, currentPage - 1) || activePages.length === 1}
                       textColor={textColor}
+                      setTextColor={setTextColor}
                       textFontSize={textFontSize}
+                      setTextFontSize={setTextFontSize}
                       textFontFamily={textFontFamily}
+                      setTextFontFamily={setTextFontFamily}
                       textIsRedact={textIsRedact}
+                      setTextIsRedact={setTextIsRedact}
                       textIsUnderline={textIsUnderline}
+                      setTextIsUnderline={setTextIsUnderline}
                     />
                     <SignatureOverlay
                       signatures={state.signatures}

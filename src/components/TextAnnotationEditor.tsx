@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { Trash2, Eye, EyeOff, Move, Clipboard, Minus, Plus, Type, Underline, Bold, Palette, Droplet } from 'lucide-react';
 import { TextAnnotation } from '../types/pdf';
 import { pdfRenderer, DetectedPDFTextLine } from '../services/pdfRenderer';
@@ -15,11 +14,17 @@ interface TextAnnotationEditorProps {
   onDeleteAnnotation: (id: string) => void;
   onAddAnnotation: (ann: Omit<TextAnnotation, 'id'>) => void;
   isTextMode: boolean;
+  showToolbar?: boolean;
   textColor?: string;
+  setTextColor?: (color: string) => void;
   textFontSize?: number;
+  setTextFontSize?: (size: number) => void;
   textFontFamily?: string;
+  setTextFontFamily?: (family: string) => void;
   textIsRedact?: boolean;
+  setTextIsRedact?: (redact: boolean) => void;
   textIsUnderline?: boolean;
+  setTextIsUnderline?: (underline: boolean) => void;
 }
 
 export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
@@ -33,63 +38,83 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   onDeleteAnnotation,
   onAddAnnotation,
   isTextMode,
+  showToolbar = true,
   textColor,
+  setTextColor,
   textFontSize,
+  setTextFontSize,
   textFontFamily,
+  setTextFontFamily,
   textIsRedact,
+  setTextIsRedact,
   textIsUnderline,
+  setTextIsUnderline,
 }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detectedLines, setDetectedLines] = useState<DetectedPDFTextLine[]>([]);
   const [hoveredLineId, setHoveredLineId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Active text box DOM element and screen position for viewport-clamped fixed toolbar
-  const activeBoxRef = useRef<HTMLDivElement | null>(null);
-  const [toolbarPos, setToolbarPos] = useState<{ left: number; top: number; isVisible: boolean }>({
-    left: 0,
-    top: 0,
-    isVisible: false,
-  });
+  const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
+  const activeAnn = selectedId ? pageAnnotations.find((a) => a.id === selectedId) : null;
+  const currentFontSize = activeAnn ? activeAnn.fontSize : (textFontSize || 14);
+  const currentTextColor = activeAnn ? (activeAnn.color || '#000000') : (textColor || '#000000');
+  const currentIsUnderline = activeAnn ? !!activeAnn.isUnderline : !!textIsUnderline;
+  const currentIsRedact = activeAnn ? !!activeAnn.isRedact : !!textIsRedact;
 
-  const updateToolbarPosition = () => {
-    if (!selectedId || !activeBoxRef.current) {
-      setToolbarPos((prev) => (prev.isVisible ? { ...prev, isVisible: false } : prev));
-      return;
-    }
-    const rect = activeBoxRef.current.getBoundingClientRect();
-    const toolbarWidth = 230;
-    const vw = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.width : window.innerWidth;
-    const vLeft = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetLeft : 0;
-    const vTop = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetTop : 0;
-    const idealLeft = rect.left + rect.width / 2 - toolbarWidth / 2;
-    const left = Math.max(vLeft + 8, Math.min(vLeft + vw - toolbarWidth - 8, idealLeft));
-    // Position above if room (> 110px from top of viewport), otherwise below text box
-    const top = rect.top > 110 ? Math.max(vTop + 58, rect.top - 42) : Math.min(window.innerHeight - 50, rect.bottom + 8);
-    const isVisible = rect.bottom > 40 && rect.top < window.innerHeight - 20;
-    setToolbarPos({ left, top, isVisible });
-  };
+  // Unfrozen direct number input state
+  const [sizeInput, setSizeInput] = useState<string>(String(currentFontSize));
 
   useEffect(() => {
-    updateToolbarPosition();
-    const handleReposition = () => updateToolbarPosition();
-    window.addEventListener('scroll', handleReposition, { capture: true, passive: true });
-    window.addEventListener('resize', handleReposition, { passive: true });
-    window.addEventListener('touchmove', handleReposition, { passive: true });
-    if (typeof window !== 'undefined' && window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleReposition);
-      window.visualViewport.addEventListener('scroll', handleReposition);
+    setSizeInput(String(currentFontSize));
+  }, [currentFontSize]);
+
+  const handleApplyFontSize = (val: number) => {
+    const clamped = Math.max(4, Math.min(150, val));
+    if (selectedId) {
+      onUpdateAnnotation(selectedId, { fontSize: clamped });
     }
-    return () => {
-      window.removeEventListener('scroll', handleReposition, { capture: true });
-      window.removeEventListener('resize', handleReposition);
-      window.removeEventListener('touchmove', handleReposition);
-      if (typeof window !== 'undefined' && window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleReposition);
-        window.visualViewport.removeEventListener('scroll', handleReposition);
-      }
-    };
-  }, [selectedId, canvasWidth, canvasHeight]);
+    if (setTextFontSize) {
+      setTextFontSize(clamped);
+    }
+  };
+
+  const handleApplyColor = (color: string) => {
+    if (selectedId) {
+      onUpdateAnnotation(selectedId, { color });
+    }
+    if (setTextColor) {
+      setTextColor(color);
+    }
+  };
+
+  const handleToggleUnderline = () => {
+    const next = !currentIsUnderline;
+    if (selectedId) {
+      onUpdateAnnotation(selectedId, { isUnderline: next });
+    }
+    if (setTextIsUnderline) {
+      setTextIsUnderline(next);
+    }
+  };
+
+  const handleToggleRedact = () => {
+    const next = !currentIsRedact;
+    if (selectedId) {
+      onUpdateAnnotation(selectedId, { isRedact: next });
+    }
+    if (setTextIsRedact) {
+      setTextIsRedact(next);
+    }
+  };
+
+  const handleToggleBold = () => {
+    const isBold = activeAnn ? (activeAnn.fontWeight === 'bold' || activeAnn.fontWeight === '700' || activeAnn.fontWeight === 700 || activeAnn.fontWeight === '600') : false;
+    const next = isBold ? 'normal' : 'bold';
+    if (selectedId) {
+      onUpdateAnnotation(selectedId, { fontWeight: next });
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -117,7 +142,6 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   // Movable Floating Toolbar Offsets per annotation
   const [toolbarOffsets, setToolbarOffsets] = useState<Record<string, { x: number; y: number }>>({});
 
-  const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
   const scaleX = originalWidth > 0 ? canvasWidth / originalWidth : 1;
   const scaleY = originalHeight > 0 ? canvasHeight / originalHeight : 1;
 
@@ -602,11 +626,6 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         return (
           <div
             key={ann.id}
-            ref={(el) => {
-              if (isSelected) {
-                activeBoxRef.current = el;
-              }
-            }}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedId(ann.id);
@@ -676,186 +695,184 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         );
       })}
 
-      {/* Viewport-Clamped Floating Action Toolbar - Glides with text box & NEVER goes off screen even when zoomed */}
-      {selectedId && toolbarPos.isVisible && (() => {
-        const activeAnn = pageAnnotations.find((a) => a.id === selectedId);
-        if (!activeAnn) return null;
-        const tbOffset = toolbarOffsets[activeAnn.id] || { x: 0, y: 0 };
-        const vw = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.width : window.innerWidth;
-        const vLeft = typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetLeft : 0;
-        const currentLeft = Math.max(vLeft + 8, Math.min(vLeft + vw - 240, toolbarPos.left + tbOffset.x));
-        const currentTop = Math.max(50, Math.min(window.innerHeight - 50, toolbarPos.top + tbOffset.y));
+      {/* Sleek Text Formatting Toolbar Pinned to Top of Page - NEVER Overlaps HeaderToolbar, Never Moves over text */}
+      {isTextMode && (showToolbar || selectedId) && (
+        <div
+          className="absolute top-2 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] w-max bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl sm:rounded-full px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl pointer-events-auto z-40 text-xs select-none animate-fadeIn touch-manipulation overflow-x-auto scrollbar-none"
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          {/* Label */}
+          <div className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 shrink-0">
+            <Type className="w-3.5 h-3.5" />
+            <span>Text</span>
+          </div>
 
-        return createPortal(
-          <div
-            style={{
-              position: 'fixed',
-              left: `${currentLeft}px`,
-              top: `${currentTop}px`,
-              zIndex: 99999,
-            }}
-            className="flex items-center gap-1 bg-slate-900/95 backdrop-blur-md text-white rounded-xl px-2 py-1 shadow-2xl select-none border border-slate-700/80 ring-1 ring-cyan-500/40 animate-fadeIn max-w-[calc(100vw-16px)] w-max touch-manipulation pointer-events-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Drag / Move Handle - Moves Text Box Anywhere on PDF Canvas */}
-            <div
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                handleMouseDownDrag(e, activeAnn);
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-                handleTouchStartTextDrag(e, activeAnn);
-              }}
-              title="Touch & Drag to Move Text Anywhere over PDF Page"
-              className="p-1 bg-cyan-500/20 hover:bg-cyan-500/40 rounded text-cyan-300 cursor-grab active:cursor-grabbing transition flex items-center border border-cyan-500/30 shrink-0"
-            >
-              <Move className="w-3.5 h-3.5" />
-            </div>
+          <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
 
-            <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
-
-            {/* Sub-Point Decimal Font Size Stepper */}
-            <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
-              <button
-                type="button"
-                onClick={() => onUpdateAnnotation(activeAnn.id, { fontSize: parseFloat(Math.max(4, activeAnn.fontSize - 0.5).toFixed(1)) })}
-                title="Decrease Font Size (-0.5pt)"
-                className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-              >
-                <Minus className="w-3 h-3" />
-              </button>
-
-              <div className="flex items-center">
-                <input
-                  type="number"
-                  step="0.5"
-                  min="4"
-                  max="120"
-                  value={activeAnn.fontSize}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val) && val >= 4 && val <= 120) {
-                      onUpdateAnnotation(activeAnn.id, { fontSize: parseFloat(val.toFixed(2)) });
-                    }
-                  }}
-                  className="w-6 bg-transparent text-[10px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  title="Direct Font Size (pt)"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onUpdateAnnotation(activeAnn.id, { fontSize: parseFloat(Math.min(120, activeAnn.fontSize + 0.5).toFixed(1)) })}
-                title="Increase Font Size (+0.5pt)"
-                className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-
-            {/* Bold Toggle Button */}
+          {/* Unfrozen Direct Number Font Size Input & Stepper */}
+          <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
             <button
               type="button"
               onClick={() => {
-                const isCurrentlyBold =
-                  activeAnn.fontWeight === 'bold' ||
-                  activeAnn.fontWeight === '700' ||
-                  activeAnn.fontWeight === 700 ||
-                  activeAnn.fontWeight === '600';
-                onUpdateAnnotation(activeAnn.id, { fontWeight: isCurrentlyBold ? 'normal' : 'bold' });
+                const next = Math.max(4, Math.round((currentFontSize - 1) * 2) / 2);
+                setSizeInput(String(next));
+                handleApplyFontSize(next);
               }}
-              title="Toggle Bold"
-              className={`p-1 rounded transition shrink-0 ${
-                activeAnn.fontWeight === 'bold' ||
-                activeAnn.fontWeight === '700' ||
-                activeAnn.fontWeight === 700 ||
-                activeAnn.fontWeight === '600'
-                  ? 'bg-cyan-500 text-white font-bold'
-                  : 'hover:bg-slate-800 text-slate-300'
-              }`}
+              title="Decrease Font Size (-1pt)"
+              className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
             >
-              <Bold className="w-3.5 h-3.5" />
+              <Minus className="w-3 h-3" />
             </button>
 
-            {/* Underline Toggle Button */}
-            <button
-              type="button"
-              onClick={() => onUpdateAnnotation(activeAnn.id, { isUnderline: !activeAnn.isUnderline })}
-              title="Toggle Underline"
-              className={`p-1 rounded transition shrink-0 ${
-                activeAnn.isUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
-              }`}
-            >
-              <Underline className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Color Palette (3 quick swatches + native color picker) */}
-            <div className="flex items-center space-x-1 pl-0.5 shrink-0">
-              {['#000000', '#1e3a8a', '#dc2626'].map((color) => {
-                const currentColor = (activeAnn.color || '#000000').toLowerCase();
-                const isColorSelected = currentColor === color.toLowerCase();
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => onUpdateAnnotation(activeAnn.id, { color })}
-                    className={`w-3.5 h-3.5 rounded-full border transition shrink-0 ${
-                      isColorSelected
-                        ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
-                        : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={`Select ${color}`}
-                  />
-                );
-              })}
-
-              {/* Native Color Picker */}
-              <label
-                title="Custom Color Spectrum Picker"
-                className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white shrink-0"
-              >
-                <Palette className="w-3 h-3" />
-                <input
-                  id={`native-color-${activeAnn.id}`}
-                  type="color"
-                  value={activeAnn.color && activeAnn.color.startsWith('#') ? activeAnn.color : '#000000'}
-                  onChange={(e) => onUpdateAnnotation(activeAnn.id, { color: e.target.value })}
-                  className="sr-only"
-                />
-              </label>
+            <div className="flex items-center">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={sizeInput}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSizeInput(val);
+                  const n = parseFloat(val);
+                  if (!isNaN(n) && n > 0 && n <= 150) {
+                    handleApplyFontSize(n);
+                  }
+                }}
+                onBlur={() => {
+                  const n = parseFloat(sizeInput);
+                  if (isNaN(n) || n < 1) {
+                    setSizeInput(String(currentFontSize));
+                  } else {
+                    const clamped = Math.max(4, Math.min(150, n));
+                    setSizeInput(String(clamped));
+                    handleApplyFontSize(clamped);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                className="w-8 bg-transparent text-[11px] font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 select-text"
+                title="Direct Font Size (pt) - Type numbers directly"
+              />
+              <span className="text-[9px] font-mono text-slate-400 select-none pr-0.5">pt</span>
             </div>
 
-            <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
-
-            {/* Quick Paste Button */}
             <button
               type="button"
-              onClick={() => handlePasteClipboard(activeAnn.id)}
-              title="Paste Clipboard Text"
-              className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition shrink-0"
-            >
-              <Clipboard className="w-3 h-3" />
-            </button>
-
-            {/* Delete Button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteAnnotation(activeAnn.id);
-                setSelectedId(null);
+              onClick={() => {
+                const next = Math.min(150, Math.round((currentFontSize + 1) * 2) / 2);
+                setSizeInput(String(next));
+                handleApplyFontSize(next);
               }}
-              title="Delete Text"
-              className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition shrink-0"
+              title="Increase Font Size (+1pt)"
+              className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Plus className="w-3 h-3" />
             </button>
-          </div>,
-          document.body
-        );
-      })()}
+          </div>
+
+          {/* Bold Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleBold}
+            title="Toggle Bold"
+            className={`p-1 rounded transition shrink-0 ${
+              activeAnn && (activeAnn.fontWeight === 'bold' || activeAnn.fontWeight === '700' || activeAnn.fontWeight === 700 || activeAnn.fontWeight === '600')
+                ? 'bg-cyan-500 text-white font-bold'
+                : 'hover:bg-slate-800 text-slate-300'
+            }`}
+          >
+            <Bold className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Underline Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleUnderline}
+            title="Toggle Underline"
+            className={`p-1 rounded transition shrink-0 ${
+              currentIsUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
+            }`}
+          >
+            <Underline className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+          {/* Color Swatches */}
+          <div className="flex items-center gap-1 shrink-0">
+            {['#000000', '#1e3a8a', '#dc2626', '#58595b'].map((color) => {
+              const isSelected = currentTextColor.toLowerCase() === color.toLowerCase();
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => handleApplyColor(color)}
+                  className={`w-3.5 h-3.5 rounded-full border transition shrink-0 ${
+                    isSelected
+                      ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
+                      : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
+                  }`}
+                  style={{ backgroundColor: color }}
+                  title={`Select ${color}`}
+                />
+              );
+            })}
+
+            {/* Custom Palette Picker */}
+            <label
+              title="Custom Color Picker"
+              className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white shrink-0"
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <input
+                type="color"
+                value={currentTextColor && currentTextColor.startsWith('#') ? currentTextColor : '#000000'}
+                onChange={(e) => handleApplyColor(e.target.value)}
+                className="sr-only"
+              />
+            </label>
+          </div>
+
+          <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+          {/* Whiteout / Redact Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleRedact}
+            title={currentIsRedact ? 'White cover box active' : 'Plain transparent text'}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition shrink-0 ${
+              currentIsRedact
+                ? 'bg-white text-slate-900 shadow'
+                : 'bg-slate-800 text-slate-300 hover:text-white'
+            }`}
+          >
+            {currentIsRedact ? <EyeOff className="w-3 h-3 text-red-600" /> : <Eye className="w-3 h-3 text-cyan-400" />}
+            <span>Whiteout</span>
+          </button>
+
+          {/* Delete Button (when text selected) */}
+          {activeAnn && (
+            <>
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteAnnotation(activeAnn.id);
+                  setSelectedId(null);
+                }}
+                title="Delete Text"
+                className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

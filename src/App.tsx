@@ -1296,10 +1296,15 @@ export const App: React.FC = () => {
           onOpenSignatureModal={handleOpenSignatureModal}
           isLoading={isLoading}
           textColor={textColor}
+          setTextColor={handleSetTextColor}
           textFontSize={textFontSize}
+          setTextFontSize={handleSetTextFontSize}
           textFontFamily={textFontFamily}
+          setTextFontFamily={handleSetTextFontFamily}
           textIsRedact={textIsRedact}
+          setTextIsRedact={handleSetTextIsRedact}
           textIsUnderline={textIsUnderline}
+          setTextIsUnderline={setTextIsUnderline}
           shapeStrokeColor={shapeStrokeColor}
           shapeFillColor={shapeFillColor}
           shapeStrokeWidth={shapeStrokeWidth}

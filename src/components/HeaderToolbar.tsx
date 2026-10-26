@@ -198,6 +198,10 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   const [savedSigs, setSavedSigs] = useState<SavedSignature[]>([]);
   const [recentFilesList, setRecentFilesList] = useState<RecentFileItem[]>([]);
   const [popoverPos, setPopoverPos] = useState<{ name: string; left: number; top: number }>({ name: '', left: 0, top: 0 });
+  const [headerFontSizeStr, setHeaderFontSizeStr] = useState<string>(String(textFontSize || 14));
+  useEffect(() => {
+    setHeaderFontSizeStr(String(textFontSize || 14));
+  }, [textFontSize]);
 
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -818,28 +822,56 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
                   {/* Row 2: Font Size Stepper & Colors Inline */}
                   <div className="flex items-center justify-between gap-1.5">
-                    {/* Stepper */}
-                    <div className="flex items-center space-x-1 bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-0.5 shrink-0">
+                    {/* Stepper with Direct Number Input */}
+                    <div className="flex items-center space-x-0.5 bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-0.5 shrink-0">
                       <button
-                        onClick={() => setTextFontSize && setTextFontSize(Math.max(8, (textFontSize || 14) - 2))}
+                        onClick={() => {
+                          const next = Math.max(4, (textFontSize || 14) - 1);
+                          setHeaderFontSizeStr(String(next));
+                          setTextFontSize && setTextFontSize(next);
+                        }}
                         className="px-1 text-slate-400 hover:text-white font-bold text-xs"
                         title="Decrease Font Size"
                       >
                         -
                       </button>
-                      <select
-                        value={textFontSize || 14}
-                        onChange={(e) => setTextFontSize && setTextFontSize(Number(e.target.value))}
-                        className="bg-transparent text-cyan-300 font-mono font-bold text-xs border-0 outline-none p-0 cursor-pointer"
-                      >
-                        {[8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48].map((s) => (
-                          <option key={s} value={s} className="bg-slate-900 text-white">
-                            {s}pt
-                          </option>
-                        ))}
-                      </select>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={headerFontSizeStr}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setHeaderFontSizeStr(val);
+                          const n = parseFloat(val);
+                          if (!isNaN(n) && n > 0 && n <= 150) {
+                            setTextFontSize && setTextFontSize(n);
+                          }
+                        }}
+                        onBlur={() => {
+                          const n = parseFloat(headerFontSizeStr);
+                          if (isNaN(n) || n < 1) {
+                            setHeaderFontSizeStr(String(textFontSize || 14));
+                          } else {
+                            const clamped = Math.max(4, Math.min(150, n));
+                            setHeaderFontSizeStr(String(clamped));
+                            setTextFontSize && setTextFontSize(clamped);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        className="w-7 bg-transparent text-cyan-300 font-mono font-bold text-xs text-center border-0 outline-none p-0 select-text"
+                        title="Direct Font Size (pt)"
+                      />
+                      <span className="text-[9px] font-mono text-slate-400 select-none pr-0.5">pt</span>
                       <button
-                        onClick={() => setTextFontSize && setTextFontSize(Math.min(72, (textFontSize || 14) + 2))}
+                        onClick={() => {
+                          const next = Math.min(150, (textFontSize || 14) + 1);
+                          setHeaderFontSizeStr(String(next));
+                          setTextFontSize && setTextFontSize(next);
+                        }}
                         className="px-1 text-slate-400 hover:text-white font-bold text-xs"
                         title="Increase Font Size"
                       >

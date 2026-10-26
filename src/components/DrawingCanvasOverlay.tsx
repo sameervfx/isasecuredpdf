@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { FreehandDrawing, SignatureAnnotation, StampAnnotation, StrikeoutAnnotation, ToolMode } from '../types/pdf';
 
 interface DrawingCanvasOverlayProps {
@@ -434,17 +433,10 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none" style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}>
-      {/* Sleek Centered Floating Toolbar Overlay for Draw / Highlight / Eraser */}
-      {showToolbar && (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') && createPortal(
+      {/* Sleek Toolbar Pinned to Top of Page - NEVER Overlaps HeaderToolbar */}
+      {showToolbar && (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') && (
         <div
-          style={{
-            position: 'fixed',
-            top: 'calc(env(safe-area-inset-top, 12px) + 54px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 99998,
-          }}
-          className="max-w-[calc(100vw-16px)] w-max bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl sm:rounded-full px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl pointer-events-auto text-xs select-none animate-fadeIn touch-manipulation overflow-x-auto scrollbar-none"
+          className="absolute top-2 left-1/2 -translate-x-1/2 max-w-[calc(100vw-24px)] w-max bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl sm:rounded-full px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl pointer-events-auto z-40 text-xs select-none animate-fadeIn touch-manipulation overflow-x-auto scrollbar-none"
           onClick={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         >
@@ -626,8 +618,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
               )}
             </>
           )}
-        </div>,
-        document.body
+        </div>
       )}
 
       {/* SVG Canvas for Freehand Drawing & Vector Stamps */}
