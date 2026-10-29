@@ -322,16 +322,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     }
   };
 
-  // Fullscreen Escape key listener
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isFullscreen && onToggleFullscreen) {
-        onToggleFullscreen();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen, onToggleFullscreen]);
+
 
   // Ctrl/Cmd + Mouse Wheel Zooming directly on document canvas (clamped to 15% - 500%)
   useEffect(() => {

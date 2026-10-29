@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onExportPDF: (callback) => ipcRenderer.on('menu-export-pdf', callback),
   onOpenPdfPayload: (callback) => ipcRenderer.on('open-pdf-payload', (_evt, data) => callback(data)),
   requestPendingPdfPayload: () => ipcRenderer.invoke('request-pending-pdf-payload'),
+  toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
+  setFullscreen: (flag) => ipcRenderer.invoke('set-fullscreen', flag),
+  isFullscreen: () => ipcRenderer.invoke('is-fullscreen'),
+  onSetFullscreenState: (callback) => ipcRenderer.on('set-fullscreen-state', (_evt, val) => callback(val)),
+  openPdfInSystemViewer: (base64Data, fileName) => ipcRenderer.invoke('open-pdf-in-system-viewer', base64Data, fileName),
 
   // Remove listeners
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),

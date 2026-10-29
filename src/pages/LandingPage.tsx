@@ -206,8 +206,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
 
-        {/* Center: Desktop Navigation Links (Centrally Aligned for Desktop) */}
-        <div className="hidden md:flex items-center space-x-8 text-xs font-semibold absolute left-1/2 -translate-x-1/2">
+        {/* Center: Desktop Navigation Links (Only on wide screens to prevent overlapping) */}
+        <div className="hidden xl:flex items-center space-x-8 text-xs font-semibold absolute left-1/2 -translate-x-1/2 pointer-events-auto">
           <a href="#features" onClick={(e) => scrollToSection(e, 'features')} className={navLinkClass}>Features</a>
           <a href="#security" onClick={(e) => scrollToSection(e, 'security')} className={navLinkClass}>Security & Compliance</a>
           <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className={navLinkClass}>Pricing</a>
@@ -221,7 +221,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               onClick={() => setIsDownloadModalOpen(true)}
               title="Download Standalone Desktop Apps (.zip for Windows/macOS)"
-              className="hidden md:flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/50 rounded-xl text-xs font-semibold text-cyan-300 transition active:scale-95 shadow"
+              className="hidden 2xl:flex items-center space-x-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/50 rounded-xl text-xs font-semibold text-cyan-300 transition active:scale-95 shadow"
             >
               <Monitor className="w-3.5 h-3.5 text-cyan-400" />
               <span className="font-bold">Desktop Apps</span>
@@ -262,7 +262,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Mobile Hamburger Toggle */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition"
+            className="xl:hidden p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition"
             aria-label="Toggle Navigation Menu"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 text-cyan-400" />}
@@ -271,7 +271,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Mobile Dropdown Navigation Drawer with Solid Backdrops */}
         {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-slate-950/98 border-b-2 border-slate-800 p-4 space-y-2.5 shadow-2xl backdrop-blur-xl animate-fadeIn z-50">
+          <div className="xl:hidden absolute top-full left-0 right-0 bg-slate-950/98 border-b-2 border-slate-800 p-4 space-y-2.5 shadow-2xl backdrop-blur-xl animate-fadeIn z-50">
             <div className="flex flex-col space-y-2 font-extrabold text-sm text-slate-100">
               <a
                 href="#features"

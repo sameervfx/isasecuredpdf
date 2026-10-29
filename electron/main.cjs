@@ -176,6 +176,34 @@ async function createWindow() {
     return { action: 'deny' };
   });
 
+  // Global F11 & Escape Fullscreen handling on Windows/Mac, block DevTools F12 in production
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown') {
+      if (input.key === 'F12' || (input.control && input.shift && (input.key === 'I' || input.key === 'i'))) {
+        event.preventDefault();
+        return;
+      }
+      if (input.key === 'F11') {
+        const isFull = mainWindow.isFullScreen();
+        mainWindow.setFullScreen(!isFull);
+        mainWindow.webContents.send('set-fullscreen-state', !isFull);
+        event.preventDefault();
+      } else if (input.key === 'Escape' && mainWindow.isFullScreen()) {
+        mainWindow.setFullScreen(false);
+        mainWindow.webContents.send('set-fullscreen-state', false);
+        event.preventDefault();
+      }
+    }
+  });
+
+  mainWindow.on('enter-full-screen', () => {
+    mainWindow?.webContents.send('set-fullscreen-state', true);
+  });
+
+  mainWindow.on('leave-full-screen', () => {
+    mainWindow?.webContents.send('set-fullscreen-state', false);
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -234,13 +262,14 @@ function buildMenu() {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },
-        { role: 'togglefullscreen' },
-        { type: 'separator' },
         {
-          label: 'Toggle DevTools',
-          accelerator: 'F12',
+          label: 'Toggle Full Screen',
+          accelerator: 'F11',
           click() {
-            mainWindow?.webContents.toggleDevTools();
+            if (mainWindow) {
+              const next = !mainWindow.isFullScreen();
+              mainWindow.setFullScreen(next);
+            }
           },
         },
       ],
@@ -249,14 +278,27 @@ function buildMenu() {
       label: 'Help',
       submenu: [
         {
-          label: 'About Isa Secure PDF Suite',
+          label: 'Contact Support',
+          click() {
+            shell.openExternal('mailto:support@isasecuredpdf.com');
+          },
+        },
+        {
+          label: 'Official Website',
+          click() {
+            shell.openExternal('https://isasecuredpdf.com');
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'About ISASecuredPDF Suite',
           click() {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
-              title: 'About Isa Secure PDF Suite',
-              message: 'ISASecuredPDF Suite v1.6.9',
+              title: 'About ISASecuredPDF Suite',
+              message: `ISASecuredPDF Suite v${app.getVersion()}`,
               detail:
-                '100% client-side PDF editing.\nNo data is ever transmitted to any server.\n\nBuilt with Electron + React + pdf-lib + pdfjs-dist + MuPDF.',
+                '100% Client-Side On-Device PDF Suite.\nZero data is ever transmitted to external servers.\n\nCustomer Support: support@isasecuredpdf.com\nWebsite: https://isasecuredpdf.com',
               buttons: ['OK'],
               icon: path.join(__dirname, 'icon.png'),
             });
@@ -306,6 +348,38 @@ ipcMain.handle('request-pending-pdf-payload', async () => {
   const payload = pendingPdfPayload;
   pendingPdfPayload = null;
   return payload;
+});
+
+// IPC: Fullscreen management
+ipcMain.handle('toggle-fullscreen', async () => {
+  if (!mainWindow) return false;
+  const next = !mainWindow.isFullScreen();
+  mainWindow.setFullScreen(next);
+  return next;
+});
+
+ipcMain.handle('set-fullscreen', async (_event, flag) => {
+  if (!mainWindow) return false;
+  mainWindow.setFullScreen(Boolean(flag));
+  return Boolean(flag);
+});
+
+ipcMain.handle('is-fullscreen', async () => {
+  return mainWindow ? mainWindow.isFullScreen() : false;
+});
+
+// IPC: Open PDF in default OS viewer (e.g. Microsoft Edge) for native Windows print preview
+ipcMain.handle('open-pdf-in-system-viewer', async (_event, base64Data, fileName) => {
+  try {
+    const tempDir = app.getPath('temp');
+    const safeName = (fileName || 'document.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = path.join(tempDir, `print_preview_${Date.now()}_${safeName}`);
+    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+    await shell.openPath(filePath);
+    return { success: true, filePath };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
 app.whenReady().then(() => {

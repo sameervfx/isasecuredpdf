@@ -18,6 +18,7 @@ import { pdfEngine } from '../services/pdfEngine';
 import { createZipBundle, ZipFileEntry } from '../utils/zipBuilder';
 import { downloadFile } from '../utils/mobileFileDownload';
 import { ExportSaveModal } from './ExportSaveModal';
+import { checkAndConsumeMonthlyQuota, FREE_MONTHLY_DOC_LIMIT } from '../utils/monthlyUsageLimit';
 
 export type ExportFormatType = 'docx' | 'xlsx' | 'jpg' | 'png' | 'tiff' | 'pptx';
 
@@ -69,9 +70,16 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
   };
 
   const handleExport = async () => {
-    if (!isProActive && selectedFormat !== 'jpg') {
-      if (onOpenCheckout) onOpenCheckout();
-      return;
+    if (!isProActive) {
+      if (selectedFormat !== 'jpg') {
+        if (onOpenCheckout) onOpenCheckout();
+        return;
+      }
+      const quota = checkAndConsumeMonthlyQuota(isProActive, 'export', fileNameWithoutExt);
+      if (!quota.allowed) {
+        if (onOpenCheckout) onOpenCheckout();
+        return;
+      }
     }
     setIsProcessing(true);
     setProgress(10);

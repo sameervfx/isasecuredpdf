@@ -15,8 +15,8 @@ exports.default = async function(context) {
       'version-string': {
         ProductName: 'ISASecuredPDF Suite',
         FileDescription: 'ISASecuredPDF Suite - Best Free PDF Editor & Converter (100% Client-Side)',
-        CompanyName: '9476-7449 Québec Inc.',
-        LegalCopyright: 'Copyright © 2026 9476-7449 Québec Inc.',
+        CompanyName: 'ISASecuredPDF',
+        LegalCopyright: 'Copyright © 2026 ISASecuredPDF',
       }
     });
     console.log('[afterPack] Successfully stamped executable with official icon!');

@@ -1,10 +1,10 @@
-// Monthly Free-Tier Usage Quota Tracker (Sign Document, Split PDF, Add Image / Logo)
+// Monthly Free-Tier Usage Quota Tracker (Save, Export, Sign, Split, Add Image / Logo, Scanner)
 // Free Starter users can process up to 5 documents per calendar month before upgrading to Pro.
 
 export const FREE_MONTHLY_DOC_LIMIT = 5;
 const STORAGE_KEY = 'isa_monthly_quota_v1';
 
-export type QuotaFeatureType = 'sign' | 'split' | 'image';
+export type QuotaFeatureType = 'sign' | 'split' | 'image' | 'save' | 'scan_export' | 'export';
 
 interface MonthlyQuotaData {
   monthKey: string; // e.g. "2026-10"
@@ -66,9 +66,9 @@ export function checkAndConsumeMonthlyQuota(
   }
 
   const data = loadQuotaData();
-  const token = docIdentifier ? `${feature}:${docIdentifier}` : `${feature}:${Date.now()}`;
+  const token = docIdentifier ? `doc:${docIdentifier}` : `${feature}:${Date.now()}`;
 
-  // If this exact document was already counted for this feature in the current month, allow additional stamps/signatures on the same document
+  // If this exact document was already counted in the current month, allow additional saves/stamps/signatures on the same document
   if (docIdentifier && data.processedDocTokens.includes(token)) {
     return {
       allowed: true,
@@ -111,7 +111,7 @@ export function canUseMonthlyQuotaFeature(
 ): boolean {
   if (isProActive) return true;
   const data = loadQuotaData();
-  const token = docIdentifier ? `${feature}:${docIdentifier}` : '';
+  const token = docIdentifier ? `doc:${docIdentifier}` : '';
   if (token && data.processedDocTokens.includes(token)) {
     return true;
   }

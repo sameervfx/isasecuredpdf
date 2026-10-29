@@ -9,11 +9,14 @@ import { PDFDocument } from 'pdf-lib';
 import { applyStandardMetadata } from '../utils/pdfMetadata';
 import { downloadFile } from '../utils/mobileFileDownload';
 import { ExportSaveModal, ExportItem } from './ExportSaveModal';
+import { checkAndConsumeMonthlyQuota, FREE_MONTHLY_DOC_LIMIT } from '../utils/monthlyUsageLimit';
 
 interface ScanModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScanComplete: (pdfBytes: Uint8Array, fileName: string) => void;
+  isProActive?: boolean;
+  onRequirePro?: (msg?: string) => void;
 }
 
 interface ScannedPage {
@@ -554,6 +557,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   isOpen,
   onClose,
   onScanComplete,
+  isProActive = false,
+  onRequirePro,
 }) => {
   // Step state: 'camera' (viewfinder) | 'edit' (post-snap crop & exposure) | 'summary' (pages tray & export)
   const [currentStep, setCurrentStep] = useState<'camera' | 'edit' | 'summary'>('camera');
@@ -1251,8 +1256,20 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   // Export Images as JPG or PNG with user-friendly naming & Save to Phone vs Share / Cloud Drive
   const handleDownloadImages = async (format: 'jpg' | 'png') => {
     if (pages.length === 0) return;
-    const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
     const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
+
+    // Monthly 5-Document Limit check for free tier image export
+    const quota = checkAndConsumeMonthlyQuota(isProActive, 'scan_export', cleanBaseName);
+    if (!quota.allowed) {
+      if (onRequirePro) {
+        onRequirePro(`Monthly free limit reached (${FREE_MONTHLY_DOC_LIMIT} documents/month). Upgrade to Pro for unlimited exports!`);
+      } else {
+        alert(`Monthly free limit reached (${FREE_MONTHLY_DOC_LIMIT} documents/month). Upgrade to Pro for unlimited exports!`);
+      }
+      return;
+    }
+
+    const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
 
     const items: ExportItem[] = [];
     for (let idx = 0; idx < pages.length; idx++) {
@@ -1298,6 +1315,19 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   // Assemble Scanned PDF & Open Export Save Modal (Save to Phone or Cloud)
   const handleExportScannedPDF = async () => {
     if (pages.length === 0) return;
+    const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
+
+    // Monthly 5-Document Limit check for free tier PDF export
+    const quota = checkAndConsumeMonthlyQuota(isProActive, 'save', cleanBaseName);
+    if (!quota.allowed) {
+      if (onRequirePro) {
+        onRequirePro(`Monthly free limit reached (${FREE_MONTHLY_DOC_LIMIT} documents/month). Upgrade to Pro for unlimited exports!`);
+      } else {
+        alert(`Monthly free limit reached (${FREE_MONTHLY_DOC_LIMIT} documents/month). Upgrade to Pro for unlimited exports!`);
+      }
+      return;
+    }
+
     setIsAssembling(true);
 
     try {

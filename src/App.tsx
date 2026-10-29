@@ -32,6 +32,7 @@ import { CompressModal } from './components/CompressModal';
 import { ScanModal } from './components/ScanModal';
 const AppDownloadModal = React.lazy(() => import('./components/AppDownloadModal').then(m => ({ default: m.AppDownloadModal })));
 const ReviewModal = React.lazy(() => import('./components/ReviewModal').then(m => ({ default: m.ReviewModal })));
+const PrintPreviewModal = React.lazy(() => import('./components/PrintPreviewModal').then(m => ({ default: m.PrintPreviewModal })));
 import './types/electron.d';
 import {
   PDFDocumentState,
@@ -105,6 +106,8 @@ export const App: React.FC = () => {
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
   const [isAppDownloadModalOpen, setIsAppDownloadModalOpen] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isPrintPreviewModalOpen, setIsPrintPreviewModalOpen] = useState<boolean>(false);
+  const [printPreviewPdfBytes, setPrintPreviewPdfBytes] = useState<Uint8Array | null>(null);
   const [isMobileExportDialogOpen, setIsMobileExportDialogOpen] = useState<boolean>(false);
   const [mobileExportData, setMobileExportData] = useState<{
     fileName: string;
@@ -674,7 +677,7 @@ export const App: React.FC = () => {
   };
 
   const handleAddSignatureAtCoords = (sigData: Omit<SignatureAnnotation, 'id'>) => {
-    const quota = checkAndConsumeMonthlyQuota(isProActive, 'sign');
+    const quota = checkAndConsumeMonthlyQuota(isProActive, 'sign', docState.fileName || 'document.pdf');
     if (!quota.allowed) {
       setPendingSignatureDataUrl(null);
       setToolMode('select');
@@ -770,7 +773,7 @@ export const App: React.FC = () => {
   };
 
   const handleAddImageStamp = (imgData: Omit<ImageStampAnnotation, 'id'>) => {
-    const quota = checkAndConsumeMonthlyQuota(isProActive, 'image');
+    const quota = checkAndConsumeMonthlyQuota(isProActive, 'image', docState.fileName || 'document.pdf');
     if (!quota.allowed) {
       notifyMonthlyQuotaReached();
       return;
@@ -904,6 +907,11 @@ export const App: React.FC = () => {
 
   const handleExportPDF = useCallback(async () => {
     if (!docState.fileBytes) return;
+    const quota = checkAndConsumeMonthlyQuota(isProActive, 'export', docState.fileName || 'document.pdf');
+    if (!quota.allowed) {
+      notifyMonthlyQuotaReached();
+      return;
+    }
     setIsExporting(true);
     try {
       const { pdfEngine } = await import('./services/pdfEngine');
@@ -932,10 +940,15 @@ export const App: React.FC = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [docState]);
+  }, [docState, isProActive, notifyMonthlyQuotaReached]);
 
   const handleSavePDF = useCallback(async () => {
     if (!docState.fileBytes) return;
+    const quota = checkAndConsumeMonthlyQuota(isProActive, 'save', docState.fileName || 'document.pdf');
+    if (!quota.allowed) {
+      notifyMonthlyQuotaReached();
+      return;
+    }
     setIsSaving(true);
     try {
       const { pdfEngine } = await import('./services/pdfEngine');
@@ -961,7 +974,7 @@ export const App: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [docState]);
+  }, [docState, isProActive, notifyMonthlyQuotaReached]);
 
   const handlePrintPDF = useCallback(async () => {
     if (!docState.fileBytes) return;
@@ -969,12 +982,12 @@ export const App: React.FC = () => {
     try {
       const { pdfEngine } = await import('./services/pdfEngine');
       const modifiedPdfBytes = await pdfEngine.exportDocument(docState);
-      const blob = new Blob([new Uint8Array(modifiedPdfBytes)], { type: 'application/pdf' });
-      await printPdfBlob(blob);
+      setPrintPreviewPdfBytes(new Uint8Array(modifiedPdfBytes));
+      setIsPrintPreviewModalOpen(true);
     } catch (err) {
-      console.error('Print error:', err);
+      console.error('Print preview preparation error:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
-      alert(`Print failed: ${errMsg}`);
+      alert(`Print preview failed: ${errMsg}`);
     } finally {
       setIsPrinting(false);
     }
@@ -1037,6 +1050,41 @@ export const App: React.FC = () => {
     [loadPDFData]
   );
 
+  const handleToggleFullscreen = useCallback(() => {
+    if (window.electronAPI?.toggleFullscreen) {
+      window.electronAPI.toggleFullscreen();
+    } else {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+        setIsFullscreen(true);
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+        setIsFullscreen(false);
+      }
+    }
+  }, []);
+
+  // Global F11 & Escape key listener for fullscreen toggle/exit
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        handleToggleFullscreen();
+      } else if (e.key === 'Escape' && isFullscreen) {
+        if (window.electronAPI?.setFullscreen) {
+          window.electronAPI.setFullscreen(false);
+        } else if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {});
+          setIsFullscreen(false);
+        } else {
+          setIsFullscreen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isFullscreen, handleToggleFullscreen]);
+
   // Wire up Electron native menu events & system file association events
   useEffect(() => {
     if (!IS_ELECTRON || !window.electronAPI) return;
@@ -1045,6 +1093,10 @@ export const App: React.FC = () => {
     api.onLoadSample(() => handleLoadSample());
     api.onExportPDF(() => handleExportPDF());
     api.onOpenPdfPayload((payload) => handleOpenPayloadData(payload));
+    api.onSetFullscreenState?.((isFull: boolean) => setIsFullscreen(isFull));
+    api.isFullscreen?.().then((full) => {
+      if (typeof full === 'boolean') setIsFullscreen(full);
+    });
 
     api.requestPendingPdfPayload().then((payload) => {
       if (payload) handleOpenPayloadData(payload);
@@ -1055,6 +1107,7 @@ export const App: React.FC = () => {
       api.removeAllListeners('menu-load-sample');
       api.removeAllListeners('menu-export-pdf');
       api.removeAllListeners('open-pdf-payload');
+      api.removeAllListeners('set-fullscreen-state');
     };
   }, [handleExportPDF, handleOpenPayloadData]);
 
@@ -1100,6 +1153,8 @@ export const App: React.FC = () => {
           <ScanModal
             isOpen={isScanModalOpen}
             onClose={() => setIsScanModalOpen(false)}
+            isProActive={isProActive}
+            onRequirePro={notifyMonthlyQuotaReached}
             onScanComplete={(pdfBytes, fileName) => {
               loadPDFData(pdfBytes, fileName);
               setCurrentView('editor');
@@ -1310,7 +1365,7 @@ export const App: React.FC = () => {
           shapeStrokeWidth={shapeStrokeWidth}
           activeTheme={activeTheme}
           isFullscreen={isFullscreen}
-          onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+          onToggleFullscreen={handleToggleFullscreen}
         />
       </div>
 
@@ -1490,10 +1545,23 @@ export const App: React.FC = () => {
         fileName={docState.fileName}
       />
 
+      {/* Print Preview & Setup Modal */}
+      {isPrintPreviewModalOpen && (
+        <PrintPreviewModal
+          isOpen={isPrintPreviewModalOpen}
+          onClose={() => setIsPrintPreviewModalOpen(false)}
+          pdfBytes={printPreviewPdfBytes}
+          fileName={docState.fileName || 'document.pdf'}
+          totalDocPages={docState.numPages}
+        />
+      )}
+
       {/* Document Camera Scanner Modal */}
       <ScanModal
         isOpen={isScanModalOpen}
         onClose={() => setIsScanModalOpen(false)}
+        isProActive={isProActive}
+        onRequirePro={notifyMonthlyQuotaReached}
         onScanComplete={(pdfBytes, fileName) => {
           loadPDFData(pdfBytes, fileName);
           setCurrentView('editor');

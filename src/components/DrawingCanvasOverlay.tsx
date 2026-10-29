@@ -35,6 +35,29 @@ interface DrawingCanvasOverlayProps {
   onOpenSignatureModal?: (tab?: 'draw' | 'type' | 'upload') => void;
 }
 
+// Build silky-smooth quadratic Bézier SVG curve path from discrete sampled points
+function buildSmoothSvgPath(points: { x: number; y: number }[], scaleX: number, scaleY: number): string {
+  if (!points || points.length === 0) return '';
+  if (points.length === 1) {
+    const p = points[0];
+    return `M ${p.x * scaleX} ${p.y * scaleY} L ${(p.x + 0.1) * scaleX} ${(p.y + 0.1) * scaleY}`;
+  }
+  if (points.length === 2) {
+    return `M ${points[0].x * scaleX} ${points[0].y * scaleY} L ${points[1].x * scaleX} ${points[1].y * scaleY}`;
+  }
+  let path = `M ${points[0].x * scaleX} ${points[0].y * scaleY}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const pCurr = points[i];
+    const pNext = points[i + 1];
+    const midX = ((pCurr.x + pNext.x) / 2) * scaleX;
+    const midY = ((pCurr.y + pNext.y) / 2) * scaleY;
+    path += ` Q ${pCurr.x * scaleX} ${pCurr.y * scaleY}, ${midX} ${midY}`;
+  }
+  const last = points[points.length - 1];
+  path += ` L ${last.x * scaleX} ${last.y * scaleY}`;
+  return path;
+}
+
 export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   pageIndex,
   canvasWidth,
@@ -455,11 +478,11 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       >
         {/* Existing Finished Drawings */}
         {pageDrawings.map((drawing) => {
-          const dPath = drawing.points
-            .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`)
-            .join(' ');
           const isHighlighterOpacity = drawing.opacity < 1.0;
           const isHighlightBox = drawing.opacity <= 0.38 && drawing.points.length === 2 && drawing.points[0].y === drawing.points[1].y;
+          const dPath = isHighlightBox
+            ? `M ${drawing.points[0].x * scaleX} ${drawing.points[0].y * scaleY} L ${drawing.points[1].x * scaleX} ${drawing.points[1].y * scaleY}`
+            : buildSmoothSvgPath(drawing.points, scaleX, scaleY);
 
           return (
             <path
@@ -531,7 +554,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
             })()
           ) : (
             <path
-              d={currentPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * scaleX} ${p.y * scaleY}`).join(' ')}
+              d={buildSmoothSvgPath(currentPoints, scaleX, scaleY)}
               stroke={toolMode === 'eraser' ? eraserColor : toolMode === 'highlight' ? highlightColor : drawColor}
               strokeWidth={(toolMode === 'eraser' ? eraserThickness : toolMode === 'highlight' ? highlightThickness : thickness) * scaleY}
               strokeOpacity={toolMode === 'highlight' ? 0.45 : 1.0}

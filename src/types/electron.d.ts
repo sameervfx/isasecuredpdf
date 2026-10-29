@@ -12,6 +12,11 @@ interface ElectronAPI {
   onExportPDF: (callback: () => void) => void;
   onOpenPdfPayload: (callback: (payload: PdfPayload) => void) => void;
   requestPendingPdfPayload: () => Promise<PdfPayload | null>;
+  toggleFullscreen?: () => Promise<boolean>;
+  setFullscreen?: (flag: boolean) => Promise<boolean>;
+  isFullscreen?: () => Promise<boolean>;
+  onSetFullscreenState?: (callback: (isFull: boolean) => void) => void;
+  openPdfInSystemViewer?: (base64Data: string, fileName?: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
   removeAllListeners: (channel: string) => void;
   isElectron: boolean;
 }
