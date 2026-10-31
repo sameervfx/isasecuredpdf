@@ -409,6 +409,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </button>
         </div>
 
+        {/* Social Proof Milestone: 20 5-Star Reviews */}
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-xs font-semibold text-slate-300">
+          <div className="flex items-center space-x-1.5 text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full shadow-sm">
+            <div className="flex space-x-0.5">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              ))}
+            </div>
+            <span className="font-extrabold text-amber-300 ml-1">5.0 / 5.0</span>
+          </div>
+          <span className="text-slate-200 font-bold">20 Verified 5-Star Reviews</span>
+          <span className="text-slate-600 hidden sm:inline">•</span>
+          <span className="text-emerald-400 font-medium">100% Five-Star Consensus on Google Play</span>
+        </div>
 
         {/* Hero Interactive Drag-and-Drop Dropzone Mockup */}
         <div className="mt-14 relative max-w-4xl mx-auto">

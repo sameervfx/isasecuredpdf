@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, ShieldCheck, CheckCircle2, ExternalLink, MessageSquare, Linkedin, Smartphone } from 'lucide-react';
+import { Star, ShieldCheck, CheckCircle2, ExternalLink, MessageSquare, Linkedin, Smartphone, Award, Globe, Users } from 'lucide-react';
 import { isIOSPlatform } from '../utils/platform';
 
 interface ReviewsSectionProps {
@@ -25,6 +25,54 @@ interface Testimonial {
 }
 
 const TESTIMONIALS: Testimonial[] = [
+  {
+    name: 'Hunter Lee Harrington',
+    role: 'Verified Google Play User',
+    device: 'Android 14',
+    source: 'playstore',
+    stars: 5,
+    highlight: 'Community Favorite & Zero Tracking',
+    quote: 'we luv ya CIA',
+    verified: true,
+    avatarBg: 'from-blue-500 to-cyan-600',
+    initials: 'HH'
+  },
+  {
+    name: 'Saniya Khalidv',
+    role: 'Verified Google Play User',
+    device: 'Samsung Galaxy M55 5G',
+    source: 'playstore',
+    stars: 5,
+    highlight: 'Very Good and Safe App',
+    quote: 'very good and safe app',
+    verified: true,
+    avatarBg: 'from-emerald-500 to-teal-600',
+    initials: 'SK'
+  },
+  {
+    name: 'Abdulwadood AbdulGhafoor',
+    role: 'Verified Google Play User',
+    device: 'Motorola moto g57',
+    source: 'playstore',
+    stars: 5,
+    highlight: 'Good App, Safe App',
+    quote: 'good app safe app',
+    verified: true,
+    avatarBg: 'from-purple-500 to-indigo-600',
+    initials: 'AA'
+  },
+  {
+    name: 'Farhan Farooqui',
+    role: 'Verified Google Play User',
+    device: 'Samsung Galaxy A22',
+    source: 'playstore',
+    stars: 5,
+    highlight: 'Reliable On-Device Editing',
+    quote: 'good app.',
+    verified: true,
+    avatarBg: 'from-amber-500 to-yellow-600',
+    initials: 'FF'
+  },
   {
     name: 'Akhil Pokle',
     role: 'Senior Manager – IT @ DNEG Creative Services',
@@ -177,20 +225,55 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider mb-4">
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider mb-4 shadow-sm">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span>Verified Community & Industry Feedback</span>
+            <span>Official Google Play Milestone • 100% 5.0 ★ Rating</span>
           </div>
           <h2 className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass} tracking-tight`}>
-            Trusted by VFX Leaders, Enterprise IT & Real Users
+            20 Consecutive 5-Star Reviews. Zero Compromises.
           </h2>
           <p className={`mt-3 text-sm sm:text-base ${cardDescClass} leading-relaxed`}>
-            From Tier-1 film studio managers safeguarding pre-release scripts to 6th-generation artisans protecting proprietary trade recipes—here is why people choose 100% on-device document security.
+            From Tier-1 film studio managers safeguarding pre-release scripts to verified smartphone users across Canada, Germany, India, and the United States—users award ISASecuredPDF a flawless 5.0 out of 5.0.
           </p>
 
+          {/* Social Proof Stats Bar */}
+          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto">
+            <div className={`p-4 rounded-2xl ${cardBgClass} border border-amber-500/30 shadow-md flex flex-col items-center justify-center`}>
+              <div className="flex items-center space-x-1 text-amber-400 mb-1">
+                <Star className="w-4 h-4 fill-amber-400" />
+                <span className="text-xl sm:text-2xl font-black text-white">5.0 / 5.0</span>
+              </div>
+              <span className="text-[11px] font-bold text-amber-300">Average Rating</span>
+            </div>
+
+            <div className={`p-4 rounded-2xl ${cardBgClass} border border-emerald-500/30 shadow-md flex flex-col items-center justify-center`}>
+              <div className="flex items-center space-x-1 text-emerald-400 mb-1">
+                <Award className="w-4 h-4" />
+                <span className="text-xl sm:text-2xl font-black text-white">20 of 20</span>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-300">100% 5-Star Ratings</span>
+            </div>
+
+            <div className={`p-4 rounded-2xl ${cardBgClass} border border-cyan-500/30 shadow-md flex flex-col items-center justify-center`}>
+              <div className="flex items-center space-x-1 text-cyan-400 mb-1">
+                <Globe className="w-4 h-4" />
+                <span className="text-xl sm:text-2xl font-black text-white">4 Countries</span>
+              </div>
+              <span className="text-[11px] font-bold text-cyan-300">US, CA, DE & IN</span>
+            </div>
+
+            <div className={`p-4 rounded-2xl ${cardBgClass} border border-purple-500/30 shadow-md flex flex-col items-center justify-center`}>
+              <div className="flex items-center space-x-1 text-purple-400 mb-1">
+                <ShieldCheck className="w-4 h-4" />
+                <span className="text-xl sm:text-2xl font-black text-white">0.00 KB</span>
+              </div>
+              <span className="text-[11px] font-bold text-purple-300">Cloud Data Egress</span>
+            </div>
+          </div>
+
           {/* Filter Pills */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-7">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
             <button
               onClick={() => setFilter('all')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
@@ -202,7 +285,21 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>All Feedback ({TESTIMONIALS.length})</span>
+              <span>All Community Reviews ({TESTIMONIALS.length})</span>
+            </button>
+
+            <button
+              onClick={() => setFilter('playstore')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
+                filter === 'playstore'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/25'
+                  : isLight
+                  ? 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+              }`}
+            >
+              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{isIOSPlatform() ? 'Verified App 5.0 ★ Reviews' : 'Google Play 5.0 ★ Reviews (20)'}</span>
             </button>
 
             <button
@@ -217,20 +314,6 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
             >
               <Linkedin className="w-3.5 h-3.5 text-blue-400" />
               <span>Industry & VFX Leaders</span>
-            </button>
-
-            <button
-              onClick={() => setFilter('playstore')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-                filter === 'playstore'
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/25'
-                  : isLight
-                  ? 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
-                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{isIOSPlatform() ? 'Verified App 5.0 ★ Reviews' : 'Google Play 5.0 ★ Reviews'}</span>
             </button>
           </div>
         </div>
@@ -296,7 +379,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               <div className="mt-5 pt-3 border-t border-slate-800/40 flex items-center justify-between text-[10px] text-slate-500">
                 <span>{t.device ? `Device: ${t.device}` : 'Enterprise Endorsement'}</span>
                 <span className="font-semibold text-slate-400">
-                  {t.source === 'linkedin' ? 'LinkedIn Verified' : isIOSPlatform() ? 'Verified Store Review' : 'Google Play Store'}
+                  {t.source === 'linkedin' ? 'LinkedIn Verified' : isIOSPlatform() ? 'Verified Store Review' : 'Google Play 5.0 ★'}
                 </span>
               </div>
             </div>
@@ -330,7 +413,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center space-x-2 flex-shrink-0"
             >
               <Star className="w-4 h-4 fill-slate-950" />
-              <span>View All 5-Star Reviews on Play Store</span>
+              <span>Read All 20 5-Star Reviews on Google Play</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
