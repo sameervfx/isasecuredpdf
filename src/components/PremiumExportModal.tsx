@@ -19,6 +19,9 @@ import { createZipBundle, ZipFileEntry } from '../utils/zipBuilder';
 import { downloadFile } from '../utils/mobileFileDownload';
 import { ExportSaveModal } from './ExportSaveModal';
 import { checkAndConsumeMonthlyQuota, FREE_MONTHLY_DOC_LIMIT } from '../utils/monthlyUsageLimit';
+import { convertPdfToDocxBlob } from '../utils/pdfToDocx';
+import { convertPdfToPptxBlob } from '../utils/pdfToPptx';
+import { convertPdfToExcelBlob } from '../utils/pdfToExcel';
 
 export type ExportFormatType = 'docx' | 'xlsx' | 'jpg' | 'png' | 'tiff' | 'pptx';
 
@@ -137,8 +140,47 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
           setIsExportSaveModalOpen(true);
           return;
         }
+      } else if (selectedFormat === 'docx') {
+        // High-Fidelity Local Word (.docx) Engine via OpenXML
+        const compiledPdfBytes = await pdfEngine.exportDocument(state);
+        const compiledPdfjsDoc = await pdfRenderer.loadDocument(compiledPdfBytes);
+        const blob = await convertPdfToDocxBlob(compiledPdfjsDoc, (p) => setProgress(p));
+        const convertedName = `${fileNameWithoutExt}_Converted.docx`;
+        const blobType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+        setProgress(100);
+        setExportBlob(blob);
+        setExportName(convertedName);
+        setExportMime(blobType);
+        setIsExportSaveModalOpen(true);
+      } else if (selectedFormat === 'pptx') {
+        // High-Fidelity Local PowerPoint (.pptx) Engine
+        const compiledPdfBytes = await pdfEngine.exportDocument(state);
+        const compiledPdfjsDoc = await pdfRenderer.loadDocument(compiledPdfBytes);
+        const blob = await convertPdfToPptxBlob(compiledPdfjsDoc, (p) => setProgress(p));
+        const convertedName = `${fileNameWithoutExt}_Converted.pptx`;
+        const blobType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+
+        setProgress(100);
+        setExportBlob(blob);
+        setExportName(convertedName);
+        setExportMime(blobType);
+        setIsExportSaveModalOpen(true);
+      } else if (selectedFormat === 'xlsx') {
+        // High-Fidelity Local Excel (.xlsx) Engine via SheetJS
+        const compiledPdfBytes = await pdfEngine.exportDocument(state);
+        const compiledPdfjsDoc = await pdfRenderer.loadDocument(compiledPdfBytes);
+        const blob = await convertPdfToExcelBlob(compiledPdfjsDoc, (p) => setProgress(p));
+        const convertedName = `${fileNameWithoutExt}_Converted.xlsx`;
+        const blobType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+        setProgress(100);
+        setExportBlob(blob);
+        setExportName(convertedName);
+        setExportMime(blobType);
+        setIsExportSaveModalOpen(true);
       } else {
-        // Document formats (Word .docx, Excel .xlsx, PowerPoint .pptx)
+        // Other document formats (Excel .xlsx)
         let contentStr = `# ${state.fileName}\nExported via ISA Secure PDF Suite Premium Conversion\n\n`;
 
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
@@ -159,8 +201,6 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
 
         if (selectedFormat === 'xlsx') {
           blobType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        } else if (selectedFormat === 'pptx') {
-          blobType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
         }
 
         const blob = new Blob([contentStr], { type: blobType });
