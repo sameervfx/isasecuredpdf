@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { ThemePreset, ThemeConfig } from '../utils/themeManager';
 import { SUPPORTED_CURRENCIES, detectUserCurrency } from '../utils/currencyFormatter';
-import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform } from '../utils/platform';
+import { isIOSPlatform, isNativeMobileApp, isAndroidPlatform, isNativeStoreApp } from '../utils/platform';
 import { handleNativePurchase, restoreNativePurchases, PLAY_PRODUCT_IDS, subscribeToPriceUpdates, initPlayStore, PlanType } from '../utils/playBilling';
 
 import appLogo from '../assets/app_logo.jpg';
@@ -817,19 +817,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             ** Subject to Terms of Service** (terms, usage limits, and pricing may be updated at any time). Lifetime License includes all future core application updates and standard software maintenance; optional premium add-on services or external cloud APIs may be offered separately.
           </p>
 
-          {/* Subscription Policy Terms Disclosure Footer */}
-          <div className="mt-8 p-4 bg-slate-900/80 border border-slate-800 rounded-2xl text-xs text-slate-400 max-w-4xl mx-auto text-center space-y-1">
-            <p className="font-bold text-slate-200">
-              📋 Subscriptions & Billing Policy Notice:
-            </p>
-            <p className="leading-relaxed">
-              {isIOSPlatform() ? (
-                <>Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via your Apple ID Account Settings. Pricing and currency are dynamically provided by Apple StoreKit and confirmed prior to purchase.</>
-              ) : (
-                <>Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via Google Play Account Settings. Local pricing and currency are dynamically provided by Google Play and confirmed prior to purchase.</>
-              )}
-            </p>
-          </div>
+          {/* Subscription Policy Terms Disclosure Footer (Only in native Google Play / App Store apps, hidden on website) */}
+          {isNativeStoreApp() && (
+            <div className="mt-8 p-4 bg-slate-900/80 border border-slate-800 rounded-2xl text-xs text-slate-400 max-w-4xl mx-auto text-center space-y-1">
+              <p className="font-bold text-slate-200">
+                📋 Subscriptions & Billing Policy Notice:
+              </p>
+              <p className="leading-relaxed">
+                {isIOSPlatform() ? (
+                  <>Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via your Apple ID Account Settings. Pricing and currency are dynamically provided by Apple StoreKit and confirmed prior to purchase.</>
+                ) : (
+                  <>Subscriptions automatically renew at the end of each billing cycle unless canceled at least 24 hours prior to renewal. You can manage or cancel your subscription anytime via Google Play Account Settings. Local pricing and currency are dynamically provided by Google Play and confirmed prior to purchase.</>
+                )}
+              </p>
+            </div>
+          )}
 
         </div>
       </section>

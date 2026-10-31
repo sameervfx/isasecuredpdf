@@ -60,3 +60,12 @@ export const isIOSPlatform = (): boolean => {
   return isIOSUA;
 };
 
+
+/**
+ * Returns true strictly if running inside a native mobile app container (Google Play or Apple App Store).
+ * Returns false on standard websites and web browsers.
+ */
+export const isNativeStoreApp = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return Capacitor.isNativePlatform();
+};
