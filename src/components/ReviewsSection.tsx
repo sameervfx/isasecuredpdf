@@ -231,7 +231,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
             <span>Official Google Play Milestone • 100% 5.0 ★ Rating</span>
           </div>
           <h2 className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass} tracking-tight`}>
-            20 Consecutive 5-Star Reviews. Zero Compromises.
+            100% Five-Star Reviews. Zero Compromises.
           </h2>
           <p className={`mt-3 text-sm sm:text-base ${cardDescClass} leading-relaxed`}>
             From Tier-1 film studio managers safeguarding pre-release scripts to verified smartphone users across Canada, Germany, India, and the United States—users award ISASecuredPDF a flawless 5.0 out of 5.0.
@@ -299,7 +299,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               }`}
             >
               <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{isIOSPlatform() ? 'Verified App 5.0 ★ Reviews' : 'Google Play 5.0 ★ Reviews (20)'}</span>
+              <span>{isIOSPlatform() ? 'Verified App 5.0 ★ Reviews' : 'Google Play 5.0 ★ Reviews'}</span>
             </button>
 
             <button
@@ -413,7 +413,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center space-x-2 flex-shrink-0"
             >
               <Star className="w-4 h-4 fill-slate-950" />
-              <span>Read All 20 5-Star Reviews on Google Play</span>
+              <span>Read All 5-Star Reviews on Google Play</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}

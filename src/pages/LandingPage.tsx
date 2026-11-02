@@ -419,7 +419,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <span className="font-extrabold text-amber-300 ml-1">5.0 / 5.0</span>
           </div>
-          <span className="text-slate-200 font-bold">20 Verified 5-Star Reviews</span>
+          <span className="text-slate-200 font-bold">Verified 5-Star Reviews</span>
           <span className="text-slate-600 hidden sm:inline">•</span>
           <span className="text-emerald-400 font-medium">100% Five-Star Consensus on Google Play</span>
         </div>
