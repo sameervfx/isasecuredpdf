@@ -3,7 +3,7 @@ import {
   X, Camera, RefreshCw, Trash2, Check, Download, Image as ImageIcon, Sparkles, Sliders, 
   ShieldCheck, ArrowRight, RotateCw, QrCode, Smartphone, Crop, Scissors, Wand2, Maximize2, 
   RotateCcw, FileText, Eye, Sun, Contrast as ContrastIcon, SlidersHorizontal, Plus, ArrowLeft,
-  Timer, Focus, Crosshair, CheckCircle2, Save
+  Timer, Focus, Crosshair, CheckCircle2, Save, Eraser, Hand
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { applyStandardMetadata } from '../utils/pdfMetadata';
@@ -33,6 +33,8 @@ interface ScannedPage {
   cropTop: number;
   cropBottom: number;
   corners?: { tl: Point; tr: Point; br: Point; bl: Point };
+  removeShadow?: boolean;
+  removeFingers?: boolean;
 }
 
 interface Point {
@@ -723,6 +725,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
   // Post-snap Edit Controls (Crop, Exposure, Mid-Tone, Filter)
   const [editSubTab, setEditSubTab] = useState<'crop' | 'tone' | 'filter'>('crop');
+  const [removeShadow, setRemoveShadow] = useState<boolean>(false);
+  const [removeFingers, setRemoveFingers] = useState<boolean>(false);
   const [selectedFilter, setSelectedFilter] = useState<'flatten' | 'bw' | 'color' | 'grayscale' | 'none'>('none');
   const [brightness, setBrightness] = useState<number>(0);
   const [contrast, setContrast] = useState<number>(0);
@@ -881,10 +885,10 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       canvas.width = flattenedCanvas.width;
       canvas.height = flattenedCanvas.height;
       ctx.drawImage(flattenedCanvas, 0, 0);
-      applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, selectedFilter, brightness, contrast, midTone);
+      applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, selectedFilter, brightness, contrast, midTone, removeShadow, removeFingers);
     };
     img.src = page.originalDataUrl;
-  }, [currentStep, editSubTab, cropLeft, cropRight, cropTop, cropBottom, corners, activePageIndex, pages, brightness, contrast, midTone, selectedFilter, showOriginalComparison]);
+  }, [currentStep, editSubTab, cropLeft, cropRight, cropTop, cropBottom, corners, activePageIndex, pages, brightness, contrast, midTone, selectedFilter, showOriginalComparison, removeShadow, removeFingers]);
 
   const handleReceivedRemoteScan = (rawDataUrl: string) => {
     const newPage: ScannedPage = {
@@ -1028,7 +1032,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     }
   };
 
-  // Filter & Tone Processing Engine
+  // Filter, Shadow, Finger & Tone Processing Engine
   const applyFilterAndToneToCanvas = (
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -1036,10 +1040,86 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     filter: 'flatten' | 'bw' | 'color' | 'grayscale' | 'none',
     bVal: number,
     cVal: number,
-    mVal: number
+    mVal: number,
+    optRemoveShadow?: boolean,
+    optRemoveFingers?: boolean
   ) => {
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
+
+    // 0. Auto Shadow Removal (Illumination Equalization)
+    if (optRemoveShadow) {
+      try {
+        const blurCanvas = document.createElement('canvas');
+        blurCanvas.width = width;
+        blurCanvas.height = height;
+        const blurCtx = blurCanvas.getContext('2d');
+        if (blurCtx && ctx.canvas) {
+          const radius = Math.max(12, Math.round(Math.min(width, height) / 30));
+          blurCtx.filter = `blur(${radius}px)`;
+          blurCtx.drawImage(ctx.canvas, 0, 0);
+          const blurData = blurCtx.getImageData(0, 0, width, height).data;
+
+          let maxBg = 190;
+          for (let i = 0; i < blurData.length; i += 4 * 16) {
+            const lum = 0.299 * blurData[i] + 0.587 * blurData[i + 1] + 0.114 * blurData[i + 2];
+            if (lum > maxBg) maxBg = lum;
+          }
+          maxBg = Math.min(245, maxBg);
+
+          for (let i = 0; i < data.length; i += 4) {
+            const bLum = 0.299 * blurData[i] + 0.587 * blurData[i + 1] + 0.114 * blurData[i + 2];
+            if (bLum < maxBg - 10) {
+              const lift = Math.min(1.75, maxBg / Math.max(50, bLum));
+              data[i] = Math.min(255, Math.round(data[i] * lift));
+              data[i + 1] = Math.min(255, Math.round(data[i + 1] * lift));
+              data[i + 2] = Math.min(255, Math.round(data[i + 2] * lift));
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 0.5. Auto Finger Removal (Perimeter Skin Inpainting)
+    if (optRemoveFingers) {
+      const marginX = Math.round(width * 0.12);
+      const marginY = Math.round(height * 0.12);
+
+      let paperR = 245, paperG = 245, paperB = 240;
+      let pCount = 0;
+      for (let y = marginY + 5; y < Math.min(height - marginY, marginY + 45); y += 4) {
+        for (let x = marginX + 5; x < Math.min(width - marginX, marginX + 45); x += 4) {
+          const idx = (y * width + x) * 4;
+          paperR += data[idx];
+          paperG += data[idx + 1];
+          paperB += data[idx + 2];
+          pCount++;
+        }
+      }
+      if (pCount > 0) {
+        paperR = Math.round(paperR / pCount);
+        paperG = Math.round(paperG / pCount);
+        paperB = Math.round(paperB / pCount);
+      }
+
+      for (let y = 0; y < height; y++) {
+        const isPerimeterY = y < marginY || y > height - marginY;
+        for (let x = 0; x < width; x++) {
+          const isPerimeterX = x < marginX || x > width - marginX;
+          if (isPerimeterX || isPerimeterY) {
+            const idx = (y * width + x) * 4;
+            const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+            const sum = r + g + b + 0.001;
+            const nr = r / sum, ng = g / sum;
+            if (r > 70 && g > 30 && b > 15 && (r - g) > 10 && (r - b) > 12 && nr > 0.36 && nr < 0.60 && ng > 0.25 && ng < 0.40) {
+              data[idx] = paperR;
+              data[idx + 1] = paperG;
+              data[idx + 2] = paperB;
+            }
+          }
+        }
+      }
+    }
 
     if (filter === 'flatten' || filter === 'bw') {
       let blurData: Uint8ClampedArray | null = null;
@@ -1160,6 +1240,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const openEditStepForPage = (page: ScannedPage, index: number) => {
     setActivePageIndex(index);
     setSelectedFilter(page.filter || 'none');
+    setRemoveShadow(page.removeShadow || false);
+    setRemoveFingers(page.removeFingers || false);
     setBrightness(page.brightness || 0);
     setContrast(page.contrast || 0);
     setMidTone(page.midTone || 0);
@@ -1304,7 +1386,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       const flattenedCanvas = warpAndFlattenQuadrilateral(img, corners);
       const flatCtx = flattenedCanvas.getContext('2d', { willReadFrequently: true });
       if (flatCtx) {
-        applyFilterAndToneToCanvas(flatCtx, flattenedCanvas.width, flattenedCanvas.height, selectedFilter, brightness, contrast, midTone);
+        applyFilterAndToneToCanvas(flatCtx, flattenedCanvas.width, flattenedCanvas.height, selectedFilter, brightness, contrast, midTone, removeShadow, removeFingers);
       }
       const editedDataUrl = flattenedCanvas.toDataURL('image/png');
 
@@ -1315,6 +1397,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                 ...p,
                 dataUrl: editedDataUrl,
                 filter: selectedFilter,
+                removeShadow,
+                removeFingers,
                 brightness,
                 contrast,
                 midTone,
@@ -1933,51 +2017,51 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
           {/* Bottom Edit Controls Toolbar & Sub-tabs */}
           <div className="p-4 pb-[max(2rem,env(safe-area-inset-bottom)+1.5rem)] bg-slate-900 border-t border-slate-800 space-y-3">
-            {/* Mobile-Optimized Equal 3-Column Tab Grid */}
+            {/* Balanced Equal 3-Column Tab Grid with Uniform Height & Typography */}
             <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-2xl border border-slate-800/80 w-full shadow-inner">
               <button
                 onClick={() => setEditSubTab('crop')}
-                className={`py-2.5 px-2 text-[11px] sm:text-xs font-black rounded-xl transition flex items-center justify-center space-x-1.5 ${
+                className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
                   editSubTab === 'crop'
                     ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
-                <span className="truncate">Crop & Trim</span>
+                <Scissors className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Crop, Trim & Erase</span>
               </button>
 
               <button
                 onClick={() => setEditSubTab('tone')}
-                className={`py-2.5 px-2 text-[11px] sm:text-xs font-black rounded-xl transition flex items-center justify-center space-x-1.5 ${
+                className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
                   editSubTab === 'tone'
                     ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
-                <span className="truncate">Tone & Light</span>
+                <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Brightness & Contrast</span>
               </button>
 
               <button
                 onClick={() => setEditSubTab('filter')}
-                className={`py-2.5 px-2 text-[11px] sm:text-xs font-black rounded-xl transition flex items-center justify-center space-x-1.5 ${
+                className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
                   editSubTab === 'filter'
                     ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
-                <span className="truncate">Filters</span>
+                <Wand2 className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Filters</span>
               </button>
             </div>
 
             {/* Hold to Compare Strip */}
             <div className="flex items-center justify-between px-1">
               <span className="text-[11px] font-bold text-slate-400">
-                {editSubTab === 'crop' && 'Drag corner handles or margin sliders:'}
-                {editSubTab === 'tone' && 'Adjust Brightness, Contrast & Mid-Tone:'}
-                {editSubTab === 'filter' && 'Select document enhancement filter:'}
+                {editSubTab === 'crop' && 'Trim & Smart Erase:'}
+                {editSubTab === 'tone' && 'Adjust Brightness & Contrast:'}
+                {editSubTab === 'filter' && 'Select Document Filter:'}
               </span>
               <button
                 onMouseDown={() => setShowOriginalComparison(true)}
@@ -1994,6 +2078,44 @@ export const ScanModal: React.FC<ScanModalProps> = ({
             {/* Sub-tab 1: Perspective Crop & Margin Sliders Controls */}
             {editSubTab === 'crop' && (
               <div className="space-y-3 pt-1">
+                {/* Smart Page Cleanup: Shadow & Finger Removal */}
+                <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-cyan-300 flex items-center space-x-1">
+                      <Eraser className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Smart Page Cleanup:</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">100% On-Device</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRemoveShadow((prev) => !prev)}
+                      className={`px-2.5 py-2 rounded-lg border text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 ${
+                        removeShadow
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 ring-1 ring-amber-400/40'
+                          : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80'
+                      }`}
+                    >
+                      <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="truncate">{removeShadow ? '✓ Shadow Removed' : 'Remove Shadow'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRemoveFingers((prev) => !prev)}
+                      className={`px-2.5 py-2 rounded-lg border text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 ${
+                        removeFingers
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 ring-1 ring-cyan-400/40'
+                          : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80'
+                      }`}
+                    >
+                      <Hand className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="truncate">{removeFingers ? '✓ Fingers Removed' : 'Remove Fingers'}</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-cyan-300 flex items-center space-x-1">
                     <Crop className="w-3.5 h-3.5 text-cyan-400" />
@@ -2176,7 +2298,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                   className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/25 flex items-center justify-center space-x-2 transition transform active:scale-98 border border-cyan-400/30 mt-2"
                 >
                   <Check className="w-4 h-4 text-cyan-200" />
-                  <span>Confirm Crop & Move to Tone & Light ➔</span>
+                  <span>Confirm Crop & Move to Brightness & Contrast ➔</span>
                 </button>
               </div>
             )}
