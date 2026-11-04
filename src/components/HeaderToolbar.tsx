@@ -63,7 +63,7 @@ import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
 import { getRecentFiles, clearRecentFiles, RecentFileItem } from '../utils/recentFiles';
 import { ExportFormatType } from './PremiumExportModal';
-import { isIOSPlatform } from '../utils/platform';
+import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
 import appLogo from '../assets/app_logo.png';
 
 interface HeaderToolbarProps {
@@ -793,7 +793,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               </button>
 
               {/* Text Formatting Options Dropdown Popover */}
-              {isTextDropdownOpen && popoverPos.name === 'text' && createPortal(
+              {!isNativeMobileApp() && isTextDropdownOpen && popoverPos.name === 'text' && createPortal(
                 <div
                   data-popover="true"
                   style={{

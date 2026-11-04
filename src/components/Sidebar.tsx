@@ -12,6 +12,7 @@ import {
   FileCheck
 } from 'lucide-react';
 import { PDFDocumentState } from '../types/pdf';
+import { isNativeMobileApp } from '../utils/platform';
 
 interface SidebarProps {
   state: PDFDocumentState;
@@ -38,15 +39,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Mobile Floating Page Count Badge when sidebar is closed (pushed down to clear top toolbar) */}
+      {/* Mobile Page Count Badge when sidebar is closed (Sleek edge tab for App, floating pill for Web) */}
       {!isOpen && (
         <button
           onClick={onToggleSidebar}
-          className="md:hidden fixed left-2.5 top-[148px] z-40 bg-slate-900/70 text-cyan-300 border border-cyan-500/40 rounded-full px-3 py-1.5 shadow-2xl backdrop-blur-md flex items-center space-x-1.5 text-xs font-bold ring-1 ring-cyan-500/30 transition hover:scale-105 active:scale-95"
+          className={
+            isNativeMobileApp()
+              ? "fixed left-0 top-[40%] -translate-y-1/2 z-40 bg-slate-900/95 text-cyan-300 border-y border-r border-cyan-500/50 rounded-r-2xl pl-1.5 pr-2 py-2.5 shadow-2xl backdrop-blur-md flex flex-col items-center justify-center space-y-1 text-xs font-bold ring-1 ring-cyan-500/30 transition active:scale-95 group"
+              : "md:hidden fixed left-2.5 top-[148px] z-40 bg-slate-900/70 text-cyan-300 border border-cyan-500/40 rounded-full px-3 py-1.5 shadow-2xl backdrop-blur-md flex items-center space-x-1.5 text-xs font-bold ring-1 ring-cyan-500/30 transition hover:scale-105 active:scale-95"
+          }
           title="Open Pages & Combined PDF Thumbnails Panel"
         >
-          <Layers className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Pages ({activePageIndices.length})</span>
+          <Layers className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+          <span className="text-[10px] font-black text-cyan-200">
+            {isNativeMobileApp() ? activePageIndices.length : `Pages (${activePageIndices.length})`}
+          </span>
+          {isNativeMobileApp() && <ChevronRight className="w-3 h-3 text-cyan-400/70" />}
         </button>
       )}
 

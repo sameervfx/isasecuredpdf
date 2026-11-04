@@ -243,6 +243,140 @@ function autoDetectDocumentCorners(
   }
 }
 
+
+/**
+ * Mathematically exact 4-point projective homography perspective unwarping.
+ * Transforms an arbitrary perspective quadrilateral (e.g. document photographed on a table)
+ * into a straight, upright, flat rectangular document image like CamScanner.
+ */
+function warpAndFlattenQuadrilateral(
+  sourceImg: HTMLImageElement,
+  corners: { tl: Point; tr: Point; br: Point; bl: Point }
+): HTMLCanvasElement {
+  const origW = sourceImg.naturalWidth || sourceImg.width;
+  const origH = sourceImg.naturalHeight || sourceImg.height;
+
+  // 1. Source quad coordinates in absolute image pixels
+  const p0 = { x: (corners.tl.x / 100) * origW, y: (corners.tl.y / 100) * origH }; // Top-Left
+  const p1 = { x: (corners.tr.x / 100) * origW, y: (corners.tr.y / 100) * origH }; // Top-Right
+  const p2 = { x: (corners.br.x / 100) * origW, y: (corners.br.y / 100) * origH }; // Bottom-Right
+  const p3 = { x: (corners.bl.x / 100) * origW, y: (corners.bl.y / 100) * origH }; // Bottom-Left
+
+  // 2. Compute target rectangular dimensions based on Euclidean edge lengths
+  const wTop = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+  const wBot = Math.hypot(p2.x - p3.x, p2.y - p3.y);
+  const targetW = Math.max(50, Math.min(4000, Math.round(Math.max(wTop, wBot))));
+
+  const hLeft = Math.hypot(p3.x - p0.x, p3.y - p0.y);
+  const hRight = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+  const targetH = Math.max(50, Math.min(4000, Math.round(Math.max(hLeft, hRight))));
+
+  // 3. Read source image pixels onto a canvas
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = origW;
+  srcCanvas.height = origH;
+  const srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+  if (!srcCtx) {
+    const fallbackCanvas = document.createElement('canvas');
+    fallbackCanvas.width = targetW;
+    fallbackCanvas.height = targetH;
+    return fallbackCanvas;
+  }
+  srcCtx.drawImage(sourceImg, 0, 0);
+  const srcImgData = srcCtx.getImageData(0, 0, origW, origH);
+  const srcData = srcImgData.data;
+
+  // 4. Create target destination canvas
+  const dstCanvas = document.createElement('canvas');
+  dstCanvas.width = targetW;
+  dstCanvas.height = targetH;
+  const dstCtx = dstCanvas.getContext('2d', { willReadFrequently: true });
+  if (!dstCtx) return dstCanvas;
+
+  const dstImgData = dstCtx.createImageData(targetW, targetH);
+  const dstData = dstImgData.data;
+
+  // 5. Solve 3x3 projective homography matrix mapping unit square [0,1]x[0,1] to source quad
+  const dx1 = p1.x - p2.x;
+  const dx2 = p3.x - p2.x;
+  const sx = p0.x - p1.x + p2.x - p3.x;
+
+  const dy1 = p1.y - p2.y;
+  const dy2 = p3.y - p2.y;
+  const sy = p0.y - p1.y + p2.y - p3.y;
+
+  const det = dx1 * dy2 - dy1 * dx2;
+  const a31 = Math.abs(det) > 1e-7 ? (sx * dy2 - sy * dx2) / det : 0;
+  const a32 = Math.abs(det) > 1e-7 ? (dx1 * sy - dy1 * sx) / det : 0;
+
+  const a11 = p1.x - p0.x + a31 * p1.x;
+  const a12 = p3.x - p0.x + a32 * p3.x;
+  const a13 = p0.x;
+
+  const a21 = p1.y - p0.y + a31 * p1.y;
+  const a22 = p3.y - p0.y + a32 * p3.y;
+  const a23 = p0.y;
+
+  const invW = 1 / targetW;
+  const invH = 1 / targetH;
+
+  // 6. Fast backward projective mapping with bilinear interpolation
+  let dstIdx = 0;
+  for (let y = 0; y < targetH; y++) {
+    const v = y * invH;
+    const a32_v_1 = a32 * v + 1;
+    const a12_v_a13 = a12 * v + a13;
+    const a22_v_a23 = a22 * v + a23;
+
+    for (let x = 0; x < targetW; x++) {
+      const u = x * invW;
+      const d = a31 * u + a32_v_1;
+      const invD = Math.abs(d) > 1e-7 ? 1 / d : 1;
+      const sx_val = (a11 * u + a12_v_a13) * invD;
+      const sy_val = (a21 * u + a22_v_a23) * invD;
+
+      const x0 = Math.floor(sx_val);
+      const y0 = Math.floor(sy_val);
+
+      if (x0 >= 0 && x0 < origW - 1 && y0 >= 0 && y0 < origH - 1) {
+        const fx = sx_val - x0;
+        const fy = sy_val - y0;
+        const fx1 = 1 - fx;
+        const fy1 = 1 - fy;
+        const w00 = fx1 * fy1;
+        const w10 = fx * fy1;
+        const w01 = fx1 * fy;
+        const w11 = fx * fy;
+
+        const idx00 = (y0 * origW + x0) << 2;
+        const idx10 = idx00 + 4;
+        const idx01 = idx00 + (origW << 2);
+        const idx11 = idx01 + 4;
+
+        dstData[dstIdx]     = (srcData[idx00] * w00 + srcData[idx10] * w10 + srcData[idx01] * w01 + srcData[idx11] * w11) | 0;
+        dstData[dstIdx + 1] = (srcData[idx00 + 1] * w00 + srcData[idx10 + 1] * w10 + srcData[idx01 + 1] * w01 + srcData[idx11 + 1] * w11) | 0;
+        dstData[dstIdx + 2] = (srcData[idx00 + 2] * w00 + srcData[idx10 + 2] * w10 + srcData[idx01 + 2] * w01 + srcData[idx11 + 2] * w11) | 0;
+        dstData[dstIdx + 3] = 255;
+      } else if (x0 >= 0 && x0 < origW && y0 >= 0 && y0 < origH) {
+        const idx = (y0 * origW + x0) << 2;
+        dstData[dstIdx]     = srcData[idx];
+        dstData[dstIdx + 1] = srcData[idx + 1];
+        dstData[dstIdx + 2] = srcData[idx + 2];
+        dstData[dstIdx + 3] = 255;
+      } else {
+        dstData[dstIdx]     = 255;
+        dstData[dstIdx + 1] = 255;
+        dstData[dstIdx + 2] = 255;
+        dstData[dstIdx + 3] = 255;
+      }
+      dstIdx += 4;
+    }
+  }
+
+  dstCtx.putImageData(dstImgData, 0, 0);
+  return dstCanvas;
+}
+
 const VirtualEdgeViewer: React.FC<{
   imageUrl: string;
   activeEdge: 'top' | 'bottom' | 'left' | 'right';
@@ -742,19 +876,15 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         return;
       }
 
-      const cropX = Math.floor((cropLeft / 100) * img.width);
-      const cropY = Math.floor((cropTop / 100) * img.height);
-      const cropW = Math.max(50, Math.floor(img.width * (1 - (cropLeft + cropRight) / 100)));
-      const cropH = Math.max(50, Math.floor(img.height * (1 - (cropTop + cropBottom) / 100)));
-
-      canvas.width = cropW;
-      canvas.height = cropH;
-
-      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-      applyFilterAndToneToCanvas(ctx, cropW, cropH, selectedFilter, brightness, contrast, midTone);
+      // Live CamScanner un-warped & flattened preview
+      const flattenedCanvas = warpAndFlattenQuadrilateral(img, corners);
+      canvas.width = flattenedCanvas.width;
+      canvas.height = flattenedCanvas.height;
+      ctx.drawImage(flattenedCanvas, 0, 0);
+      applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, selectedFilter, brightness, contrast, midTone);
     };
     img.src = page.originalDataUrl;
-  }, [currentStep, editSubTab, cropLeft, cropRight, cropTop, cropBottom, activePageIndex, pages, brightness, contrast, midTone, selectedFilter, showOriginalComparison]);
+  }, [currentStep, editSubTab, cropLeft, cropRight, cropTop, cropBottom, corners, activePageIndex, pages, brightness, contrast, midTone, selectedFilter, showOriginalComparison]);
 
   const handleReceivedRemoteScan = (rawDataUrl: string) => {
     const newPage: ScannedPage = {
@@ -911,52 +1041,77 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
 
-    if (filter === 'flatten') {
-      const sampleStep = 8;
-      let bgLumSum = 0;
-      let count = 0;
-
-      for (let i = 0; i < data.length; i += 4 * sampleStep) {
-        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        if (lum > 130) {
-          bgLumSum += lum;
-          count++;
+    if (filter === 'flatten' || filter === 'bw') {
+      let blurData: Uint8ClampedArray | null = null;
+      try {
+        const blurCanvas = document.createElement('canvas');
+        blurCanvas.width = width;
+        blurCanvas.height = height;
+        const blurCtx = blurCanvas.getContext('2d');
+        if (blurCtx && ctx.canvas) {
+          const radius = Math.max(12, Math.round(Math.min(width, height) / 35));
+          blurCtx.filter = `blur(${radius}px)`;
+          blurCtx.drawImage(ctx.canvas, 0, 0);
+          blurData = blurCtx.getImageData(0, 0, width, height).data;
         }
+      } catch (e) {
+        blurData = null;
       }
-      const avgBg = count > 0 ? bgLumSum / count : 220;
 
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (blurData) {
+        if (filter === 'bw') {
+          for (let i = 0; i < data.length; i += 4) {
+            const origLum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            const blurLum = 0.299 * blurData[i] + 0.587 * blurData[i + 1] + 0.114 * blurData[i + 2];
+            const diff = origLum - blurLum;
 
-        if (lum > avgBg - 40) {
-          data[i] = 255;
-          data[i + 1] = 255;
-          data[i + 2] = 255;
+            let val: number;
+            if (diff >= -2) {
+              val = 255;
+            } else {
+              val = Math.max(0, Math.min(255, Math.round(255 + diff * 2.8)));
+            }
+            data[i] = val;
+            data[i + 1] = val;
+            data[i + 2] = val;
+          }
         } else {
-          data[i] = Math.max(0, Math.floor(r * 0.85));
-          data[i + 1] = Math.max(0, Math.floor(g * 0.85));
-          data[i + 2] = Math.max(0, Math.floor(b * 0.85));
+          // filter === 'flatten': Whiten background, remove wrinkles while preserving ink hue & legibility
+          for (let i = 0; i < data.length; i += 4) {
+            const origLum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            const blurLum = 0.299 * blurData[i] + 0.587 * blurData[i + 1] + 0.114 * blurData[i + 2];
+            const diff = origLum - blurLum;
+
+            if (diff >= -3) {
+              data[i] = 255;
+              data[i + 1] = 255;
+              data[i + 2] = 255;
+            } else {
+              const bgVal = Math.max(50, blurLum);
+              const normFactor = 255 / bgVal;
+              const contrast = diff < -20 ? 0.75 : 0.88;
+
+              data[i] = Math.max(0, Math.min(255, Math.floor(data[i] * normFactor * contrast)));
+              data[i + 1] = Math.max(0, Math.min(255, Math.floor(data[i + 1] * normFactor * contrast)));
+              data[i + 2] = Math.max(0, Math.min(255, Math.floor(data[i + 2] * normFactor * contrast)));
+            }
+          }
         }
-      }
-    } else if (filter === 'bw') {
-      for (let i = 0; i < data.length; i += 4) {
-        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        if (lum > 140) {
-          data[i] = 255;
-          data[i + 1] = 255;
-          data[i + 2] = 255;
-        } else if (lum < 90) {
-          data[i] = 0;
-          data[i + 1] = 0;
-          data[i + 2] = 0;
-        } else {
-          const v = Math.floor((lum - 90) * (255 / 50));
-          data[i] = v;
-          data[i + 1] = v;
-          data[i + 2] = v;
+      } else {
+        // Fallback if offscreen blur unavailable: smooth tone curve without harsh hard clipping
+        for (let i = 0; i < data.length; i += 4) {
+          const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          if (filter === 'bw') {
+            const val = Math.max(0, Math.min(255, Math.round(Math.pow(lum / 255, 1.3) * 270 - 15)));
+            data[i] = val;
+            data[i + 1] = val;
+            data[i + 2] = val;
+          } else {
+            const boost = lum > 200 ? 255 : Math.min(255, Math.round(data[i] * 1.15));
+            data[i] = boost;
+            data[i + 1] = Math.min(255, Math.round(data[i + 1] * 1.15));
+            data[i + 2] = Math.min(255, Math.round(data[i + 2] * 1.15));
+          }
         }
       }
     } else if (filter === 'grayscale') {
@@ -1145,21 +1300,13 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return;
-
-      const cropX = Math.floor((cropLeft / 100) * img.width);
-      const cropY = Math.floor((cropTop / 100) * img.height);
-      const cropW = Math.max(50, Math.floor(img.width * (1 - (cropLeft + cropRight) / 100)));
-      const cropH = Math.max(50, Math.floor(img.height * (1 - (cropTop + cropBottom) / 100)));
-
-      canvas.width = cropW;
-      canvas.height = cropH;
-
-      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-      applyFilterAndToneToCanvas(ctx, cropW, cropH, selectedFilter, brightness, contrast, midTone);
-      const editedDataUrl = canvas.toDataURL('image/png');
+      // CamScanner-style 4-point perspective un-warping & flattening
+      const flattenedCanvas = warpAndFlattenQuadrilateral(img, corners);
+      const flatCtx = flattenedCanvas.getContext('2d', { willReadFrequently: true });
+      if (flatCtx) {
+        applyFilterAndToneToCanvas(flatCtx, flattenedCanvas.width, flattenedCanvas.height, selectedFilter, brightness, contrast, midTone);
+      }
+      const editedDataUrl = flattenedCanvas.toDataURL('image/png');
 
       setPages((prev) =>
         prev.map((p, idx) =>

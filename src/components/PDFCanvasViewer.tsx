@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { pdfRenderer } from '../services/pdfRenderer';
+import { isNativeMobileApp } from '../utils/platform';
 import { PDFDocumentState, ToolMode, TextAnnotation, SignatureAnnotation, StampAnnotation, StrikeoutAnnotation, FreehandDrawing } from '../types/pdf';
 import { AcroFormOverlay } from './AcroFormOverlay';
 import { TextAnnotationEditor } from './TextAnnotationEditor';
@@ -60,6 +61,7 @@ interface PDFCanvasViewerProps {
   onDeleteImageStamp?: (id: string) => void;
   onFocusFormField?: (fieldName: string) => void;
   onFitToWidth?: () => void;
+  onSetToolMode?: (mode: ToolMode) => void;
   onOpenSignatureModal?: (tab?: 'draw' | 'type' | 'upload') => void;
   activeTheme?: any;
   isFullscreen?: boolean;
@@ -79,6 +81,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   zoom,
   onZoomChange,
   onFitToWidth,
+  onSetToolMode,
   toolMode,
   pendingSignatureDataUrl,
   onCloseDocument,
@@ -192,6 +195,16 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     }
     if (setTextFontSize) {
       setTextFontSize(clamped);
+    }
+  };
+
+  const currentTextFontFamily = activeTextAnn ? activeTextAnn.fontFamily : textFontFamily;
+  const handleApplyTextFontFamily = (family: string) => {
+    if (selectedTextAnnId) {
+      onUpdateAnnotation(selectedTextAnnId, { fontFamily: family });
+    }
+    if (setTextFontFamily) {
+      setTextFontFamily(family);
     }
   };
 
@@ -974,8 +987,8 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
   return (
     <div className="relative flex-1 h-full w-full overflow-hidden flex flex-col select-none">
-      {/* Floating Close Button: Anchored to page viewer, in line with viewer, strictly below HeaderToolbar */}
-      {onCloseDocument && (
+      {/* Floating Close Button: Anchored to page viewer, in line with viewer on desktop web */}
+      {onCloseDocument && !isNativeMobileApp() && (
         <div className="absolute top-3 sm:top-4 right-3 sm:right-6 z-40 pointer-events-auto">
           <button
             onClick={onCloseDocument}
@@ -1059,10 +1072,14 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         )}
       </div>
 
-      {/* Floating Secondary Tool Options Bar - Pinned Directly Under HeaderToolbar in Viewport */}
+      {/* Secondary Tool Options Bar - Docked at Top in Normal Flow on Mobile App, Floating on Web */}
       {(toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser' || toolMode === 'text') && (
         <div
-          className="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-auto max-w-[calc(100vw-16px)] sm:max-w-2xl bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl text-xs select-none animate-fadeIn overflow-x-auto scrollbar-none"
+          className={
+            isNativeMobileApp()
+              ? "relative w-full bg-slate-900/98 border-b border-cyan-500/20 z-30 shrink-0 px-2.5 py-1.5 flex items-center justify-start sm:justify-center gap-1.5 sm:gap-2 shadow-lg text-xs select-none overflow-x-auto scrollbar-none animate-fadeIn"
+              : "absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-auto max-w-[calc(100vw-16px)] sm:max-w-2xl bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-2xl px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-2xl text-xs select-none animate-fadeIn overflow-x-auto scrollbar-none"
+          }
           onClick={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         >
@@ -1258,11 +1275,26 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
 
           {toolMode === 'text' && (
             <>
-              {/* Label */}
+              {/* Label & Optional Mobile Font Selector */}
               <div className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 shrink-0">
                 <Type className="w-3.5 h-3.5" />
-                <span>Text</span>
+                <span className="hidden sm:inline">Text</span>
               </div>
+
+              {setTextFontFamily && (
+                <select
+                  value={currentTextFontFamily || "'Times New Roman', Times, serif"}
+                  onChange={(e) => handleApplyTextFontFamily(e.target.value)}
+                  className="bg-slate-950 text-slate-100 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-semibold hover:border-cyan-500 transition max-w-[80px] sm:max-w-[120px] truncate shrink-0"
+                >
+                  <option value="'Nunito', sans-serif">Nunito</option>
+                  <option value="'Times New Roman', Times, serif">Times</option>
+                  <option value="Arial, sans-serif">Arial</option>
+                  <option value="'Courier New', monospace">Courier</option>
+                  <option value="Georgia, serif">Georgia</option>
+                  <option value="Impact, sans-serif">Impact</option>
+                </select>
+              )}
 
               <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
 
@@ -1429,6 +1461,17 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
               )}
             </>
           )}
+          {/* Swift Tool Switch / Done Button (Desktop only, mobile uses tool icons) */}
+          <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0 hidden sm:block" />
+          <button
+            type="button"
+            onClick={() => onSetToolMode ? onSetToolMode('select') : null}
+            title="Done / Switch back to Select mode"
+            className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition shrink-0 hidden sm:flex items-center gap-1 active:scale-95"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span className="text-[10px] hidden sm:inline">Done</span>
+          </button>
         </div>
       )}
 
@@ -1588,6 +1631,18 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                 <div className="absolute left-2 sm:-left-14 top-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800/50 text-cyan-300/70 sm:text-slate-400/70 text-[10px] sm:text-[11px] font-mono font-bold px-2 py-0.5 sm:py-1 rounded-full sm:rounded shadow z-30 opacity-50">
                   P.{pageNum}
                 </div>
+
+                {/* Close document button: Anchored directly over the page on the top right, transparent like P.1 badge */}
+                {onCloseDocument && (
+                  <button
+                    type="button"
+                    onClick={onCloseDocument}
+                    className="absolute right-2 sm:-right-14 top-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800/50 text-slate-400/70 hover:text-rose-400 hover:border-rose-500/50 text-[10px] sm:text-[11px] p-1 sm:p-1.5 rounded-full shadow z-30 opacity-50 hover:opacity-100 transition active:scale-95 group"
+                    title="Close document"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             );
           })}

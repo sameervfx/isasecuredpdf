@@ -1314,6 +1314,7 @@ export const App: React.FC = () => {
         )}
 
         <PDFCanvasViewer
+          onSetToolMode={setToolMode}
           state={docState}
           currentPage={currentPage}
           onPageVisibleChange={setCurrentPage}
