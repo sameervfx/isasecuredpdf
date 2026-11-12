@@ -30,6 +30,114 @@ interface TextAnnotationEditorProps {
   setTextIsUnderline?: (underline: boolean) => void;
 }
 
+interface FontSizeControlProps {
+  fontSize: number;
+  onUpdate: (newSize: number) => void;
+  isNative: boolean;
+}
+
+const FontSizeControl: React.FC<FontSizeControlProps> = ({ fontSize, onUpdate, isNative }) => {
+  const [textVal, setTextVal] = useState<string>(String(fontSize));
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setTextVal(String(fontSize));
+    }
+  }, [fontSize, isEditing]);
+
+  const commitValue = (valStr: string) => {
+    const cleaned = valStr.trim().replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned);
+    if (!isNaN(num) && num >= 1 && num <= 500) {
+      const rounded = Math.round(num * 10) / 10;
+      setTextVal(String(rounded));
+      onUpdate(rounded);
+    } else {
+      setTextVal(String(fontSize));
+    }
+  };
+
+  const step = (delta: number) => {
+    let s = delta;
+    if (Math.abs(delta) === 1) {
+      if (fontSize >= 48) s = delta * 4;
+      else if (fontSize >= 24) s = delta * 2;
+    }
+    const target = Math.max(1, Math.min(500, Math.round((fontSize + s) * 10) / 10));
+    setTextVal(String(target));
+    onUpdate(target);
+  };
+
+  return (
+    <div className="flex items-center space-x-0.5 bg-slate-950 rounded-lg px-1.5 py-0.5 border border-slate-700 shrink-0">
+      <button
+        type="button"
+        onClick={() => step(-1)}
+        title="Decrease Font Size"
+        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-95"
+      >
+        <Minus className="w-3.5 h-3.5" />
+      </button>
+
+      <div className="flex items-center">
+        <input
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          value={isEditing ? textVal : String(fontSize)}
+          onFocus={(e) => {
+            setIsEditing(true);
+            setTextVal(String(fontSize));
+            e.target.select();
+          }}
+          onChange={(e) => {
+            const v = e.target.value;
+            setTextVal(v);
+            const num = parseFloat(v);
+            if (!isNaN(num) && num >= 1 && num <= 500 && !v.endsWith('.')) {
+              onUpdate(Math.round(num * 10) / 10);
+            }
+          }}
+          onBlur={() => {
+            setIsEditing(false);
+            commitValue(textVal);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              setIsEditing(false);
+              commitValue(textVal);
+              (e.target as HTMLInputElement).blur();
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              step(1);
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              step(-1);
+            }
+          }}
+          className={`${
+            isNative ? 'w-9 text-[11px] py-0.5' : 'w-11 text-[11px] py-0.5'
+          } bg-transparent font-black font-mono text-cyan-300 text-center outline-none border-none p-0 selection:bg-cyan-500/40`}
+          title="Type any font size (1 to 500 pt)"
+        />
+        <span className="text-[9px] font-mono text-slate-400 select-none pr-0.5">pt</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => step(1)}
+        title="Increase Font Size"
+        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-95"
+      >
+        <Plus className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+};
+
 export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   annotations,
   pageIndex,
@@ -351,12 +459,12 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         ctx.font = `${fontWeight || 'normal'} ${fontSize}px ${fontFamily || 'sans-serif'}`;
         const lines = text.split('\n');
         const maxW = Math.max(...lines.map((l) => ctx.measureText(l.replace(/ /g, '\u00A0')).width), 0);
-        return Math.round(maxW + 4);
+        return Math.round(maxW + 12);
       }
     } catch (e) {}
     const lines = text.split('\n');
     const maxChars = Math.max(...lines.map((l) => l.length), 1);
-    return Math.round(maxChars * fontSize * 0.55 + 4);
+    return Math.round(maxChars * fontSize * 0.55 + 12);
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -581,9 +689,9 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
           ann.fontWeight
         );
         // While actively editing, dynamic buffer allows real-time cursor travel and instant text expansion
-        const typingBuffer = isSelected ? 12 : 4;
+        const typingBuffer = isSelected ? 24 : 16;
         const effectiveWidth = Math.max((ann.width || 0) * scaleX, dynamicScreenW + typingBuffer);
-        const effectiveHeight = ann.height ? Math.max(ann.height * scaleY, renderedFontSize * 1.2) : undefined;
+        const effectiveHeight = Math.max((ann.height || 0) * scaleY, lineCount * renderedFontSize * 1.35 + 8);
         const tbOffset = toolbarOffsets[ann.id] || { x: 0, y: 4 };
 
         return (
@@ -631,7 +739,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                 );
                 onUpdateAnnotation(ann.id, {
                   text: newText,
-                  width: Math.max(16, measuredW + 4),
+                  width: Math.max(32, measuredW + 16),
                 });
               }}
               placeholder="Type text..."
@@ -644,9 +752,9 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                 color: ann.color || '#000000',
                 caretColor: ann.color || '#000000',
                 textDecoration: ann.isUnderline ? 'underline' : 'none',
-                lineHeight: '1.2',
-                padding: '0 2px',
-                paddingRight: isSelected ? '8px' : '4px',
+                lineHeight: '1.35',
+                padding: '4px 8px',
+                paddingRight: isSelected ? '14px' : '8px',
                 margin: '0',
                 letterSpacing: 'normal',
                 width: '100%',
@@ -679,7 +787,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                     isNative ? 'gap-0.5 px-1.5 py-0.5 rounded-lg' : 'gap-1 px-2 py-1 rounded-xl'
                   } bg-slate-900/95 backdrop-blur-md text-white shadow-2xl z-50 select-none border border-slate-700/80 whitespace-nowrap ring-1 ring-cyan-500/40 animate-fadeIn ${originClass} touch-manipulation`}
                   style={{
-                    transform: `translate(${tbOffset.x}px, ${tbOffset.y}px) ${isNative ? 'scale(0.68)' : ''}`,
+                    transform: `translate(${tbOffset.x}px, ${tbOffset.y}px) ${isNative ? 'scale(0.82)' : ''}`,
                   }}
                   onClick={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
@@ -703,55 +811,24 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
 
                   <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
 
-                  {/* Sub-Point Decimal Font Size Stepper (0.2pt precision) & Direct Numeric Input */}
-                  <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newSize = parseFloat(Math.max(4, ann.fontSize - 0.2).toFixed(1));
-                        onUpdateAnnotation(ann.id, { fontSize: newSize });
-                        if (setTextFontSize) setTextFontSize(newSize);
-                      }}
-                      title="Decrease Font Size (-0.2pt)"
-                      className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                    >
-                      <Minus className="w-3 h-3" />
-                    </button>
-
-                    <div className="flex items-center">
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="4"
-                        max="120"
-                        value={ann.fontSize}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          if (!isNaN(val) && val >= 4 && val <= 120) {
-                            const size = parseFloat(val.toFixed(2));
-                            onUpdateAnnotation(ann.id, { fontSize: size });
-                            if (setTextFontSize) setTextFontSize(size);
-                          }
-                        }}
-                        className={`${isNative ? 'w-7 text-[9px]' : 'w-9 text-[10px]'} bg-transparent font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-                        title="Direct Font Size (e.g. 13.2, 13.4, 9.75)"
-                      />
-                      <span className="text-[9px] font-mono text-slate-400 select-none">pt</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newSize = parseFloat(Math.min(120, ann.fontSize + 0.2).toFixed(1));
-                        onUpdateAnnotation(ann.id, { fontSize: newSize });
-                        if (setTextFontSize) setTextFontSize(newSize);
-                      }}
-                      title="Increase Font Size (+0.2pt)"
-                      className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </div>
+                  {/* Stepper & Direct Font Size Numeric Input (1pt - 500pt) */}
+                  <FontSizeControl
+                    fontSize={ann.fontSize}
+                    isNative={isNative}
+                    onUpdate={(newSize) => {
+                      const measuredW = measureTextWidth(
+                        ann.text,
+                        newSize,
+                        ann.fontFamily || textFontFamily,
+                        ann.fontWeight
+                      );
+                      onUpdateAnnotation(ann.id, {
+                        fontSize: newSize,
+                        width: Math.max(32, measuredW + 16),
+                      });
+                      if (setTextFontSize) setTextFontSize(newSize);
+                    }}
+                  />
 
                   {/* Bold Toggle Button */}
                   <button
