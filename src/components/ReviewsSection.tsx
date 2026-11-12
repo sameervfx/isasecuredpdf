@@ -239,34 +239,38 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
           {/* Social Proof Stats Bar */}
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto">
-            <div className={`p-4 rounded-2xl ${cardBgClass} border border-amber-500/30 shadow-md flex flex-col items-center justify-center`}>
-              <div className="flex items-center space-x-1 text-amber-400 mb-1">
-                <Star className="w-4 h-4 fill-amber-400" />
-                <span className="text-xl sm:text-2xl font-black text-white">5.0 / 5.0</span>
+            <div className={`p-4 rounded-2xl ${cardBgClass} border border-amber-500/30 shadow-md flex flex-col items-center justify-center text-center`}>
+              <div className="w-full flex items-center justify-center text-amber-400 mb-1.5">
+                <Star className="w-4 h-4 fill-amber-400 shrink-0 mr-1.5" />
+                <span className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">5.0 / 5.0</span>
+                <span className="w-4 h-4 shrink-0 ml-1.5 opacity-0 pointer-events-none select-none aria-hidden" aria-hidden="true" />
               </div>
               <span className="text-[11px] font-bold text-amber-300">Average Rating</span>
             </div>
 
-            <div className={`p-4 rounded-2xl ${cardBgClass} border border-emerald-500/30 shadow-md flex flex-col items-center justify-center`}>
-              <div className="flex items-center space-x-1 text-emerald-400 mb-1">
-                <Award className="w-4 h-4" />
-                <span className="text-xl sm:text-2xl font-black text-white">20 of 20</span>
+            <div className={`p-4 rounded-2xl ${cardBgClass} border border-emerald-500/30 shadow-md flex flex-col items-center justify-center text-center`}>
+              <div className="w-full flex items-center justify-center text-emerald-400 mb-1.5">
+                <Award className="w-4 h-4 shrink-0 mr-1.5" />
+                <span className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">20 of 20</span>
+                <span className="w-4 h-4 shrink-0 ml-1.5 opacity-0 pointer-events-none select-none aria-hidden" aria-hidden="true" />
               </div>
               <span className="text-[11px] font-bold text-emerald-300">100% 5-Star Ratings</span>
             </div>
 
-            <div className={`p-4 rounded-2xl ${cardBgClass} border border-cyan-500/30 shadow-md flex flex-col items-center justify-center`}>
-              <div className="flex items-center space-x-1 text-cyan-400 mb-1">
-                <Globe className="w-4 h-4" />
-                <span className="text-xl sm:text-2xl font-black text-white">4 Countries</span>
+            <div className={`p-4 rounded-2xl ${cardBgClass} border border-cyan-500/30 shadow-md flex flex-col items-center justify-center text-center`}>
+              <div className="w-full flex items-center justify-center text-cyan-400 mb-1.5">
+                <Globe className="w-4 h-4 shrink-0 mr-1.5" />
+                <span className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">Countries</span>
+                <span className="w-4 h-4 shrink-0 ml-1.5 opacity-0 pointer-events-none select-none aria-hidden" aria-hidden="true" />
               </div>
-              <span className="text-[11px] font-bold text-cyan-300">US, CA, DE & IN</span>
+              <span className="text-[11px] font-bold text-cyan-300">US, CA, Germany & IN</span>
             </div>
 
-            <div className={`p-4 rounded-2xl ${cardBgClass} border border-purple-500/30 shadow-md flex flex-col items-center justify-center`}>
-              <div className="flex items-center space-x-1 text-purple-400 mb-1">
-                <ShieldCheck className="w-4 h-4" />
-                <span className="text-xl sm:text-2xl font-black text-white">0.00 KB</span>
+            <div className={`p-4 rounded-2xl ${cardBgClass} border border-purple-500/30 shadow-md flex flex-col items-center justify-center text-center`}>
+              <div className="w-full flex items-center justify-center text-purple-400 mb-1.5">
+                <ShieldCheck className="w-4 h-4 shrink-0 mr-1.5" />
+                <span className="text-xl sm:text-2xl font-black text-white tracking-tight leading-none">0.00 KB</span>
+                <span className="w-4 h-4 shrink-0 ml-1.5 opacity-0 pointer-events-none select-none aria-hidden" aria-hidden="true" />
               </div>
               <span className="text-[11px] font-bold text-purple-300">Cloud Data Egress</span>
             </div>
