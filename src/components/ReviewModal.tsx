@@ -18,7 +18,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
   if (!isOpen) return null;
 
   const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.isasecuredpdf.app';
-  const APP_STORE_URL = 'https://apps.apple.com/app/isasecuredpdf/id6742323863?action=write-review';
+  const APP_STORE_URL = 'https://apps.apple.com/app/isasecuredpdf/id6808373104?action=write-review';
   const storeUrl = isIOSPlatform() ? APP_STORE_URL : PLAY_STORE_URL;
 
   const handleStarClick = (num: number) => {

@@ -31,13 +31,15 @@ jobs:
         run: |
           node -e "
           const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const version = pkg.version || '1.7.5';
           const pbx = 'ios/App/App.xcodeproj/project.pbxproj';
           let content = fs.readFileSync(pbx, 'utf8');
-          const runNum = Math.max(434, 267 + parseInt(process.env.GITHUB_RUN_NUMBER || '1')).toString();
+          const runNum = Math.max(450, 300 + parseInt(process.env.GITHUB_RUN_NUMBER || '1')).toString();
           content = content.replace(/CURRENT_PROJECT_VERSION = \d+/g, 'CURRENT_PROJECT_VERSION = ' + runNum);
-          content = content.replace(/MARKETING_VERSION = [0-9.]+/g, 'MARKETING_VERSION = 1.7.1');
+          content = content.replace(/MARKETING_VERSION = [0-9.]+/g, 'MARKETING_VERSION = ' + version);
           fs.writeFileSync(pbx, content);
-          console.log('Successfully set CURRENT_PROJECT_VERSION to ' + runNum + ' and MARKETING_VERSION to 1.7.1');
+          console.log('Successfully set CURRENT_PROJECT_VERSION to ' + runNum + ' and MARKETING_VERSION to ' + version);
           "
 
       - name: Import Apple Distribution Certificate

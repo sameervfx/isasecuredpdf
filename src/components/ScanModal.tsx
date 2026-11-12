@@ -3,7 +3,7 @@ import {
   X, Camera, RefreshCw, Trash2, Check, Download, Image as ImageIcon, Sparkles, Sliders, 
   ShieldCheck, ArrowRight, RotateCw, QrCode, Smartphone, Crop, Scissors, Wand2, Maximize2, 
   RotateCcw, FileText, Eye, Sun, Contrast as ContrastIcon, SlidersHorizontal, Plus, ArrowLeft,
-  Timer, Focus, Crosshair, CheckCircle2, Save, Eraser, Hand
+  Timer, Focus, Crosshair, CheckCircle2, Save, Eraser, Hand, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { PDFDocument } from 'pdf-lib';
 import { applyStandardMetadata } from '../utils/pdfMetadata';
@@ -267,11 +267,21 @@ function warpAndFlattenQuadrilateral(
   // 2. Compute target rectangular dimensions based on Euclidean edge lengths
   const wTop = Math.hypot(p1.x - p0.x, p1.y - p0.y);
   const wBot = Math.hypot(p2.x - p3.x, p2.y - p3.y);
-  const targetW = Math.max(50, Math.min(4000, Math.round(Math.max(wTop, wBot))));
+  const rawW = Math.max(50, Math.round(Math.max(wTop, wBot)));
 
   const hLeft = Math.hypot(p3.x - p0.x, p3.y - p0.y);
   const hRight = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-  const targetH = Math.max(50, Math.min(4000, Math.round(Math.max(hLeft, hRight))));
+  const rawH = Math.max(50, Math.round(Math.max(hLeft, hRight)));
+
+  // Fast, Butter-Smooth Flattening: Cap max dimension to 1600px for instant <50ms processing without jerkiness
+  const maxDim = 1600;
+  let targetW = rawW;
+  let targetH = rawH;
+  if (targetW > maxDim || targetH > maxDim) {
+    const scale = maxDim / Math.max(targetW, targetH);
+    targetW = Math.max(50, Math.round(targetW * scale));
+    targetH = Math.max(50, Math.round(targetH * scale));
+  }
 
   // 3. Read source image pixels onto a canvas
   const srcCanvas = document.createElement('canvas');
@@ -697,7 +707,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   onRequirePro,
 }) => {
   // Step state: 'camera' (viewfinder) | 'edit' (post-snap crop & exposure) | 'summary' (pages tray & export)
-  const [currentStep, setCurrentStep] = useState<'camera' | 'edit' | 'summary'>('camera');
+  const [currentStep, setCurrentStep] = useState<'camera' | 'crop' | 'edit' | 'summary'>('camera');
   const [activeTab, setActiveTab] = useState<'camera' | 'qr'>('camera');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
@@ -724,7 +734,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const [steadyCountdown, setSteadyCountdown] = useState<number | null>(null);
 
   // Post-snap Edit Controls (Crop, Exposure, Mid-Tone, Filter)
-  const [editSubTab, setEditSubTab] = useState<'crop' | 'tone' | 'filter'>('crop');
+  const [editSubTab, setEditSubTab] = useState<'tools' | 'tone' | 'filter'>('tools');
   const [removeShadow, setRemoveShadow] = useState<boolean>(false);
   const [removeFingers, setRemoveFingers] = useState<boolean>(false);
   const [selectedFilter, setSelectedFilter] = useState<'flatten' | 'bw' | 'color' | 'grayscale' | 'none'>('none');
@@ -757,6 +767,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const cropContainerRef = useRef<HTMLDivElement>(null);
   const liveEditCanvasRef = useRef<HTMLCanvasElement>(null);
   const viewfinderRef = useRef<HTMLDivElement>(null);
+  const isCameraStartingRef = useRef<boolean>(false);
+  const cameraRequestIdRef = useRef<number>(0);
 
   // QR Code URL & Remote Sync Setup
   useEffect(() => {
@@ -861,33 +873,45 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     setCropBottom(Math.round(100 - Math.max(corners.bl.y, corners.br.y)));
   }, [corners]);
 
-  // Live Real-Time Canvas Renderer for Post-Snap Edit Step
+  // Live Real-Time Canvas Renderer for Post-Snap Edit Step (Race-Condition Free)
   useEffect(() => {
+    let isCancelled = false;
     if (currentStep !== 'edit' || pages.length === 0 || activePageIndex >= pages.length) return;
     const page = pages[activePageIndex];
+    if (!page || !page.originalDataUrl) return;
 
     const img = new Image();
     img.onload = () => {
+      if (isCancelled) return;
       const canvas = liveEditCanvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
 
-      if (showOriginalComparison) {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        return;
-      }
+      try {
+        if (showOriginalComparison) {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          return;
+        }
 
-      // Live CamScanner un-warped & flattened preview
-      const flattenedCanvas = warpAndFlattenQuadrilateral(img, corners);
-      canvas.width = flattenedCanvas.width;
-      canvas.height = flattenedCanvas.height;
-      ctx.drawImage(flattenedCanvas, 0, 0);
-      applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, selectedFilter, brightness, contrast, midTone, removeShadow, removeFingers);
+        // Live CamScanner un-warped & flattened preview
+        const flattenedCanvas = warpAndFlattenQuadrilateral(img, corners);
+        if (isCancelled) return;
+        canvas.width = flattenedCanvas.width;
+        canvas.height = flattenedCanvas.height;
+        ctx.drawImage(flattenedCanvas, 0, 0);
+        applyFilterAndToneToCanvas(ctx, canvas.width, canvas.height, selectedFilter, brightness, contrast, midTone, removeShadow, removeFingers);
+      } catch (err) {
+        console.warn('Real-time canvas render error:', err);
+      }
     };
     img.src = page.originalDataUrl;
+
+    return () => {
+      isCancelled = true;
+    };
   }, [currentStep, editSubTab, cropLeft, cropRight, cropTop, cropBottom, corners, activePageIndex, pages, brightness, contrast, midTone, selectedFilter, showOriginalComparison, removeShadow, removeFingers]);
 
   const handleReceivedRemoteScan = (rawDataUrl: string) => {
@@ -902,13 +926,14 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       midTone: 0,
       cropLeft: 5,
       cropRight: 5,
-      cropTop: 15,
-      cropBottom: 15,
+      cropTop: 5,
+      cropBottom: 5,
+      corners: { ...DEFAULT_5PCT_CORNERS },
     };
 
     setPages((prev) => [...prev, newPage]);
     setActivePageIndex(pages.length);
-    openEditStepForPage(newPage, pages.length);
+    openCropStepForPage(newPage, pages.length);
   };
 
   useEffect(() => {
@@ -922,8 +947,39 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     };
   }, [isOpen, facingMode, activeTab, currentStep]);
 
+  // Auto-revive live camera stream when returning from native HD camera intent, minimize, or screen lock
+  useEffect(() => {
+    const handleResume = () => {
+      if (isOpen && activeTab === 'camera' && currentStep === 'camera') {
+        const v = videoRef.current;
+        const tracks = stream ? stream.getVideoTracks() : [];
+        const hasDeadTracks = tracks.length === 0 || tracks.some((t) => t.readyState === 'ended' || !t.enabled);
+        if (hasDeadTracks || !isCameraActive || (v && v.paused)) {
+          startCamera();
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleResume);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(handleResume, 300); // 300ms delay to let OS camera hardware release cleanly from native app
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleResume);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [isOpen, activeTab, currentStep, stream, isCameraActive]);
+
   const startCamera = async () => {
     setCameraError('');
+    if (isCameraStartingRef.current) return;
+    isCameraStartingRef.current = true;
+    const currentReqId = ++cameraRequestIdRef.current;
+
     try {
       if (stream) {
         stream.getTracks().forEach((t) => t.stop());
@@ -938,6 +994,12 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         } as any,
         audio: false,
       });
+
+      // If camera was stopped or another request was initiated while awaiting, discard stream immediately
+      if (cameraRequestIdRef.current !== currentReqId) {
+        mediaStream.getTracks().forEach((t) => t.stop());
+        return;
+      }
 
       // Apply continuous auto-focus track constraints if supported
       const videoTrack = mediaStream.getVideoTracks()[0];
@@ -962,20 +1024,26 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         videoRef.current.play().catch(() => {});
       }
     } catch (err: any) {
-      console.warn('Camera access error:', err);
-      setIsCameraActive(false);
-      const isHttp = window.location.protocol === 'http:' && window.location.hostname !== 'localhost';
-      if (isHttp) {
-        setCameraError(
-          'Mobile browsers restrict live camera on unencrypted HTTP IP. Tap "Snap Photo with Camera App" below!'
-        );
-      } else {
-        setCameraError('Live camera stream is unavailable. Tap "Snap Photo with Camera App" below!');
+      if (cameraRequestIdRef.current === currentReqId) {
+        console.warn('Camera access error:', err);
+        setIsCameraActive(false);
+        const isHttp = window.location.protocol === 'http:' && window.location.hostname !== 'localhost';
+        if (isHttp) {
+          setCameraError(
+            'Mobile browsers restrict live camera on unencrypted HTTP IP. Tap "Snap Photo with Camera App" below!'
+          );
+        } else {
+          setCameraError('Live camera stream is unavailable. Tap "Snap Photo with Camera App" below!');
+        }
       }
+    } finally {
+      isCameraStartingRef.current = false;
     }
   };
 
   const stopCamera = () => {
+    cameraRequestIdRef.current++; // Invalidate any in-flight request
+    isCameraStartingRef.current = false;
     if (stream) {
       stream.getTracks().forEach((t) => t.stop());
       setStream(null);
@@ -987,8 +1055,15 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
   };
 
-  // Interactive Tap to Focus Handler
+  // Interactive Tap to Focus Handler (with auto-unfreeze)
   const handleTapToFocus = async (e: React.MouseEvent<HTMLDivElement>) => {
+    const v = videoRef.current;
+    const tracks = stream ? stream.getVideoTracks() : [];
+    if (!isCameraActive || !stream || tracks.length === 0 || tracks.some((t) => t.readyState === 'ended') || (v && v.paused)) {
+      startCamera();
+      return;
+    }
+
     if (!viewfinderRef.current || !stream) return;
     const rect = viewfinderRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -1047,75 +1122,242 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
 
-    // 0. Auto Shadow Removal (Illumination Equalization)
-    if (optRemoveShadow) {
-      try {
-        const blurCanvas = document.createElement('canvas');
-        blurCanvas.width = width;
-        blurCanvas.height = height;
-        const blurCtx = blurCanvas.getContext('2d');
-        if (blurCtx && ctx.canvas) {
-          const radius = Math.max(12, Math.round(Math.min(width, height) / 30));
-          blurCtx.filter = `blur(${radius}px)`;
-          blurCtx.drawImage(ctx.canvas, 0, 0);
-          const blurData = blurCtx.getImageData(0, 0, width, height).data;
-
-          let maxBg = 190;
-          for (let i = 0; i < blurData.length; i += 4 * 16) {
-            const lum = 0.299 * blurData[i] + 0.587 * blurData[i + 1] + 0.114 * blurData[i + 2];
-            if (lum > maxBg) maxBg = lum;
+    // 0. Connected-Component Finger & Thumb Removal (Zero-Speckle, Ink-Safe)
+    if (optRemoveFingers) {
+      // 1. Sample representative paper background color from the interior
+      let paperR = 245, paperG = 242, paperB = 238;
+      let paperCount = 0;
+      for (let y = Math.round(height * 0.25); y < Math.round(height * 0.75); y += 6) {
+        for (let x = Math.round(width * 0.3); x < Math.round(width * 0.7); x += 6) {
+          const idx = (y * width + x) * 4;
+          const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          if (lum > 170) {
+            paperR += data[idx];
+            paperG += data[idx + 1];
+            paperB += data[idx + 2];
+            paperCount++;
           }
-          maxBg = Math.min(245, maxBg);
+        }
+      }
+      if (paperCount > 0) {
+        paperR = Math.round(paperR / paperCount);
+        paperG = Math.round(paperG / paperCount);
+        paperB = Math.round(paperB / paperCount);
+      }
 
-          for (let i = 0; i < data.length; i += 4) {
-            const bLum = 0.299 * blurData[i] + 0.587 * blurData[i + 1] + 0.114 * blurData[i + 2];
-            if (bLum < maxBg - 10) {
-              const lift = Math.min(1.75, maxBg / Math.max(50, bLum));
-              data[i] = Math.min(255, Math.round(data[i] * lift));
-              data[i + 1] = Math.min(255, Math.round(data[i + 1] * lift));
-              data[i + 2] = Math.min(255, Math.round(data[i + 2] * lift));
+      // 2. Identify candidate skin pixels strictly on side/bottom holding margins
+      // (Top 18% of document is 100% immune: headers, logos, test strips never modified)
+      const candidateMask = new Uint8Array(width * height);
+      const minY = Math.round(height * 0.18);
+      const maxY = Math.round(height * 0.95);
+
+      for (let y = minY; y < maxY; y++) {
+        for (let x = 0; x < width; x++) {
+          const isLeft = x < width * 0.22;
+          const isRight = x > width * 0.78;
+          const isBottom = y > height * 0.85;
+          if (!isLeft && !isRight && !isBottom) continue;
+
+          const idx = (y * width + x) * 4;
+          const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+          // STRICT INK SAFETY: Any printed text ink is NEVER considered skin!
+          if (lum < 90 || (r < 80 && g < 80 && b < 80)) continue;
+
+          // Precise skin discriminator:
+          const isSkin = (
+            (r > 115 && g > 55 && b > 35 && (r - g) > 30 && (r - b) > 42 && (r / (g + 0.1)) > 1.22) ||
+            (r > 175 && g > 115 && (r - g) > 24 && (r - b) > 40)
+          );
+
+          if (isSkin) {
+            candidateMask[y * width + x] = 1;
+          }
+        }
+      }
+
+      // 3. Connected-Component Flood Fill from outer border seeds
+      // A finger is a continuous blob connected to the perimeter. Isolated pixels are rejected!
+      const visited = new Uint8Array(width * height);
+      const fingerMask = new Uint8Array(width * height);
+      const queue = new Int32Array(width * height);
+
+      for (let y = minY; y < maxY; y++) {
+        // Left border seeds (x = 0 to 2)
+        for (let sx = 0; sx <= 2; sx++) {
+          const seedIdx = y * width + sx;
+          if (candidateMask[seedIdx] === 1 && visited[seedIdx] === 0) {
+            let qHead = 0, qTail = 0;
+            queue[qTail++] = seedIdx;
+            visited[seedIdx] = 1;
+            const blob: number[] = [];
+
+            while (qHead < qTail) {
+              const curr = queue[qHead++];
+              blob.push(curr);
+              const cy = Math.floor(curr / width);
+              const cx = curr % width;
+
+              const neighbors = [
+                cy > 0 ? (cy - 1) * width + cx : -1,
+                cy < height - 1 ? (cy + 1) * width + cx : -1,
+                cx > 0 ? cy * width + (cx - 1) : -1,
+                cx < width - 1 ? cy * width + (cx + 1) : -1
+              ];
+
+              for (const n of neighbors) {
+                if (n >= 0 && visited[n] === 0 && candidateMask[n] === 1) {
+                  visited[n] = 1;
+                  queue[qTail++] = n;
+                }
+              }
+            }
+
+            // Only retain substantial blobs (> 250 pixels). Eliminates 100% of noise speckles!
+            if (blob.length > 250) {
+              for (const p of blob) fingerMask[p] = 1;
             }
           }
         }
-      } catch (e) {}
+
+        // Right border seeds (x = width - 3 to width - 1)
+        for (let sx = width - 3; sx < width; sx++) {
+          const seedIdx = y * width + sx;
+          if (candidateMask[seedIdx] === 1 && visited[seedIdx] === 0) {
+            let qHead = 0, qTail = 0;
+            queue[qTail++] = seedIdx;
+            visited[seedIdx] = 1;
+            const blob: number[] = [];
+
+            while (qHead < qTail) {
+              const curr = queue[qHead++];
+              blob.push(curr);
+              const cy = Math.floor(curr / width);
+              const cx = curr % width;
+
+              const neighbors = [
+                cy > 0 ? (cy - 1) * width + cx : -1,
+                cy < height - 1 ? (cy + 1) * width + cx : -1,
+                cx > 0 ? cy * width + (cx - 1) : -1,
+                cx < width - 1 ? cy * width + (cx + 1) : -1
+              ];
+
+              for (const n of neighbors) {
+                if (n >= 0 && visited[n] === 0 && candidateMask[n] === 1) {
+                  visited[n] = 1;
+                  queue[qTail++] = n;
+                }
+              }
+            }
+
+            if (blob.length > 250) {
+              for (const p of blob) fingerMask[p] = 1;
+            }
+          }
+        }
+      }
+
+      // 4. Morphological Dilation (expand boundary by 4px so fingernails & finger shadows are fully covered)
+      const dilatedMask = new Uint8Array(width * height);
+      const radius = 4;
+      for (let y = radius; y < height - radius; y++) {
+        for (let x = radius; x < width - radius; x++) {
+          if (fingerMask[y * width + x] === 1) {
+            for (let dy = -radius; dy <= radius; dy++) {
+              for (let dx = -radius; dx <= radius; dx++) {
+                dilatedMask[(y + dy) * width + (x + dx)] = 1;
+              }
+            }
+          }
+        }
+      }
+
+      // 5. Inpainting with Clean Paper Tone
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const p = y * width + x;
+          if (dilatedMask[p] === 1) {
+            const idx = p * 4;
+            const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            // STRICT TEXT INK IMMUNITY: Never erase text ink
+            if (lum < 90) continue;
+
+            data[idx] = paperR;
+            data[idx + 1] = paperG;
+            data[idx + 2] = paperB;
+          }
+        }
+      }
     }
 
-    // 0.5. Auto Finger Removal (Perimeter Skin Inpainting)
-    if (optRemoveFingers) {
-      const marginX = Math.round(width * 0.12);
-      const marginY = Math.round(height * 0.12);
+    // 0.5. Robust Illumination Equalization (Shadow Removal with zero color separation/halos)
+    if (optRemoveShadow) {
+      const blockSize = Math.max(16, Math.round(Math.min(width, height) / 24));
+      const gridW = Math.ceil(width / blockSize);
+      const gridH = Math.ceil(height / blockSize);
+      const bgGrid = new Float32Array(gridW * gridH);
 
-      let paperR = 245, paperG = 245, paperB = 240;
-      let pCount = 0;
-      for (let y = marginY + 5; y < Math.min(height - marginY, marginY + 45); y += 4) {
-        for (let x = marginX + 5; x < Math.min(width - marginX, marginX + 45); x += 4) {
-          const idx = (y * width + x) * 4;
-          paperR += data[idx];
-          paperG += data[idx + 1];
-          paperB += data[idx + 2];
-          pCount++;
+      for (let gy = 0; gy < gridH; gy++) {
+        for (let gx = 0; gx < gridW; gx++) {
+          const startX = gx * blockSize;
+          const endX = Math.min(width, (gx + 1) * blockSize);
+          const startY = gy * blockSize;
+          const endY = Math.min(height, (gy + 1) * blockSize);
+
+          const lums: number[] = [];
+          for (let y = startY; y < endY; y += 2) {
+            for (let x = startX; x < endX; x += 2) {
+              const idx = (y * width + x) * 4;
+              const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+              lums.push(lum);
+            }
+          }
+          lums.sort((a, b) => a - b);
+          // 80th percentile captures paper illumination while ignoring dark text and black bars
+          const p80 = lums[Math.floor(lums.length * 0.80)] || 180;
+          bgGrid[gy * gridW + gx] = p80;
         }
       }
-      if (pCount > 0) {
-        paperR = Math.round(paperR / pCount);
-        paperG = Math.round(paperG / pCount);
-        paperB = Math.round(paperB / pCount);
+
+      let maxBg = 0;
+      for (let i = 0; i < bgGrid.length; i++) {
+        if (bgGrid[i] > maxBg) maxBg = bgGrid[i];
       }
+      const targetWhite = Math.min(252, Math.max(225, maxBg));
 
       for (let y = 0; y < height; y++) {
-        const isPerimeterY = y < marginY || y > height - marginY;
+        const gy = (y / blockSize) - 0.5;
+        const gy0 = Math.max(0, Math.min(gridH - 1, Math.floor(gy)));
+        const gy1 = Math.max(0, Math.min(gridH - 1, gy0 + 1));
+        const fy = Math.max(0, Math.min(1, gy - gy0));
+
         for (let x = 0; x < width; x++) {
-          const isPerimeterX = x < marginX || x > width - marginX;
-          if (isPerimeterX || isPerimeterY) {
-            const idx = (y * width + x) * 4;
-            const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-            const sum = r + g + b + 0.001;
-            const nr = r / sum, ng = g / sum;
-            if (r > 70 && g > 30 && b > 15 && (r - g) > 10 && (r - b) > 12 && nr > 0.36 && nr < 0.60 && ng > 0.25 && ng < 0.40) {
-              data[idx] = paperR;
-              data[idx + 1] = paperG;
-              data[idx + 2] = paperB;
-            }
+          const gx = (x / blockSize) - 0.5;
+          const gx0 = Math.max(0, Math.min(gridW - 1, Math.floor(gx)));
+          const gx1 = Math.max(0, Math.min(gridW - 1, gx0 + 1));
+          const fx = Math.max(0, Math.min(1, gx - gx0));
+
+          const top = bgGrid[gy0 * gridW + gx0] * (1 - fx) + bgGrid[gy0 * gridW + gx1] * fx;
+          const bot = bgGrid[gy1 * gridW + gx0] * (1 - fx) + bgGrid[gy1 * gridW + gx1] * fx;
+          const localBg = Math.max(65, top * (1 - fy) + bot * fy);
+
+          const idx = (y * width + x) * 4;
+          const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+          const gain = Math.min(2.5, targetWhite / localBg);
+
+          if (lum < 75) {
+            // Text ink stays deep black
+            data[idx] = Math.max(0, Math.min(255, Math.round(r * Math.min(gain, 1.05))));
+            data[idx + 1] = Math.max(0, Math.min(255, Math.round(g * Math.min(gain, 1.05))));
+            data[idx + 2] = Math.max(0, Math.min(255, Math.round(b * Math.min(gain, 1.05))));
+          } else {
+            // Smoothly level paper illumination to bright white
+            data[idx] = Math.max(0, Math.min(255, Math.round(r * gain)));
+            data[idx + 1] = Math.max(0, Math.min(255, Math.round(g * gain)));
+            data[idx + 2] = Math.max(0, Math.min(255, Math.round(b * gain)));
           }
         }
       }
@@ -1236,7 +1478,39 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     ctx.putImageData(imgData, 0, 0);
   };
 
-  // Open Edit Step for a Page
+  // Step 1: Open Crop & Boundary Alignment Step
+  const openCropStepForPage = (page: ScannedPage, index: number) => {
+    setActivePageIndex(index);
+    if (page.corners) {
+      setCorners(page.corners);
+    } else {
+      const cL = page.cropLeft !== undefined ? page.cropLeft : 5;
+      const cR = page.cropRight !== undefined ? page.cropRight : 5;
+      const cT = page.cropTop !== undefined ? page.cropTop : 5;
+      const cB = page.cropBottom !== undefined ? page.cropBottom : 5;
+      setCorners({
+        tl: { x: cL, y: cT },
+        tr: { x: 100 - cR, y: cT },
+        br: { x: 100 - cR, y: 100 - cB },
+        bl: { x: cL, y: 100 - cB },
+      });
+    }
+    setCurrentStep('crop');
+  };
+
+  // Step 1 -> Step 2: Apply Crop & Flatten, then proceed to Enhance Step
+  const applyCropAndProceed = () => {
+    if (pages.length === 0 || activePageIndex >= pages.length) return;
+    setPages((prev) =>
+      prev.map((p, idx) =>
+        idx === activePageIndex ? { ...p, corners } : p
+      )
+    );
+    setEditSubTab('tools');
+    setCurrentStep('edit');
+  };
+
+  // Step 2: Open Enhance & Edit Step for an existing Page
   const openEditStepForPage = (page: ScannedPage, index: number) => {
     setActivePageIndex(index);
     setSelectedFilter(page.filter || 'none');
@@ -1245,28 +1519,45 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     setBrightness(page.brightness || 0);
     setContrast(page.contrast || 0);
     setMidTone(page.midTone || 0);
-    setCropLeft(page.cropLeft !== undefined ? page.cropLeft : 5);
-    setCropRight(page.cropRight !== undefined ? page.cropRight : 5);
-    setCropTop(page.cropTop !== undefined ? page.cropTop : 5);
-    setCropBottom(page.cropBottom !== undefined ? page.cropBottom : 5);
-
     if (page.corners) {
       setCorners(page.corners);
-    } else {
-      const cL = page.cropLeft !== undefined ? page.cropLeft : 5;
-      const cR = page.cropRight !== undefined ? page.cropRight : 5;
-      const cT = page.cropTop !== undefined ? page.cropTop : 5;
-      const cB = page.cropBottom !== undefined ? page.cropBottom : 5;
-
-      setCorners({
-        tl: { x: cL, y: cT },
-        tr: { x: 100 - cR, y: cT },
-        br: { x: 100 - cR, y: 100 - cB },
-        bl: { x: cL, y: 100 - cB },
-      });
     }
-
+    setEditSubTab('tools');
     setCurrentStep('edit');
+  };
+
+  // Seamless Page Navigation during Crop or Edit step with auto-save
+  const navigateToPageInCurrentStep = (newIndex: number) => {
+    if (newIndex < 0 || newIndex >= pages.length || newIndex === activePageIndex) return;
+
+    // Persist current page adjustments before switching
+    setPages((prev) =>
+      prev.map((p, idx) =>
+        idx === activePageIndex
+          ? {
+              ...p,
+              corners,
+              filter: selectedFilter,
+              removeShadow,
+              brightness,
+              contrast,
+              midTone,
+            }
+          : p
+      )
+    );
+
+    const targetPage = pages[newIndex];
+    if (currentStep === 'crop') {
+      openCropStepForPage(targetPage, newIndex);
+    } else if (currentStep === 'edit') {
+      openEditStepForPage(targetPage, newIndex);
+    }
+  };
+
+  const handleLaunchNativeHdCamera = () => {
+    stopCamera();
+    cameraInputRef.current?.click();
   };
 
   // Snap Photo Handler -> Instantly Opens Post-Snap Edit View
@@ -1290,8 +1581,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     ctx.drawImage(video, 0, 0, w, h);
     const rawDataUrl = canvas.toDataURL('image/png', 1.0);
 
-    // Auto-detect document paper edges & corners
-    const detectedCorners = autoDetectDocumentCorners(canvas);
+    // Default to clean 5% uniform trim for easy, neat corner pickers
+    const initialCorners = { ...DEFAULT_5PCT_CORNERS };
 
     const newPage: ScannedPage = {
       id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -1302,11 +1593,11 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       brightness: 0,
       contrast: 0,
       midTone: 0,
-      cropLeft: Math.round(Math.min(detectedCorners.tl.x, detectedCorners.bl.x)),
-      cropRight: Math.round(100 - Math.max(detectedCorners.tr.x, detectedCorners.br.x)),
-      cropTop: Math.round(Math.min(detectedCorners.tl.y, detectedCorners.tr.y)),
-      cropBottom: Math.round(100 - Math.max(detectedCorners.bl.y, detectedCorners.br.y)),
-      corners: detectedCorners,
+      cropLeft: 5,
+      cropRight: 5,
+      cropTop: 5,
+      cropBottom: 5,
+      corners: initialCorners,
     };
 
     stopCamera();
@@ -1314,7 +1605,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       const updated = [...prev, newPage];
       const targetIndex = updated.length - 1;
       setTimeout(() => {
-        openEditStepForPage(newPage, targetIndex);
+        openCropStepForPage(newPage, targetIndex);
       }, 50);
       return updated;
     });
@@ -1336,7 +1627,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         if (rawDataUrl) {
           const img = new Image();
           img.onload = () => {
-            const detectedCorners = autoDetectDocumentCorners(img);
+            const initialCorners = { ...DEFAULT_5PCT_CORNERS };
             const newPage: ScannedPage = {
               id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${idx}`,
               dataUrl: rawDataUrl,
@@ -1346,11 +1637,11 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               brightness: 0,
               contrast: 0,
               midTone: 0,
-              cropLeft: Math.round(Math.min(detectedCorners.tl.x, detectedCorners.bl.x)),
-              cropRight: Math.round(100 - Math.max(detectedCorners.tr.x, detectedCorners.br.x)),
-              cropTop: Math.round(Math.min(detectedCorners.tl.y, detectedCorners.tr.y)),
-              cropBottom: Math.round(100 - Math.max(detectedCorners.bl.y, detectedCorners.br.y)),
-              corners: detectedCorners,
+              cropLeft: 5,
+              cropRight: 5,
+              cropTop: 5,
+              cropBottom: 5,
+              corners: initialCorners,
             };
             newPagesToAppend.push(newPage);
             processedCount++;
@@ -1360,7 +1651,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                 const firstNewIndex = prev.length;
                 const firstNewPage = newPagesToAppend[0];
                 setTimeout(() => {
-                  openEditStepForPage(firstNewPage, firstNewIndex);
+                  openCropStepForPage(firstNewPage, firstNewIndex);
                 }, 50);
                 return updated;
               });
@@ -1781,7 +2072,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                     {cameraError || 'Initializing document camera...'}
                   </p>
                   <button
-                    onClick={() => cameraInputRef.current?.click()}
+                    onClick={handleLaunchNativeHdCamera}
                     className="px-6 py-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-2xl shadow-emerald-500/40 transition transform active:scale-95 flex items-center space-x-3 border border-emerald-400/40"
                   >
                     <Camera className="w-5 h-5 text-white" />
@@ -1832,7 +2123,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
                 {/* 2. HD Camera Launcher */}
                 <button
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={handleLaunchNativeHdCamera}
                   className="flex flex-col items-center justify-center space-y-1 group active:scale-95 transition"
                   title="Capture high-resolution photo with device native camera"
                 >
@@ -1895,8 +2186,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         </div>
       )}
 
-      {/* ================= STEP 2: POST-SNAP CROP, EXPOSURE & TONE FINE-TUNING ================= */}
-      {currentStep === 'edit' && pages[activePageIndex] && (
+      {/* ================= STEP 2: CROP & 4-CORNER BOUNDARY ALIGNMENT ================= */}
+      {currentStep === 'crop' && pages[activePageIndex] && (
         <div className="flex flex-col w-full h-full bg-slate-950 text-slate-100 overflow-hidden">
           {/* Sleek Sticky Top Header */}
           <div className="pt-[max(1.5rem,env(safe-area-inset-top)+0.75rem)] px-4 py-3 bg-slate-900/95 backdrop-blur border-b border-slate-800 flex items-center justify-between z-30 shrink-0 shadow-md">
@@ -1905,32 +2196,87 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center space-x-1"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="text-xs font-bold hidden sm:inline">Back</span>
+              <span className="text-xs font-bold hidden sm:inline">Camera</span>
             </button>
 
-            <div className="text-center">
-              <h3 className="text-sm font-extrabold text-white tracking-wide">
-                Edit Page {activePageIndex + 1} of {pages.length}
-              </h3>
-              <p className="text-[10px] text-cyan-400 font-semibold">Fine-tune trim, tone & filters</p>
+            <div className="flex items-center space-x-2">
+              {pages.length > 1 && (
+                <button
+                  type="button"
+                  disabled={activePageIndex === 0}
+                  onClick={() => navigateToPageInCurrentStep(activePageIndex - 1)}
+                  className={`p-1.5 rounded-lg border transition ${
+                    activePageIndex > 0
+                      ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700 active:scale-95'
+                      : 'bg-slate-900/40 border-slate-800/40 text-slate-600 cursor-not-allowed opacity-40'
+                  }`}
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+
+              <div className="text-center">
+                <h3 className="text-sm font-extrabold text-white tracking-wide">
+                  Crop Page {activePageIndex + 1} of {pages.length}
+                </h3>
+                <p className="text-[10px] text-cyan-400 font-semibold">Drag 4 corners to frame the document</p>
+              </div>
+
+              {pages.length > 1 && (
+                <button
+                  type="button"
+                  disabled={activePageIndex >= pages.length - 1}
+                  onClick={() => navigateToPageInCurrentStep(activePageIndex + 1)}
+                  className={`p-1.5 rounded-lg border transition ${
+                    activePageIndex < pages.length - 1
+                      ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700 active:scale-95'
+                      : 'bg-slate-900/40 border-slate-800/40 text-slate-600 cursor-not-allowed opacity-40'
+                  }`}
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             <button
-              onClick={handleSavePageEdits}
+              onClick={applyCropAndProceed}
               className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5 transition transform active:scale-95"
             >
-              <Check className="w-4 h-4 text-slate-950" />
-              <span>Confirm</span>
+              <span>Next</span>
+              <ArrowRight className="w-4 h-4 text-slate-950" />
             </button>
           </div>
 
-          {/* Scrollable View for Large Document Preview + Edit Controls Below */}
-          <div className="flex-1 overflow-y-auto overscroll-contain bg-slate-950 flex flex-col">
+          {/* Multi-Page Quick Navigation Strip */}
+          {pages.length > 1 && (
+            <div className="px-4 py-2 bg-slate-900/90 border-b border-slate-800/80 flex items-center space-x-2 overflow-x-auto no-scrollbar shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-wider">
+                Document Pages:
+              </span>
+              <div className="flex items-center space-x-1.5">
+                {pages.map((p, idx) => (
+                  <button
+                    key={p.id || idx}
+                    type="button"
+                    onClick={() => navigateToPageInCurrentStep(idx)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1 ${
+                      idx === activePageIndex
+                        ? 'bg-cyan-500 text-slate-950 shadow-md ring-2 ring-cyan-400/50'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
+                    }`}
+                  >
+                    <span>Page {idx + 1}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-          {/* Big Prominent Document Preview Section */}
-          <div className="w-full bg-black/95 flex items-center justify-center p-3 sm:p-6 min-h-[52vh] sm:min-h-[64vh] shrink-0 border-b border-slate-800/80">
-            {editSubTab === 'crop' ? (
-              /* Interactive Crop Corner Selector Overlay with Precision Canvas Magnifying Lens */
+          {/* Scrollable View for Corner Selector Overlay */}
+          <div className="flex-1 overflow-y-auto overscroll-contain bg-slate-950 flex flex-col">
+            <div className="w-full bg-black/95 flex items-center justify-center p-3 sm:p-6 min-h-[54vh] sm:min-h-[62vh] shrink-0 border-b border-slate-800/80">
               <div className="relative inline-block max-w-full select-none cursor-crosshair shadow-2xl bg-slate-950 touch-none">
                 <div
                   ref={cropContainerRef}
@@ -1998,8 +2344,149 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                   </div>
                 )}
               </div>
-            ) : (
-              /* Real-Time Exposure & Tone Canvas Preview */
+            </div>
+
+            {/* Bottom Controls for Crop Step */}
+            <div className="p-4 pb-[max(2rem,env(safe-area-inset-bottom)+1.5rem)] bg-slate-900 border-t border-slate-800 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPresetCrop(0)}
+                  className="flex-1 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-800 transition shadow"
+                >
+                  Full Page (0%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPresetCrop(5)}
+                  className="flex-1 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-800 transition shadow"
+                >
+                  Trim 5%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const img = new Image();
+                    img.onload = () => {
+                      const detected = autoDetectDocumentCorners(img);
+                      setCorners(detected);
+                    };
+                    img.src = pages[activePageIndex].originalDataUrl;
+                  }}
+                  className="flex-1 py-2 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 text-xs font-bold rounded-xl border border-cyan-800 transition shadow flex items-center justify-center space-x-1"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Auto Detect</span>
+                </button>
+              </div>
+
+              {/* Big Action Button: Apply Crop & Flatten */}
+              <button
+                type="button"
+                onClick={applyCropAndProceed}
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-cyan-500/20 flex items-center justify-center space-x-2 transition transform active:scale-[0.99]"
+              >
+                <Check className="w-5 h-5 text-slate-950" />
+                <span>Apply Crop & Flatten ➔</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= STEP 2.5: ENHANCE, CLEANUP & FILTERS (ON FLATTENED DOCUMENT) ================= */}
+      {currentStep === 'edit' && pages[activePageIndex] && (
+        <div className="flex flex-col w-full h-full bg-slate-950 text-slate-100 overflow-hidden">
+          {/* Sleek Sticky Top Header */}
+          <div className="pt-[max(1.5rem,env(safe-area-inset-top)+0.75rem)] px-4 py-3 bg-slate-900/95 backdrop-blur border-b border-slate-800 flex items-center justify-between z-30 shrink-0 shadow-md">
+            <button
+              onClick={() => setCurrentStep('crop')}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center space-x-1"
+              title="Return to Crop Corners"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-xs font-bold hidden sm:inline">Crop</span>
+            </button>
+
+            <div className="flex items-center space-x-2">
+              {pages.length > 1 && (
+                <button
+                  type="button"
+                  disabled={activePageIndex === 0}
+                  onClick={() => navigateToPageInCurrentStep(activePageIndex - 1)}
+                  className={`p-1.5 rounded-lg border transition ${
+                    activePageIndex > 0
+                      ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700 active:scale-95'
+                      : 'bg-slate-900/40 border-slate-800/40 text-slate-600 cursor-not-allowed opacity-40'
+                  }`}
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+
+              <div className="text-center">
+                <h3 className="text-sm font-extrabold text-white tracking-wide">
+                  Edit Page {activePageIndex + 1} of {pages.length}
+                </h3>
+                <p className="text-[10px] text-cyan-400 font-semibold">Real-time tone, cleanup & filters</p>
+              </div>
+
+              {pages.length > 1 && (
+                <button
+                  type="button"
+                  disabled={activePageIndex >= pages.length - 1}
+                  onClick={() => navigateToPageInCurrentStep(activePageIndex + 1)}
+                  className={`p-1.5 rounded-lg border transition ${
+                    activePageIndex < pages.length - 1
+                      ? 'bg-slate-800 border-slate-700 text-cyan-400 hover:bg-slate-700 active:scale-95'
+                      : 'bg-slate-900/40 border-slate-800/40 text-slate-600 cursor-not-allowed opacity-40'
+                  }`}
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={handleSavePageEdits}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5 transition transform active:scale-95"
+            >
+              <Check className="w-4 h-4 text-slate-950" />
+              <span>Confirm</span>
+            </button>
+          </div>
+
+          {/* Multi-Page Quick Navigation Strip */}
+          {pages.length > 1 && (
+            <div className="px-4 py-2 bg-slate-900/90 border-b border-slate-800/80 flex items-center space-x-2 overflow-x-auto no-scrollbar shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 shrink-0 uppercase tracking-wider">
+                Document Pages:
+              </span>
+              <div className="flex items-center space-x-1.5">
+                {pages.map((p, idx) => (
+                  <button
+                    key={p.id || idx}
+                    type="button"
+                    onClick={() => navigateToPageInCurrentStep(idx)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1 ${
+                      idx === activePageIndex
+                        ? 'bg-cyan-500 text-slate-950 shadow-md ring-2 ring-cyan-400/50'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
+                    }`}
+                  >
+                    <span>Page {idx + 1}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Scrollable View for Large Flattened Document Preview + Edit Controls Below */}
+          <div className="flex-1 overflow-y-auto overscroll-contain bg-slate-950 flex flex-col">
+            {/* Real-Time Live Flattened Document Canvas */}
+            <div className="w-full bg-black/95 flex items-center justify-center p-3 sm:p-6 min-h-[52vh] sm:min-h-[64vh] shrink-0 border-b border-slate-800/80">
               <div className="relative flex items-center justify-center max-w-full overflow-hidden rounded-2xl border-2 border-cyan-500/40 bg-slate-950 p-2 shadow-2xl">
                 <canvas
                   ref={liveEditCanvasRef}
@@ -2012,423 +2499,242 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                   </span>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* Bottom Edit Controls Toolbar & Sub-tabs */}
-          <div className="p-4 pb-[max(2rem,env(safe-area-inset-bottom)+1.5rem)] bg-slate-900 border-t border-slate-800 space-y-3">
-            {/* Balanced Equal 3-Column Tab Grid with Uniform Height & Typography */}
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-2xl border border-slate-800/80 w-full shadow-inner">
-              <button
-                onClick={() => setEditSubTab('crop')}
-                className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
-                  editSubTab === 'crop'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Scissors className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
-                <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Crop, Trim & Erase</span>
-              </button>
-
-              <button
-                onClick={() => setEditSubTab('tone')}
-                className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
-                  editSubTab === 'tone'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
-                <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Brightness & Contrast</span>
-              </button>
-
-              <button
-                onClick={() => setEditSubTab('filter')}
-                className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
-                  editSubTab === 'filter'
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Wand2 className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
-                <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Filters</span>
-              </button>
             </div>
 
-            {/* Hold to Compare Strip */}
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold text-slate-400">
-                {editSubTab === 'crop' && 'Trim & Smart Erase:'}
-                {editSubTab === 'tone' && 'Adjust Brightness & Contrast:'}
-                {editSubTab === 'filter' && 'Select Document Filter:'}
-              </span>
-              <button
-                onMouseDown={() => setShowOriginalComparison(true)}
-                onMouseUp={() => setShowOriginalComparison(false)}
-                onTouchStart={() => setShowOriginalComparison(true)}
-                onTouchEnd={() => setShowOriginalComparison(false)}
-                className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-cyan-300 text-[11px] font-extrabold rounded-xl border border-slate-800 transition flex items-center space-x-1 active:scale-95 shrink-0"
-              >
-                <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Hold to Compare</span>
-              </button>
-            </div>
-
-            {/* Sub-tab 1: Perspective Crop & Margin Sliders Controls */}
-            {editSubTab === 'crop' && (
-              <div className="space-y-3 pt-1">
-                {/* Smart Page Cleanup: Shadow & Finger Removal */}
-                <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-cyan-300 flex items-center space-x-1">
-                      <Eraser className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Smart Page Cleanup:</span>
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">100% On-Device</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRemoveShadow((prev) => !prev)}
-                      className={`px-2.5 py-2 rounded-lg border text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 ${
-                        removeShadow
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 ring-1 ring-amber-400/40'
-                          : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80'
-                      }`}
-                    >
-                      <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span className="truncate">{removeShadow ? '✓ Shadow Removed' : 'Remove Shadow'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setRemoveFingers((prev) => !prev)}
-                      className={`px-2.5 py-2 rounded-lg border text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 ${
-                        removeFingers
-                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 ring-1 ring-cyan-400/40'
-                          : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80'
-                      }`}
-                    >
-                      <Hand className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                      <span className="truncate">{removeFingers ? '✓ Fingers Removed' : 'Remove Fingers'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-cyan-300 flex items-center space-x-1">
-                    <Crop className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Quick Margin Presets:</span>
-                  </span>
-                  <div className="flex items-center space-x-1.5">
-                    <button
-                      onClick={() => setPresetCrop(0)}
-                      className={`px-2.5 py-1 text-[11px] font-black rounded-lg border shadow transition ${
-                        cropTop === 0 && cropBottom === 0 && cropLeft === 0 && cropRight === 0
-                          ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border-cyan-700/60 ring-1 ring-cyan-500/40'
-                          : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
-                      }`}
-                    >
-                      Full Corners (0%)
-                    </button>
-                    <button
-                      onClick={() => setPresetCrop(5)}
-                      className={`px-2 py-0.5 text-[11px] font-bold rounded-lg border transition ${
-                        cropTop === 5 && cropBottom === 5 && cropLeft === 5 && cropRight === 5
-                          ? 'bg-cyan-950 text-cyan-300 border-cyan-700 ring-1 ring-cyan-500/30'
-                          : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
-                      }`}
-                    >
-                      Trim 5%
-                    </button>
-                    <button
-                      onClick={() => setPresetCrop(10)}
-                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-[11px] font-bold rounded-lg border border-slate-800"
-                    >
-                      Trim 10%
-                    </button>
-                    <button
-                      onClick={() => setPresetCrop(15)}
-                      className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-slate-400 text-[11px] font-bold rounded-lg border border-slate-800"
-                    >
-                      Trim 15%
-                    </button>
-                  </div>
-                </div>
-
-                {/* Virtual Edge Magnifier View - Always visible live view of the edge being trimmed */}
-                <VirtualEdgeViewer
-                  imageUrl={pages[activePageIndex].originalDataUrl}
-                  activeEdge={inspectEdge}
-                  cropTop={cropTop}
-                  cropBottom={cropBottom}
-                  cropLeft={cropLeft}
-                  cropRight={cropRight}
-                  onSelectEdge={(edge) => setInspectEdge(edge)}
-                />
-
-                {/* 4 Fine-Tuning Crop Margin Sliders (Top, Bottom, Left, Right) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div className={`p-2 rounded-xl transition ${inspectEdge === 'top' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
-                    <div className="flex justify-between text-[11px] font-bold mb-1">
-                      <span className={inspectEdge === 'top' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
-                        Top Trim {inspectEdge === 'top' && '●'}
-                      </span>
-                      <span className="text-cyan-400">{cropTop}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="40"
-                      value={cropTop}
-                      onMouseDown={() => {
-                        setActiveSlider('top');
-                        setInspectEdge('top');
-                      }}
-                      onTouchStart={() => {
-                        setActiveSlider('top');
-                        setInspectEdge('top');
-                      }}
-                      onMouseUp={() => setActiveSlider(null)}
-                      onTouchEnd={() => setActiveSlider(null)}
-                      onChange={(e) => {
-                        setActiveSlider('top');
-                        setInspectEdge('top');
-                        handleSliderMarginChange('top', Number(e.target.value));
-                      }}
-                      className="w-full accent-cyan-400 cursor-pointer"
-                    />
-                  </div>
-                  <div className={`p-2 rounded-xl transition ${inspectEdge === 'bottom' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
-                    <div className="flex justify-between text-[11px] font-bold mb-1">
-                      <span className={inspectEdge === 'bottom' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
-                        Bottom Trim {inspectEdge === 'bottom' && '●'}
-                      </span>
-                      <span className="text-cyan-400">{cropBottom}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="40"
-                      value={cropBottom}
-                      onMouseDown={() => {
-                        setActiveSlider('bottom');
-                        setInspectEdge('bottom');
-                      }}
-                      onTouchStart={() => {
-                        setActiveSlider('bottom');
-                        setInspectEdge('bottom');
-                      }}
-                      onMouseUp={() => setActiveSlider(null)}
-                      onTouchEnd={() => setActiveSlider(null)}
-                      onChange={(e) => {
-                        setActiveSlider('bottom');
-                        setInspectEdge('bottom');
-                        handleSliderMarginChange('bottom', Number(e.target.value));
-                      }}
-                      className="w-full accent-cyan-400 cursor-pointer"
-                    />
-                  </div>
-                  <div className={`p-2 rounded-xl transition ${inspectEdge === 'left' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
-                    <div className="flex justify-between text-[11px] font-bold mb-1">
-                      <span className={inspectEdge === 'left' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
-                        Left Trim {inspectEdge === 'left' && '●'}
-                      </span>
-                      <span className="text-cyan-400">{cropLeft}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="40"
-                      value={cropLeft}
-                      onMouseDown={() => {
-                        setActiveSlider('left');
-                        setInspectEdge('left');
-                      }}
-                      onTouchStart={() => {
-                        setActiveSlider('left');
-                        setInspectEdge('left');
-                      }}
-                      onMouseUp={() => setActiveSlider(null)}
-                      onTouchEnd={() => setActiveSlider(null)}
-                      onChange={(e) => {
-                        setActiveSlider('left');
-                        setInspectEdge('left');
-                        handleSliderMarginChange('left', Number(e.target.value));
-                      }}
-                      className="w-full accent-cyan-400 cursor-pointer"
-                    />
-                  </div>
-                  <div className={`p-2 rounded-xl transition ${inspectEdge === 'right' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
-                    <div className="flex justify-between text-[11px] font-bold mb-1">
-                      <span className={inspectEdge === 'right' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
-                        Right Trim {inspectEdge === 'right' && '●'}
-                      </span>
-                      <span className="text-cyan-400">{cropRight}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="40"
-                      value={cropRight}
-                      onMouseDown={() => {
-                        setActiveSlider('right');
-                        setInspectEdge('right');
-                      }}
-                      onTouchStart={() => {
-                        setActiveSlider('right');
-                        setInspectEdge('right');
-                      }}
-                      onMouseUp={() => setActiveSlider(null)}
-                      onTouchEnd={() => setActiveSlider(null)}
-                      onChange={(e) => {
-                        setActiveSlider('right');
-                        setInspectEdge('right');
-                        handleSliderMarginChange('right', Number(e.target.value));
-                      }}
-                      className="w-full accent-cyan-400 cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                {/* Confirm Crop & Move directly to Tone & Light */}
+            {/* Bottom Edit Controls Toolbar & Sub-tabs */}
+            <div className="p-4 pb-[max(2rem,env(safe-area-inset-bottom)+1.5rem)] bg-slate-900 border-t border-slate-800 space-y-3">
+              {/* Balanced Equal 3-Column Tab Grid with Uniform Height & Typography */}
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-2xl border border-slate-800/80 w-full shadow-inner">
                 <button
-                  onClick={() => setEditSubTab('tone')}
-                  className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/25 flex items-center justify-center space-x-2 transition transform active:scale-98 border border-cyan-400/30 mt-2"
+                  type="button"
+                  onClick={() => setEditSubTab('tools')}
+                  className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
+                    editSubTab === 'tools'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
                 >
-                  <Check className="w-4 h-4 text-cyan-200" />
-                  <span>Confirm Crop & Move to Brightness & Contrast ➔</span>
+                  <Eraser className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Clean & Tools</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEditSubTab('tone')}
+                  className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
+                    editSubTab === 'tone'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Brightness & Contrast</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEditSubTab('filter')}
+                  className={`py-2 px-1 rounded-xl transition flex flex-col items-center justify-center min-h-[52px] ${
+                    editSubTab === 'filter'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/40'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Wand2 className="w-3.5 h-3.5 text-cyan-300 mb-0.5 shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-bold text-center leading-tight">Filters</span>
                 </button>
               </div>
-            )}
 
-            {/* Sub-tab 2: Exposure & Mid-Tone Controls */}
-            {editSubTab === 'tone' && (
-              <div className="space-y-3 pt-1">
-                <div className="flex items-center justify-end space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
-                  <button
-                    onClick={() => setPresetTone(10, 25, 15)}
-                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-cyan-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
-                  >
-                    Boost Text
-                  </button>
-                  <button
-                    onClick={() => setPresetTone(20, 15, 10)}
-                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-yellow-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
-                  >
-                    Whiten Paper
-                  </button>
-                  <button
-                    onClick={() => setPresetTone(0, 35, 0)}
-                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-emerald-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
-                  >
-                    High Contrast Ink
-                  </button>
-                  <button
-                    onClick={() => setPresetTone(0, 0, 0)}
-                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-slate-400 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
-                  >
-                    Reset
-                  </button>
-                </div>
+              {/* Hold to Compare Strip */}
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-bold text-slate-400">
+                  {editSubTab === 'tools' && 'Smart Document Cleanup (Real-Time):'}
+                  {editSubTab === 'tone' && 'Adjust Brightness & Contrast (Real-Time):'}
+                  {editSubTab === 'filter' && 'Select Document Enhancement Filter:'}
+                </span>
+                <button
+                  type="button"
+                  onMouseDown={() => setShowOriginalComparison(true)}
+                  onMouseUp={() => setShowOriginalComparison(false)}
+                  onTouchStart={() => setShowOriginalComparison(true)}
+                  onTouchEnd={() => setShowOriginalComparison(false)}
+                  className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-cyan-300 text-[11px] font-extrabold rounded-xl border border-slate-800 transition flex items-center space-x-1 active:scale-95 shrink-0"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Hold to Compare</span>
+                </button>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                      <span className="flex items-center space-x-1">
-                        <Sun className="w-3 h-3 text-yellow-400" />
-                        <span>Brightness</span>
-                      </span>
-                      <span className="text-yellow-400 font-black">{brightness > 0 ? `+${brightness}` : brightness}</span>
+              {/* Sub-tab 1: Smart Cleanup & Tools */}
+              {editSubTab === 'tools' && (
+                <div className="space-y-3 pt-1">
+                  <div className="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 space-y-2.5">
+                    <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-200">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="whitespace-nowrap">Smart Document Cleanup Beta version</span>
                     </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      value={brightness}
-                      onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="w-full accent-yellow-400 cursor-pointer"
-                    />
-                  </div>
 
-                  <div>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                      <span className="flex items-center space-x-1">
-                        <ContrastIcon className="w-3 h-3 text-cyan-400" />
-                        <span>Contrast</span>
-                      </span>
-                      <span className="text-cyan-400 font-black">{contrast > 0 ? `+${contrast}` : contrast}</span>
+                    <div className="pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setRemoveShadow((prev) => !prev)}
+                        className={`w-full px-4 py-3 rounded-xl border text-xs font-extrabold transition flex items-center justify-center space-x-2 shadow-sm active:scale-95 ${
+                          removeShadow
+                            ? 'bg-amber-500/25 text-amber-300 border-amber-500/80 ring-2 ring-amber-400/40'
+                            : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-700/80'
+                        }`}
+                      >
+                        <Sun className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span className="truncate">{removeShadow ? '✓ Shadow Removal Active' : 'Remove Shadow'}</span>
+                      </button>
                     </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      value={contrast}
-                      onChange={(e) => setContrast(Number(e.target.value))}
-                      className="w-full accent-cyan-400 cursor-pointer"
-                    />
-                  </div>
 
-                  <div>
-                    <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
-                      <span className="flex items-center space-x-1">
-                        <Sliders className="w-3 h-3 text-emerald-400" />
-                        <span>Mid-Tone Balance</span>
-                      </span>
-                      <span className="text-emerald-400 font-black">{midTone > 0 ? `+${midTone}` : midTone}</span>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep('crop')}
+                        className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 text-cyan-300 rounded-xl border border-cyan-800/60 text-xs font-extrabold transition flex items-center justify-center space-x-1.5 shadow"
+                      >
+                        <Crop className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Re-Adjust 4 Crop Corners</span>
+                      </button>
                     </div>
-                    <input
-                      type="range"
-                      min="-50"
-                      max="50"
-                      value={midTone}
-                      onChange={(e) => setMidTone(Number(e.target.value))}
-                      className="w-full accent-emerald-400 cursor-pointer"
-                    />
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Sub-tab 3: Document Filters */}
-            {editSubTab === 'filter' && (
-              <div className="flex items-center space-x-2.5 overflow-x-auto py-1 scrollbar-thin">
-                {[
-                  { id: 'none', label: '📷 Original (Zero Loss)' },
-                  { id: 'flatten', label: '✨ Flatten & Remove Wrinkles' },
-                  { id: 'bw', label: '📄 Soft B&W' },
-                  { id: 'color', label: '🎨 High Contrast' },
-                  { id: 'grayscale', label: '🌙 Grayscale' },
-                ].map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setSelectedFilter(f.id as any)}
-                    className={`px-3.5 py-2 rounded-xl font-extrabold text-xs transition whitespace-nowrap shrink-0 ${
-                      selectedFilter === f.id
-                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/50'
-                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            )}
+              {/* Sub-tab 2: Brightness & Contrast Controls */}
+              {editSubTab === 'tone' && (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-thin">
+                    <button
+                      type="button"
+                      onClick={() => setPresetTone(15, 20, 0)}
+                      className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-cyan-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
+                    >
+                      Boost Text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresetTone(20, 10, -10)}
+                      className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-yellow-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
+                    >
+                      Whiten Paper
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresetTone(0, 35, 0)}
+                      className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-emerald-300 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
+                    >
+                      High Contrast Ink
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPresetTone(0, 0, 0)}
+                      className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-slate-400 rounded-lg border border-slate-800 text-[11px] font-bold shrink-0"
+                    >
+                      Reset
+                    </button>
+                  </div>
 
-            {/* Primary Confirm Button at Bottom of Scrollable View */}
-            <div className="pt-3">
-              <button
-                onClick={handleSavePageEdits}
-                className="w-full py-3.5 px-6 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2 transition transform active:scale-98"
-              >
-                <CheckCircle2 className="w-5 h-5 text-slate-950" />
-                <span>Confirm Page Edits & Continue ➔</span>
-              </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                        <span className="flex items-center space-x-1">
+                          <Sun className="w-3 h-3 text-yellow-400" />
+                          <span>Brightness</span>
+                        </span>
+                        <span className="text-yellow-400 font-black">{brightness > 0 ? `+${brightness}` : brightness}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-50"
+                        max="50"
+                        value={brightness}
+                        onChange={(e) => setBrightness(Number(e.target.value))}
+                        className="w-full accent-yellow-400 cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                        <span className="flex items-center space-x-1">
+                          <ContrastIcon className="w-3 h-3 text-cyan-400" />
+                          <span>Contrast</span>
+                        </span>
+                        <span className="text-cyan-400 font-black">{contrast > 0 ? `+${contrast}` : contrast}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-50"
+                        max="50"
+                        value={contrast}
+                        onChange={(e) => setContrast(Number(e.target.value))}
+                        className="w-full accent-cyan-400 cursor-pointer"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-[11px] text-slate-400 font-bold mb-1">
+                        <span className="flex items-center space-x-1">
+                          <Sliders className="w-3 h-3 text-emerald-400" />
+                          <span>Mid-Tone Balance</span>
+                        </span>
+                        <span className="text-emerald-400 font-black">{midTone > 0 ? `+${midTone}` : midTone}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-50"
+                        max="50"
+                        value={midTone}
+                        onChange={(e) => setMidTone(Number(e.target.value))}
+                        className="w-full accent-emerald-400 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-tab 3: Document Filters */}
+              {editSubTab === 'filter' && (
+                <div className="flex items-center space-x-2.5 overflow-x-auto py-1 scrollbar-thin">
+                  {[
+                    { id: 'none', label: '📷 Original (Zero Loss)' },
+                    { id: 'flatten', label: '✨ Flatten & Remove Wrinkles' },
+                    { id: 'bw', label: '📄 Soft B&W' },
+                    { id: 'color', label: '🎨 High Contrast' },
+                    { id: 'grayscale', label: '🌙 Grayscale' },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setSelectedFilter(f.id as any)}
+                      className={`px-3.5 py-2 rounded-xl font-extrabold text-xs transition whitespace-nowrap shrink-0 ${
+                        selectedFilter === f.id
+                          ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg ring-2 ring-cyan-400/50'
+                          : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Primary Confirm Button at Bottom of Scrollable View */}
+              <div className="pt-3">
+                <button
+                  type="button"
+                  onClick={handleSavePageEdits}
+                  className="w-full py-3.5 px-6 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2 transition transform active:scale-98"
+                >
+                  <CheckCircle2 className="w-5 h-5 text-slate-950" />
+                  <span>Confirm Page Edits & Continue ➔</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* ================= STEP 3: SCAN SUMMARY & EXPORT OPTIONS ================= */}

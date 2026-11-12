@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Trash2, Eye, EyeOff, Move, Clipboard, Minus, Plus, Type, Underline, Bold, Palette, Droplet } from 'lucide-react';
 import { TextAnnotation } from '../types/pdf';
 import { pdfRenderer, DetectedPDFTextLine } from '../services/pdfRenderer';
+import { isNativeMobileApp } from '../utils/platform';
 
 interface TextAnnotationEditorProps {
   annotations: TextAnnotation[];
@@ -54,6 +55,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   textIsUnderline,
   setTextIsUnderline,
 }) => {
+  const isNative = isNativeMobileApp();
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(null);
   const selectedId = selectedAnnotationId !== undefined ? selectedAnnotationId : localSelectedId;
   const setSelectedId = (id: string | null) => {
@@ -63,67 +65,6 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   const [detectedLines, setDetectedLines] = useState<DetectedPDFTextLine[]>([]);
   const [hoveredLineId, setHoveredLineId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-
-  const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
-  const activeAnn = selectedId ? pageAnnotations.find((a) => a.id === selectedId) : null;
-  const currentFontSize = activeAnn ? activeAnn.fontSize : (textFontSize || 14);
-  const currentTextColor = activeAnn ? (activeAnn.color || '#000000') : (textColor || '#000000');
-  const currentIsUnderline = activeAnn ? !!activeAnn.isUnderline : !!textIsUnderline;
-  const currentIsRedact = activeAnn ? !!activeAnn.isRedact : !!textIsRedact;
-
-  // Unfrozen direct number input state
-  const [sizeInput, setSizeInput] = useState<string>(String(currentFontSize));
-
-  useEffect(() => {
-    setSizeInput(String(currentFontSize));
-  }, [currentFontSize]);
-
-  const handleApplyFontSize = (val: number) => {
-    const clamped = Math.max(4, Math.min(150, val));
-    if (selectedId) {
-      onUpdateAnnotation(selectedId, { fontSize: clamped });
-    }
-    if (setTextFontSize) {
-      setTextFontSize(clamped);
-    }
-  };
-
-  const handleApplyColor = (color: string) => {
-    if (selectedId) {
-      onUpdateAnnotation(selectedId, { color });
-    }
-    if (setTextColor) {
-      setTextColor(color);
-    }
-  };
-
-  const handleToggleUnderline = () => {
-    const next = !currentIsUnderline;
-    if (selectedId) {
-      onUpdateAnnotation(selectedId, { isUnderline: next });
-    }
-    if (setTextIsUnderline) {
-      setTextIsUnderline(next);
-    }
-  };
-
-  const handleToggleRedact = () => {
-    const next = !currentIsRedact;
-    if (selectedId) {
-      onUpdateAnnotation(selectedId, { isRedact: next });
-    }
-    if (setTextIsRedact) {
-      setTextIsRedact(next);
-    }
-  };
-
-  const handleToggleBold = () => {
-    const isBold = activeAnn ? (activeAnn.fontWeight === 'bold' || activeAnn.fontWeight === '700' || activeAnn.fontWeight === 700 || activeAnn.fontWeight === '600') : false;
-    const next = isBold ? 'normal' : 'bold';
-    if (selectedId) {
-      onUpdateAnnotation(selectedId, { fontWeight: next });
-    }
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -151,6 +92,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   // Movable Floating Toolbar Offsets per annotation
   const [toolbarOffsets, setToolbarOffsets] = useState<Record<string, { x: number; y: number }>>({});
 
+  const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
   const scaleX = originalWidth > 0 ? canvasWidth / originalWidth : 1;
   const scaleY = originalHeight > 0 ? canvasHeight / originalHeight : 1;
 
@@ -408,7 +350,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       if (ctx) {
         ctx.font = `${fontWeight || 'normal'} ${fontSize}px ${fontFamily || 'sans-serif'}`;
         const lines = text.split('\n');
-        const maxW = Math.max(...lines.map((l) => ctx.measureText(l).width), 0);
+        const maxW = Math.max(...lines.map((l) => ctx.measureText(l.replace(/ /g, '\u00A0')).width), 0);
         return Math.round(maxW + 4);
       }
     } catch (e) {}
@@ -480,7 +422,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       line.fontWeight
     );
 
-    const totalW = Math.max(line.width + 4, measuredInitialW + 4);
+    const totalW = Math.max(line.width + 2, measuredInitialW + 2);
 
     onAddAnnotation({
       pageIndex,
@@ -627,9 +569,21 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         const isSelected = selectedId === ann.id;
         const lines = (ann.text || '').split('\n');
         const lineCount = Math.max(1, lines.length);
-        const dynamicW = measureTextWidth(ann.text, ann.fontSize, ann.fontFamily || textFontFamily, ann.fontWeight);
-        const effectiveWidth = Math.max(ann.width || 0, dynamicW);
-        const effectiveHeight = ann.height ? ann.height * scaleY : undefined;
+
+        // Pure proportional font scaling across all zoom levels (seamless zoom without erratic jumping)
+        const renderedFontSize = ann.fontSize * scaleY;
+
+        // Measure rendered text width on screen to ensure full visibility without clipping on mobile
+        const dynamicScreenW = measureTextWidth(
+          ann.text,
+          renderedFontSize,
+          ann.fontFamily || textFontFamily,
+          ann.fontWeight
+        );
+        // While actively editing, dynamic buffer allows real-time cursor travel and instant text expansion
+        const typingBuffer = isSelected ? 12 : 4;
+        const effectiveWidth = Math.max((ann.width || 0) * scaleX, dynamicScreenW + typingBuffer);
+        const effectiveHeight = ann.height ? Math.max(ann.height * scaleY, renderedFontSize * 1.2) : undefined;
         const tbOffset = toolbarOffsets[ann.id] || { x: 0, y: 4 };
 
         return (
@@ -645,7 +599,8 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
             style={{
               left: `${scaledX}px`,
               top: `${scaledY}px`,
-              width: `${effectiveWidth * scaleX}px`,
+              width: `${effectiveWidth}px`,
+              minWidth: '0px',
               minHeight: effectiveHeight ? `${effectiveHeight}px` : undefined,
               backgroundColor: ann.isRedact ? (ann.backgroundColor || '#ffffff') : 'transparent',
               opacity: ann.opacity !== undefined ? ann.opacity : 1.0,
@@ -656,6 +611,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
             {/* Plain Text Area - Auto Expands Horizontally Until Enter Key */}
             <textarea
               autoFocus
+              cols={1}
               ref={(el) => {
                 if (el && isSelected && document.activeElement !== el) {
                   el.focus();
@@ -675,31 +631,274 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                 );
                 onUpdateAnnotation(ann.id, {
                   text: newText,
-                  width: Math.max(30, measuredW),
+                  width: Math.max(16, measuredW + 4),
                 });
               }}
               placeholder="Type text..."
               rows={lineCount}
-              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none p-0 m-0 w-full overflow-hidden resize-none select-text block"
+              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none p-0 m-0 w-full overflow-visible resize-none select-text block"
               style={{
-                fontSize: `${ann.fontSize * scaleY}px`,
+                fontSize: `${renderedFontSize}px`,
                 fontFamily: ann.fontFamily || textFontFamily || "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
                 fontWeight: ann.fontWeight || 'normal',
                 color: ann.color || '#000000',
                 caretColor: ann.color || '#000000',
                 textDecoration: ann.isUnderline ? 'underline' : 'none',
-                lineHeight: '1',
-                padding: '0',
+                lineHeight: '1.2',
+                padding: '0 2px',
+                paddingRight: isSelected ? '8px' : '4px',
                 margin: '0',
                 letterSpacing: 'normal',
                 width: '100%',
+                minWidth: '0px',
                 whiteSpace: 'pre',
-                overflow: 'hidden',
+                overflow: 'visible',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
                 resize: 'none',
+                boxSizing: 'border-box',
+                WebkitTextSizeAdjust: '100%',
               }}
             />
+
+            {/* Movable & Draggable Compact Floating Action Toolbar - Placed with Text Box */}
+            {isSelected && (() => {
+              const isAbove = scaledY > canvasHeight - 80;
+              const isRight = isNative && scaledX > canvasWidth * 0.45;
+              const originClass = isAbove
+                ? (isRight ? 'origin-bottom-right' : 'origin-bottom-left')
+                : (isRight ? 'origin-top-right' : 'origin-top-left');
+
+              return (
+                <div
+                  className={`absolute ${
+                    isAbove ? 'bottom-[calc(100%+6px)]' : 'top-[calc(100%+6px)]'
+                  } ${
+                    isRight ? 'right-0' : 'left-0'
+                  } flex items-center ${
+                    isNative ? 'gap-0.5 px-1.5 py-0.5 rounded-lg' : 'gap-1 px-2 py-1 rounded-xl'
+                  } bg-slate-900/95 backdrop-blur-md text-white shadow-2xl z-50 select-none border border-slate-700/80 whitespace-nowrap ring-1 ring-cyan-500/40 animate-fadeIn ${originClass} touch-manipulation`}
+                  style={{
+                    transform: `translate(${tbOffset.x}px, ${tbOffset.y}px) ${isNative ? 'scale(0.68)' : ''}`,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                >
+                  {/* Drag / Move Handle - Moves Text Box Anywhere on PDF Canvas */}
+                  <div
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      handleMouseDownDrag(e, ann);
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                      handleTouchStartTextDrag(e, ann);
+                    }}
+                    title="Touch & Drag to Move Text Anywhere over PDF Page"
+                    className="p-1 bg-cyan-500/20 hover:bg-cyan-500/40 rounded text-cyan-300 cursor-grab active:cursor-grabbing transition flex items-center space-x-1 border border-cyan-500/30 shrink-0"
+                  >
+                    <Move className="w-3.5 h-3.5" />
+                    {!isNative && <span className="text-[10px] font-bold">Move</span>}
+                  </div>
+
+                  <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
+
+                  {/* Sub-Point Decimal Font Size Stepper (0.2pt precision) & Direct Numeric Input */}
+                  <div className="flex items-center space-x-0.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-700 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSize = parseFloat(Math.max(4, ann.fontSize - 0.2).toFixed(1));
+                        onUpdateAnnotation(ann.id, { fontSize: newSize });
+                        if (setTextFontSize) setTextFontSize(newSize);
+                      }}
+                      title="Decrease Font Size (-0.2pt)"
+                      className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+
+                    <div className="flex items-center">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="4"
+                        max="120"
+                        value={ann.fontSize}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 4 && val <= 120) {
+                            const size = parseFloat(val.toFixed(2));
+                            onUpdateAnnotation(ann.id, { fontSize: size });
+                            if (setTextFontSize) setTextFontSize(size);
+                          }
+                        }}
+                        className={`${isNative ? 'w-7 text-[9px]' : 'w-9 text-[10px]'} bg-transparent font-extrabold font-mono text-cyan-300 text-center outline-none border-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                        title="Direct Font Size (e.g. 13.2, 13.4, 9.75)"
+                      />
+                      <span className="text-[9px] font-mono text-slate-400 select-none">pt</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newSize = parseFloat(Math.min(120, ann.fontSize + 0.2).toFixed(1));
+                        onUpdateAnnotation(ann.id, { fontSize: newSize });
+                        if (setTextFontSize) setTextFontSize(newSize);
+                      }}
+                      title="Increase Font Size (+0.2pt)"
+                      className="p-0.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Bold Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isCurrentlyBold =
+                        ann.fontWeight === 'bold' ||
+                        ann.fontWeight === '700' ||
+                        ann.fontWeight === 700 ||
+                        ann.fontWeight === '600';
+                      onUpdateAnnotation(ann.id, { fontWeight: isCurrentlyBold ? 'normal' : 'bold' });
+                    }}
+                    title="Toggle Bold"
+                    className={`p-1 rounded transition shrink-0 ${
+                      ann.fontWeight === 'bold' ||
+                      ann.fontWeight === '700' ||
+                      ann.fontWeight === 700 ||
+                      ann.fontWeight === '600'
+                        ? 'bg-cyan-500 text-white font-bold'
+                        : 'hover:bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <Bold className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Underline Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !ann.isUnderline;
+                      onUpdateAnnotation(ann.id, { isUnderline: next });
+                      if (setTextIsUnderline) setTextIsUnderline(next);
+                    }}
+                    title="Toggle Underline"
+                    className={`p-1 rounded transition shrink-0 ${
+                      ann.isUnderline ? 'bg-cyan-500 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <Underline className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Whiteout / Redact Cover Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !ann.isRedact;
+                      onUpdateAnnotation(ann.id, { isRedact: next });
+                      if (setTextIsRedact) setTextIsRedact(next);
+                    }}
+                    title={ann.isRedact ? 'White cover box active' : 'Plain transparent text'}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition shrink-0 ${
+                      ann.isRedact
+                        ? 'bg-white text-slate-900 shadow'
+                        : 'bg-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {ann.isRedact ? <EyeOff className="w-3 h-3 text-red-600" /> : <Eye className="w-3 h-3 text-cyan-400" />}
+                    {!isNative && <span>Whiteout</span>}
+                  </button>
+
+                  {/* Comprehensive Color Palette with Exact Page Color Matching */}
+                  <div className="flex items-center space-x-1 pl-0.5 shrink-0">
+                    {/* EyeDropper Tool to sample exact pixel color */}
+                    <button
+                      type="button"
+                      onClick={() => handlePickColorEyeDropper(ann.id)}
+                      title="EyeDropper: Sample exact color from anywhere on page"
+                      className="p-1 hover:bg-cyan-500/30 text-cyan-300 hover:text-white rounded transition flex items-center shrink-0"
+                    >
+                      <Droplet className="w-3 h-3" />
+                    </button>
+
+                    {/* Dynamic Color Swatches (compact on mobile, full on web) */}
+                    <div className={`flex items-center space-x-1 ${isNative ? 'max-w-[70px]' : 'max-w-[140px]'} overflow-x-auto scrollbar-none py-0.5 shrink-0`}>
+                      {Array.from(new Set([ann.color || '#000000', ...availableColors]))
+                        .filter((c) => typeof c === 'string' && c.startsWith('#'))
+                        .slice(0, isNative ? 3 : 9)
+                        .map((color) => {
+                          const currentColor = (ann.color || '#000000').toLowerCase();
+                          const isSelectedColor = currentColor === color.toLowerCase();
+                          return (
+                            <button
+                              key={color}
+                              type="button"
+                              onClick={() => {
+                                onUpdateAnnotation(ann.id, { color });
+                                if (setTextColor) setTextColor(color);
+                              }}
+                              className={`w-3.5 h-3.5 rounded-full border transition shrink-0 ${
+                                isSelectedColor
+                                  ? 'scale-125 border-white ring-2 ring-cyan-400 shadow-md'
+                                  : 'border-slate-600 opacity-80 hover:opacity-100 hover:scale-110'
+                              }`}
+                              style={{ backgroundColor: color }}
+                              title={`Select ${color}`}
+                            />
+                          );
+                        })}
+                    </div>
+
+                    {/* Native Color Picker for custom Hex/RGB colors */}
+                    <label
+                      title="Custom Color Spectrum Picker"
+                      className="cursor-pointer p-0.5 hover:bg-slate-800 rounded transition flex items-center text-slate-300 hover:text-white shrink-0"
+                    >
+                      <Palette className="w-3 h-3" />
+                      <input
+                        id={`native-color-${ann.id}`}
+                        type="color"
+                        value={ann.color && ann.color.startsWith('#') ? ann.color : '#000000'}
+                        onChange={(e) => {
+                          onUpdateAnnotation(ann.id, { color: e.target.value });
+                          if (setTextColor) setTextColor(e.target.value);
+                        }}
+                        className="sr-only"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="w-[1px] h-3.5 bg-slate-700 shrink-0" />
+
+                  {/* Quick Paste Button */}
+                  <button
+                    type="button"
+                    onClick={() => handlePasteClipboard(ann.id)}
+                    title="Paste Clipboard Text"
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition shrink-0"
+                  >
+                    <Clipboard className="w-3 h-3" />
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteAnnotation(ann.id);
+                      setSelectedId(null);
+                    }}
+                    title="Delete Text"
+                    className="p-1 hover:bg-red-600/80 rounded text-red-400 hover:text-white transition shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         );
       })}
