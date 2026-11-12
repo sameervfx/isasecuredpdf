@@ -907,26 +907,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            {/* Google Play Store Badge Button (Rendered on Web and Android only; hidden on iOS per Apple Guideline 2.3.10 and completely on native app) */}
-            {!isNativeApp && !isIOSPlatform() && (
-              <a
-                href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center space-x-2.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-white rounded-xl border border-slate-800 hover:border-emerald-500/60 transition shadow-md group"
-                title="Download ISASecuredPDF on Google Play Store"
-              >
-                <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M3.6 1.4L13.8 11.6 3.6 21.8C3.2 21.4 3 20.8 3 20V3.2C3 2.4 3.2 1.8 3.6 1.4z" />
-                  <path fill="#FBBC04" d="M17.4 8L13.8 11.6 17.4 15.2 21.4 12.9C22.2 12.4 22.2 11.6 21.4 11.1L17.4 8z" />
-                  <path fill="#34A853" d="M13.8 11.6L3.6 21.8C4.1 22.3 4.8 22.4 5.6 22L17.4 15.2 13.8 11.6z" />
-                  <path fill="#EA4335" d="M3.6 1.4C4.1 0.9 4.8 1 5.6 1.4L17.4 8.2 13.8 11.8 3.6 1.4z" />
-                </svg>
-                <div className="text-left leading-none">
-                  <span className="text-[8px] uppercase tracking-wider text-slate-400 font-semibold block group-hover:text-emerald-400 transition">GET IT ON</span>
-                  <span className="text-xs font-bold text-white tracking-tight">Google Play</span>
-                </div>
-              </a>
+            {/* App Store Badges (Rendered on Web; hidden on iOS native app per Guideline 2.3.10) */}
+            {!isNativeApp && (
+              <div className="flex items-center space-x-2">
+                {/* Apple App Store Badge */}
+                <a
+                  href="https://apps.apple.com/us/app/isa-secured-pdf-editor-scanner/id6808373104"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-2.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-white rounded-xl border border-slate-800 hover:border-cyan-500/60 transition shadow-md group"
+                  title="Download ISASecuredPDF on the Apple App Store"
+                >
+                  <svg className="w-4 h-4 flex-shrink-0 fill-current text-white group-hover:text-cyan-400 transition" viewBox="0 0 24 24">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 0.92-2.87-.9.04-2 .6-2.65 1.35-.56.64-1.06 1.7-0.92 2.74 1.02.08 2.04-.47 2.65-1.22z" />
+                  </svg>
+                  <div className="text-left leading-none">
+                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-semibold block group-hover:text-cyan-400 transition">DOWNLOAD ON THE</span>
+                    <span className="text-xs font-bold text-white tracking-tight">App Store</span>
+                  </div>
+                </a>
+
+                {/* Google Play Store Badge Button */}
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.isasecuredpdf.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-2.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-white rounded-xl border border-slate-800 hover:border-emerald-500/60 transition shadow-md group"
+                  title="Download ISASecuredPDF on Google Play Store"
+                >
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M3.6 1.4L13.8 11.6 3.6 21.8C3.2 21.4 3 20.8 3 20V3.2C3 2.4 3.2 1.8 3.6 1.4z" />
+                    <path fill="#FBBC04" d="M17.4 8L13.8 11.6 17.4 15.2 21.4 12.9C22.2 12.4 22.2 11.6 21.4 11.1L17.4 8z" />
+                    <path fill="#34A853" d="M13.8 11.6L3.6 21.8C4.1 22.3 4.8 22.4 5.6 22L17.4 15.2 13.8 11.6z" />
+                    <path fill="#EA4335" d="M3.6 1.4C4.1 0.9 4.8 1 5.6 1.4L17.4 8.2 13.8 11.8 3.6 1.4z" />
+                  </svg>
+                  <div className="text-left leading-none">
+                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-semibold block group-hover:text-emerald-400 transition">GET IT ON</span>
+                    <span className="text-xs font-bold text-white tracking-tight">Google Play</span>
+                  </div>
+                </a>
+              </div>
             )}
           </div>
 
@@ -1137,6 +1157,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             <div className="space-y-3">
+              {/* Apple App Store Card */}
+              <a
+                href="https://apps.apple.com/us/app/isa-secured-pdf-editor-scanner/id6808373104"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-between p-4 bg-slate-950/60 hover:bg-slate-800 border border-slate-800 hover:border-cyan-500/50 rounded-xl transition group text-left"
+              >
+                <div className="flex items-center space-x-3">
+                  <svg className="w-5 h-5 flex-shrink-0 fill-current text-white group-hover:text-cyan-400 transition" viewBox="0 0 24 24">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.61-.75 1.04-1.8 0.92-2.87-.9.04-2 .6-2.65 1.35-.56.64-1.06 1.7-0.92 2.74 1.02.08 2.04-.47 2.65-1.22z" />
+                  </svg>
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center space-x-2">
+                      <span>iOS App on Apple App Store</span>
+                      <span className="text-[10px] bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-1.5 py-0.5 rounded font-semibold">Active</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">iPhone & iPad • 100% On-Device Privacy</div>
+                  </div>
+                </div>
+                <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition" />
+              </a>
+
               {/* Android Google Play Store Card (Rendered on Web only; hidden on iOS) */}
               {!isIOSPlatform() && (
                 <a
