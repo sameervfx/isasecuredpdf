@@ -27,7 +27,7 @@ interface Testimonial {
 const TESTIMONIALS: Testimonial[] = [
   {
     name: 'Hunter Lee Harrington',
-    role: 'Verified Google Play User',
+    role: 'Verified Store Review',
     device: 'Android 14',
     source: 'playstore',
     stars: 5,
@@ -39,7 +39,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: 'Saniya Khalidv',
-    role: 'Verified Google Play User',
+    role: 'Verified Store Review',
     device: 'Samsung Galaxy M55 5G',
     source: 'playstore',
     stars: 5,
@@ -51,7 +51,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: 'Abdulwadood AbdulGhafoor',
-    role: 'Verified Google Play User',
+    role: 'Verified Store Review',
     device: 'Motorola moto g57',
     source: 'playstore',
     stars: 5,
@@ -63,7 +63,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: 'Farhan Farooqui',
-    role: 'Verified Google Play User',
+    role: 'Verified Store Review',
     device: 'Samsung Galaxy A22',
     source: 'playstore',
     stars: 5,
@@ -228,7 +228,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
         <div className="text-center max-w-3xl mx-auto mb-10">
           <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider mb-4 shadow-sm">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span>Official Google Play Milestone • 100% 5.0 ★ Rating</span>
+            <span>Official Store Milestone • 100% 5.0 ★ Rating</span>
           </div>
           <h2 className={`text-3xl sm:text-4xl font-extrabold ${headingTextClass} tracking-tight`}>
             100% Five-Star Reviews. Zero Compromises.
@@ -303,7 +303,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               }`}
             >
               <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{isIOSPlatform() ? 'Verified App 5.0 ★ Reviews' : 'Google Play 5.0 ★ Reviews'}</span>
+              <span>Verified Store 5.0 ★ Reviews</span>
             </button>
 
             <button

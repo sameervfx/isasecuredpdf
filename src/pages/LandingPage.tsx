@@ -377,18 +377,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </h1>
 
         <p className={`mt-6 text-base sm:text-xl ${subTextClass} max-w-3xl mx-auto leading-relaxed font-normal`}>
-          Fill AcroForms, edit text, add vector shapes, encrypt, and compress PDFs locally in your browser. Zero data uploaded to cloud servers. Save up to 80% compared to traditional Acrobat subscriptions.
+          {isNativeApp ? (
+            'Fill AcroForms, edit text, add vector shapes, encrypt, and compress PDFs locally on your device. Zero data uploaded to cloud servers. Save up to 80% compared to traditional Acrobat subscriptions.'
+          ) : (
+            'Fill AcroForms, edit text, add vector shapes, encrypt, and compress PDFs locally in your browser. Zero data uploaded to cloud servers. Save up to 80% compared to traditional Acrobat subscriptions.'
+          )}
         </p>
 
         {/* Hero CTAs - Matching Scale Width, Height, Thickness & Live Camera Flashing Effect */}
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-2xl mx-auto w-full">
-          {/* Primary CTA: Open Free Web Editor */}
+          {/* Primary CTA */}
           <button
             onClick={handleGateCheckAndLaunch}
             className={`w-full sm:w-1/2 flex items-center justify-center space-x-2.5 px-6 py-4 bg-gradient-to-r ${primaryBtnClass} text-white font-extrabold text-base rounded-2xl shadow-xl shadow-cyan-500/25 border-2 border-cyan-400/50 transition transform active:scale-95 ring-2 ring-cyan-400/40`}
           >
             <Sparkles className="w-5 h-5 text-yellow-300 flex-shrink-0" />
-            <span>Open Free Web Editor →</span>
+            <span>{isNativeApp ? 'Open Free Editor →' : 'Open Free Web Editor →'}</span>
           </button>
 
           {/* Camera Scanner CTA with Flashing Liveness Indicator & Single Camera Icon */}
@@ -421,7 +425,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
           <span className="text-slate-200 font-bold">Verified 5-Star Reviews</span>
           <span className="text-slate-600 hidden sm:inline">•</span>
-          <span className="text-emerald-400 font-medium">100% Five-Star Consensus on Google Play</span>
+          <span className="text-emerald-400 font-medium">
+            {isNativeApp ? '100% Five-Star Consensus across Verified Users' : '100% Five-Star Consensus on Google Play'}
+          </span>
         </div>
 
         {/* Hero Interactive Drag-and-Drop Dropzone Mockup */}
@@ -451,10 +457,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
               <div>
                 <h3 className={`text-lg sm:text-xl font-extrabold ${cardTitleClass} group-hover:text-cyan-600 transition`}>
-                  Drop your PDF here to edit privately in-browser
+                  {isNativeApp ? 'Tap or Drop your PDF here to edit privately in-app' : 'Drop your PDF here to edit privately in-browser'}
                 </h3>
                 <p className={`text-xs sm:text-sm ${cardDescClass} mt-1 max-w-md mx-auto`}>
-                  Click or drag any PDF file to open in Web Editor. 100% in-browser processing with zero server uploads.
+                  {isNativeApp
+                    ? 'Click or tap any PDF file to open in App Editor. 100% on-device processing with zero server uploads.'
+                    : 'Click or drag any PDF file to open in Web Editor. 100% in-browser processing with zero server uploads.'}
                 </p>
               </div>
 
@@ -626,7 +634,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={handleGateCheckAndLaunch}
                 className={`mt-8 w-full py-3 ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700/80'} text-xs font-bold rounded-xl transition border hover:border-cyan-500/50`}
               >
-                Use Free Web Editor
+                {isNativeApp ? 'Use Free App Editor' : 'Use Free Web Editor'}
               </button>
             </div>
 
