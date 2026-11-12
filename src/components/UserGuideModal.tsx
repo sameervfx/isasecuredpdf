@@ -171,30 +171,6 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                   </div>
                 </div>
               </div>
-
-              {/* General Enterprise IT & Security Question */}
-              <div className="bg-slate-950/80 p-4 rounded-2xl border border-cyan-500/30 space-y-2.5">
-                <div className="text-cyan-400 font-bold text-xs uppercase tracking-wider">
-                  General Question — Enterprise & IT Security Review
-                </div>
-                <h4 className="text-sm font-extrabold text-white">
-                  Q: Don&apos;t traditional desktop PDF suites (such as Adobe Acrobat, Smallpdf Desktop, or iLovePDF Desktop) also work offline on a local machine?
-                </h4>
-                <p className="text-slate-300 text-xs leading-relaxed">
-                  <strong className="text-white">Yes</strong> — core PDF tasks in standalone desktop suites can execute locally. The difference for regulated IT &amp; R&amp;D teams is <strong className="text-white">cloud defaults, hybrid web leakage risk, and audit simplicity</strong>:
-                </p>
-                <ul className="space-y-1.5 text-[11px] text-slate-300 list-disc pl-4">
-                  <li>
-                    <strong className="text-white">Zero Cloud / AI / Telemetry Lockdowns Needed:</strong> Traditional enterprise suites frequently enable cloud storage, usage telemetry, or Generative AI hooks by default — requiring IT admins to deploy machine-wide GPO/Registry lockdowns across endpoints. ISASecuredPDF has <strong className="text-emerald-400">no document-processing backend and no cloud AI hooks</strong>.
-                  </li>
-                  <li>
-                    <strong className="text-white">Zero &ldquo;Web vs. Desktop&rdquo; Leak Gap:</strong> Hybrid providers split users between a local desktop binary and cloud-hosted web/e-sign tools, creating risk if staff drop confidential NDAs or clinical protocols into a browser tab. ISASecuredPDF runs <strong className="text-emerald-400">100% client-side in local RAM/WebAssembly</strong> across Desktop, Web, iOS, and Android.
-                  </li>
-                  <li>
-                    <strong className="text-white">10-Second IT Network Verification:</strong> Security teams can inspect Traffic with Wireshark, endpoint firewalls, or Browser DevTools Network logs while editing, signing, compressing, or encrypting — <strong className="text-emerald-400">0 bytes of document payload leave the workstation</strong>, even on air-gapped VLANs.
-                  </li>
-                </ul>
-              </div>
             </div>
           )}
 

@@ -872,10 +872,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               a: 'Absolutely. Both the web editor and PWA/desktop execution function 100% offline without requiring active internet connections.'
             },
             {
-              q: "Don't standalone desktop apps like Adobe Acrobat, Smallpdf Desktop, or iLovePDF Desktop also work offline?",
-              a: 'Core tasks in standalone desktop suites can run locally, but traditional enterprise suites often enable cloud sync, telemetry, or AI hooks by default (requiring IT GPO/Registry lockdowns), and hybrid providers still route web or e-sign workflows through remote cloud servers. ISASecuredPDF has no document-processing backend server at all—across Desktop, Web, iOS, and Android, 100% of editing, signing, encryption, and compression executes locally in device RAM/WebAssembly with 0 bytes transmitted (verifiable via firewall or DevTools Network logs).'
-            },
-            {
               q: 'What is your refund policy?',
               a: 'We offer a 14-day money-back guarantee for all Pro license purchases (less third-party transaction processing fees).'
             }
