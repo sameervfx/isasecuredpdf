@@ -10,6 +10,7 @@ import { applyStandardMetadata } from '../utils/pdfMetadata';
 import { downloadFile } from '../utils/mobileFileDownload';
 import { ExportSaveModal, ExportItem } from './ExportSaveModal';
 import { checkAndConsumeMonthlyQuota, FREE_MONTHLY_DOC_LIMIT } from '../utils/monthlyUsageLimit';
+import { isNativeMobileApp } from '../utils/platform';
 
 interface ScanModalProps {
   isOpen: boolean;
@@ -240,6 +241,158 @@ function autoDetectDocumentCorners(
     // Fallback: If contrast detection gets confused or corners are irregular,
     // do not scatter corners here and there - cleanly default to 5% uniform trim!
     return DEFAULT_5PCT_CORNERS;
+  } catch (e) {
+    return DEFAULT_5PCT_CORNERS;
+  }
+}
+
+/**
+ * Web & Desktop Webcam Book / Document Page Boundary Detector (0-100%).
+ * Specifically engineered for holding up a book or document page in front of a 16:9 webcam,
+ * where room background (windows, head/ceiling at top, walls on sides) confuses global Otsu.
+ * Scans directional color/luminance gradients along the 4 edges to lock onto the top, bottom,
+ * left, and right boundaries of the held book/document page.
+ */
+function autoDetectBookOrDocumentWebcamPage(
+  source: HTMLCanvasElement | HTMLImageElement
+): { tl: Point; tr: Point; br: Point; bl: Point } {
+  try {
+    const origW = 'naturalWidth' in source ? (source.naturalWidth || source.width) : source.width;
+    const origH = 'naturalHeight' in source ? (source.naturalHeight || source.height) : source.height;
+    if (!origW || !origH) {
+      return DEFAULT_5PCT_CORNERS;
+    }
+
+    const w = 240;
+    const h = 150;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) {
+      return DEFAULT_5PCT_CORNERS;
+    }
+
+    ctx.drawImage(source, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h).data;
+
+    const getRgb = (x: number, y: number): [number, number, number] => {
+      const cx = Math.max(0, Math.min(w - 1, x));
+      const cy = Math.max(0, Math.min(h - 1, y));
+      const idx = (cy * w + cx) * 4;
+      return [data[idx], data[idx + 1], data[idx + 2]];
+    };
+
+    // 1. TOP HORIZONTAL EDGE: Scan downward y in [7%..42%] across the middle X band [28%..72%]
+    // Captures the top edge of a held book/document below the ceiling/user's head
+    let bestTopY = Math.round(h * 0.16);
+    let bestTopScore = 0;
+    const xStart = Math.round(w * 0.28);
+    const xEnd = Math.round(w * 0.72);
+    const xSpan = Math.max(1, xEnd - xStart);
+
+    for (let y = Math.round(h * 0.07); y <= Math.round(h * 0.42); y++) {
+      let gradSum = 0;
+      let hits = 0;
+      for (let x = xStart; x < xEnd; x++) {
+        const [r1, g1, b1] = getRgb(x, y - 2);
+        const [r2, g2, b2] = getRgb(x, y + 2);
+        const dy = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+        gradSum += dy;
+        if (dy > 28) hits++;
+      }
+      const hitRatio = hits / xSpan;
+      const score = (gradSum / xSpan) * Math.pow(hitRatio, 1.5);
+      if (score > bestTopScore) {
+        bestTopScore = score;
+        bestTopY = y;
+      }
+    }
+
+    // 2. BOTTOM HORIZONTAL EDGE: Scan y in [58%..97%] across the middle X band [28%..72%]
+    let bestBotY = Math.round(h * 0.96);
+    let bestBotScore = 0;
+    for (let y = Math.round(h * 0.58); y <= Math.round(h * 0.97); y++) {
+      let gradSum = 0;
+      let hits = 0;
+      for (let x = xStart; x < xEnd; x++) {
+        const [r1, g1, b1] = getRgb(x, y - 2);
+        const [r2, g2, b2] = getRgb(x, y + 2);
+        const dy = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+        gradSum += dy;
+        if (dy > 28) hits++;
+      }
+      const hitRatio = hits / xSpan;
+      const score = (gradSum / xSpan) * Math.pow(hitRatio, 1.5);
+      if (score > bestBotScore) {
+        bestBotScore = score;
+        bestBotY = y;
+      }
+    }
+
+    // 3. LEFT VERTICAL EDGE: Scan x in [4%..42%] across the detected vertical span [bestTopY..bestBotY]
+    const yStart = Math.max(Math.round(h * 0.10), bestTopY + 2);
+    const yEnd = Math.min(Math.round(h * 0.92), bestBotY - 2);
+    const ySpan = Math.max(1, yEnd - yStart);
+
+    let bestLeftX = Math.round(w * 0.16);
+    let bestLeftScore = 0;
+    for (let x = Math.round(w * 0.04); x <= Math.round(w * 0.42); x++) {
+      let gradSum = 0;
+      let hits = 0;
+      for (let y = yStart; y < yEnd; y++) {
+        const [r1, g1, b1] = getRgb(x - 2, y);
+        const [r2, g2, b2] = getRgb(x + 2, y);
+        const dx = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+        gradSum += dx;
+        if (dx > 28) hits++;
+      }
+      const hitRatio = hits / ySpan;
+      const score = (gradSum / ySpan) * Math.pow(hitRatio, 1.5);
+      if (score > bestLeftScore) {
+        bestLeftScore = score;
+        bestLeftX = x;
+      }
+    }
+
+    // 4. RIGHT VERTICAL EDGE: Scan x in [58%..96%] across the detected vertical span [bestTopY..bestBotY]
+    let bestRightX = Math.round(w * 0.84);
+    let bestRightScore = 0;
+    for (let x = Math.round(w * 0.58); x <= Math.round(w * 0.96); x++) {
+      let gradSum = 0;
+      let hits = 0;
+      for (let y = yStart; y < yEnd; y++) {
+        const [r1, g1, b1] = getRgb(x - 2, y);
+        const [r2, g2, b2] = getRgb(x + 2, y);
+        const dx = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+        gradSum += dx;
+        if (dx > 28) hits++;
+      }
+      const hitRatio = hits / ySpan;
+      const score = (gradSum / ySpan) * Math.pow(hitRatio, 1.5);
+      if (score > bestRightScore) {
+        bestRightScore = score;
+        bestRightX = x;
+      }
+    }
+
+    const topPct = Math.max(0, Math.min(40, Math.round((bestTopY / h) * 100)));
+    const botPct = Math.max(60, Math.min(100, Math.round((bestBotY / h) * 100)));
+    const leftPct = Math.max(0, Math.min(40, Math.round((bestLeftX / w) * 100)));
+    const rightPct = Math.max(60, Math.min(100, Math.round((bestRightX / w) * 100)));
+
+    // Verify reasonable page dimensions (at least 25% width and 30% height)
+    if (rightPct - leftPct >= 25 && botPct - topPct >= 30 && bestTopScore > 12) {
+      return {
+        tl: { x: leftPct, y: topPct },
+        tr: { x: rightPct, y: topPct },
+        br: { x: rightPct, y: botPct },
+        bl: { x: leftPct, y: botPct },
+      };
+    }
+
+    // Fallback to standard Otsu detector if directional gradient is weak
+    return autoDetectDocumentCorners(source);
   } catch (e) {
     return DEFAULT_5PCT_CORNERS;
   }
@@ -1581,8 +1734,15 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     ctx.drawImage(video, 0, 0, w, h);
     const rawDataUrl = canvas.toDataURL('image/png', 1.0);
 
-    // Default to clean 5% uniform trim for easy, neat corner pickers
-    const initialCorners = { ...DEFAULT_5PCT_CORNERS };
+    // On Web & Desktop, auto-detect book/document page edges (top, bottom, left, right);
+    // on Native Mobile, default to clean 5% uniform trim.
+    const initialCorners = !isNativeMobileApp()
+      ? autoDetectBookOrDocumentWebcamPage(canvas)
+      : { ...DEFAULT_5PCT_CORNERS };
+    const initLeft = Math.round(Math.min(initialCorners.tl.x, initialCorners.bl.x));
+    const initRight = Math.round(100 - Math.max(initialCorners.tr.x, initialCorners.br.x));
+    const initTop = Math.round(Math.min(initialCorners.tl.y, initialCorners.tr.y));
+    const initBottom = Math.round(100 - Math.max(initialCorners.bl.y, initialCorners.br.y));
 
     const newPage: ScannedPage = {
       id: `page_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -1593,10 +1753,10 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       brightness: 0,
       contrast: 0,
       midTone: 0,
-      cropLeft: 5,
-      cropRight: 5,
-      cropTop: 5,
-      cropBottom: 5,
+      cropLeft: initLeft,
+      cropRight: initRight,
+      cropTop: initTop,
+      cropBottom: initBottom,
       corners: initialCorners,
     };
 
@@ -2348,37 +2508,272 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
             {/* Bottom Controls for Crop Step */}
             <div className="p-4 pb-[max(2rem,env(safe-area-inset-bottom)+1.5rem)] bg-slate-900 border-t border-slate-800 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPresetCrop(0)}
-                  className="flex-1 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-800 transition shadow"
-                >
-                  Full Page (0%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPresetCrop(5)}
-                  className="flex-1 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-800 transition shadow"
-                >
-                  Trim 5%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const img = new Image();
-                    img.onload = () => {
-                      const detected = autoDetectDocumentCorners(img);
-                      setCorners(detected);
-                    };
-                    img.src = pages[activePageIndex].originalDataUrl;
-                  }}
-                  className="flex-1 py-2 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 text-xs font-bold rounded-xl border border-cyan-800 transition shadow flex items-center justify-center space-x-1"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Auto Detect</span>
-                </button>
-              </div>
+              {!isNativeMobileApp() ? (
+                /* Web & Desktop Download Version: Full Quick Margin Presets + Book/Page Auto-Scanner + Edge Magnifier + 4 Manual Trim Sliders */
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-cyan-300 flex items-center space-x-1">
+                      <Crop className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Quick Margin Presets:</span>
+                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPresetCrop(0)}
+                        className={`px-2.5 py-1 text-[11px] font-black rounded-lg border shadow transition ${
+                          cropTop === 0 && cropBottom === 0 && cropLeft === 0 && cropRight === 0
+                            ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border-cyan-700/60 ring-1 ring-cyan-500/40'
+                            : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                        }`}
+                      >
+                        Full Corners (0%)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPresetCrop(5)}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition ${
+                          cropTop === 5 && cropBottom === 5 && cropLeft === 5 && cropRight === 5
+                            ? 'bg-cyan-950 text-cyan-300 border-cyan-700 ring-1 ring-cyan-500/30'
+                            : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                        }`}
+                      >
+                        Trim 5%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPresetCrop(10)}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition ${
+                          cropTop === 10 && cropBottom === 10 && cropLeft === 10 && cropRight === 10
+                            ? 'bg-cyan-950 text-cyan-300 border-cyan-700 ring-1 ring-cyan-500/30'
+                            : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-800'
+                        }`}
+                      >
+                        Trim 10%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPresetCrop(15)}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition ${
+                          cropTop === 15 && cropBottom === 15 && cropLeft === 15 && cropRight === 15
+                            ? 'bg-cyan-950 text-cyan-300 border-cyan-700 ring-1 ring-cyan-500/30'
+                            : 'bg-slate-950 hover:bg-slate-800 text-slate-400 border-slate-800'
+                        }`}
+                      >
+                        Trim 15%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCropTop(17);
+                          setCropBottom(2);
+                          setCropLeft(18);
+                          setCropRight(22);
+                          setCorners({
+                            tl: { x: 18, y: 17 },
+                            tr: { x: 78, y: 17 },
+                            br: { x: 78, y: 98 },
+                            bl: { x: 18, y: 98 },
+                          });
+                          setInspectEdge('top');
+                        }}
+                        className={`px-2.5 py-1 text-[11px] font-extrabold rounded-lg border transition flex items-center space-x-1 ${
+                          cropTop === 17 && cropBottom === 2 && cropLeft === 18 && cropRight === 22
+                            ? 'bg-purple-950 text-purple-200 border-purple-500 ring-1 ring-purple-400/40'
+                            : 'bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 border-purple-700/70'
+                        }`}
+                        title="Preset for holding a book or document page in front of a laptop/desktop webcam (trims top head/ceiling & wide side margins)"
+                      >
+                        <span>📖 Book / Page Preset</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const img = new Image();
+                          img.onload = () => {
+                            const detected = autoDetectBookOrDocumentWebcamPage(img);
+                            setCorners(detected);
+                            setInspectEdge('top');
+                          };
+                          img.src = pages[activePageIndex].originalDataUrl;
+                        }}
+                        className="px-3 py-1 bg-gradient-to-r from-cyan-950 to-teal-950 hover:from-cyan-900 hover:to-teal-900 text-cyan-300 text-[11px] font-extrabold rounded-lg border border-cyan-500/60 transition shadow flex items-center space-x-1"
+                        title="Smart Top, Bottom, Left & Right Edge Detector for Documents and Books"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Auto-Detect Page / Book</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Virtual Edge Magnifier View - Live view of the edge being trimmed */}
+                  <VirtualEdgeViewer
+                    imageUrl={pages[activePageIndex].originalDataUrl}
+                    activeEdge={inspectEdge}
+                    cropTop={cropTop}
+                    cropBottom={cropBottom}
+                    cropLeft={cropLeft}
+                    cropRight={cropRight}
+                    onSelectEdge={(edge) => setInspectEdge(edge)}
+                  />
+
+                  {/* 4 Fine-Tuning Crop Margin Sliders (Top, Bottom, Left, Right) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className={`p-2 rounded-xl transition ${inspectEdge === 'top' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
+                      <div className="flex justify-between text-[11px] font-bold mb-1">
+                        <span className={inspectEdge === 'top' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
+                          Top Trim {inspectEdge === 'top' && '●'}
+                        </span>
+                        <span className="text-cyan-400">{cropTop}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="45"
+                        value={cropTop}
+                        onMouseDown={() => {
+                          setActiveSlider('top');
+                          setInspectEdge('top');
+                        }}
+                        onTouchStart={() => {
+                          setActiveSlider('top');
+                          setInspectEdge('top');
+                        }}
+                        onMouseUp={() => setActiveSlider(null)}
+                        onTouchEnd={() => setActiveSlider(null)}
+                        onChange={(e) => {
+                          setActiveSlider('top');
+                          setInspectEdge('top');
+                          handleSliderMarginChange('top', Number(e.target.value));
+                        }}
+                        className="w-full accent-cyan-400 cursor-pointer"
+                      />
+                    </div>
+                    <div className={`p-2 rounded-xl transition ${inspectEdge === 'bottom' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
+                      <div className="flex justify-between text-[11px] font-bold mb-1">
+                        <span className={inspectEdge === 'bottom' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
+                          Bottom Trim {inspectEdge === 'bottom' && '●'}
+                        </span>
+                        <span className="text-cyan-400">{cropBottom}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="45"
+                        value={cropBottom}
+                        onMouseDown={() => {
+                          setActiveSlider('bottom');
+                          setInspectEdge('bottom');
+                        }}
+                        onTouchStart={() => {
+                          setActiveSlider('bottom');
+                          setInspectEdge('bottom');
+                        }}
+                        onMouseUp={() => setActiveSlider(null)}
+                        onTouchEnd={() => setActiveSlider(null)}
+                        onChange={(e) => {
+                          setActiveSlider('bottom');
+                          setInspectEdge('bottom');
+                          handleSliderMarginChange('bottom', Number(e.target.value));
+                        }}
+                        className="w-full accent-cyan-400 cursor-pointer"
+                      />
+                    </div>
+                    <div className={`p-2 rounded-xl transition ${inspectEdge === 'left' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
+                      <div className="flex justify-between text-[11px] font-bold mb-1">
+                        <span className={inspectEdge === 'left' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
+                          Left Trim {inspectEdge === 'left' && '●'}
+                        </span>
+                        <span className="text-cyan-400">{cropLeft}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="45"
+                        value={cropLeft}
+                        onMouseDown={() => {
+                          setActiveSlider('left');
+                          setInspectEdge('left');
+                        }}
+                        onTouchStart={() => {
+                          setActiveSlider('left');
+                          setInspectEdge('left');
+                        }}
+                        onMouseUp={() => setActiveSlider(null)}
+                        onTouchEnd={() => setActiveSlider(null)}
+                        onChange={(e) => {
+                          setActiveSlider('left');
+                          setInspectEdge('left');
+                          handleSliderMarginChange('left', Number(e.target.value));
+                        }}
+                        className="w-full accent-cyan-400 cursor-pointer"
+                      />
+                    </div>
+                    <div className={`p-2 rounded-xl transition ${inspectEdge === 'right' ? 'bg-cyan-950/40 border border-cyan-500/40 ring-1 ring-cyan-500/20' : 'bg-slate-950/50'}`}>
+                      <div className="flex justify-between text-[11px] font-bold mb-1">
+                        <span className={inspectEdge === 'right' ? 'text-cyan-300 font-black' : 'text-slate-400'}>
+                          Right Trim {inspectEdge === 'right' && '●'}
+                        </span>
+                        <span className="text-cyan-400">{cropRight}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="45"
+                        value={cropRight}
+                        onMouseDown={() => {
+                          setActiveSlider('right');
+                          setInspectEdge('right');
+                        }}
+                        onTouchStart={() => {
+                          setActiveSlider('right');
+                          setInspectEdge('right');
+                        }}
+                        onMouseUp={() => setActiveSlider(null)}
+                        onTouchEnd={() => setActiveSlider(null)}
+                        onChange={(e) => {
+                          setActiveSlider('right');
+                          setInspectEdge('right');
+                          handleSliderMarginChange('right', Number(e.target.value));
+                        }}
+                        className="w-full accent-cyan-400 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Native Mobile App: Keep existing compact 3-button layout untouched */
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPresetCrop(0)}
+                    className="flex-1 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-800 transition shadow"
+                  >
+                    Full Page (0%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPresetCrop(5)}
+                    className="flex-1 py-2 bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold rounded-xl border border-slate-800 transition shadow"
+                  >
+                    Trim 5%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const img = new Image();
+                      img.onload = () => {
+                        const detected = autoDetectDocumentCorners(img);
+                        setCorners(detected);
+                      };
+                      img.src = pages[activePageIndex].originalDataUrl;
+                    }}
+                    className="flex-1 py-2 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 text-xs font-bold rounded-xl border border-cyan-800 transition shadow flex items-center justify-center space-x-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Auto Detect</span>
+                  </button>
+                </div>
+              )}
 
               {/* Big Action Button: Apply Crop & Flatten */}
               <button
