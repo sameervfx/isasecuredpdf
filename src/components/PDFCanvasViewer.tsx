@@ -78,6 +78,7 @@ interface PageDims {
 export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   state,
   currentPage,
+  onPageVisibleChange,
   zoom,
   onZoomChange,
   onFitToWidth,
@@ -852,9 +853,69 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     };
   }, [state.fileBytes, state.pageOrder, state.deletedPages, state.pageRotations, zoom, currentPage, visibleTrigger, pinchRenderTrigger]);
 
-  // Scroll to page when currentPage changes
+  const lastScrollTriggeredPageRef = useRef<number | null>(null);
+  const currentPageRef = useRef<number>(currentPage);
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+  }, [currentPage]);
+
+  // Synchronize Sidebar & Toolbar active page selection when scrolling through document pages
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || activePages.length <= 1) return;
+
+    let rafId: number | null = null;
+    const handleScroll = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (!containerRef.current) return;
+        const cRect = containerRef.current.getBoundingClientRect();
+        const viewportCenterY = cRect.top + cRect.height * 0.42;
+
+        const pageNodes = containerRef.current.querySelectorAll('.pdf-document-page');
+        let bestPageNum = currentPageRef.current;
+        let minDistance = Infinity;
+
+        pageNodes.forEach((node, seqIdx) => {
+          const rect = node.getBoundingClientRect();
+          const pageNum = seqIdx + 1;
+          // If the viewport reference line falls directly inside this page, select it immediately
+          if (rect.top <= viewportCenterY && rect.bottom >= viewportCenterY) {
+            bestPageNum = pageNum;
+            minDistance = -1;
+          } else if (minDistance >= 0) {
+            const pageCenterY = (rect.top + rect.bottom) / 2;
+            const dist = Math.abs(pageCenterY - viewportCenterY);
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestPageNum = pageNum;
+            }
+          }
+        });
+
+        if (bestPageNum !== currentPageRef.current) {
+          lastScrollTriggeredPageRef.current = bestPageNum;
+          currentPageRef.current = bestPageNum;
+          onPageVisibleChange(bestPageNum);
+        }
+      });
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [activePages, onPageVisibleChange, Boolean(state.fileBytes)]);
+
+  // Scroll to page when currentPage changes via Sidebar thumbnail click or Header toolbar
   useEffect(() => {
     if (activePages.length === 0) return;
+    if (lastScrollTriggeredPageRef.current === currentPage) {
+      lastScrollTriggeredPageRef.current = null;
+      return;
+    }
     const targetIdx = activePages[currentPage - 1];
     if (targetIdx !== undefined) {
       const el = canvasRefs.current.get(targetIdx);

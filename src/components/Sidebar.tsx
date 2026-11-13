@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { 
   FileText, 
   RotateCw, 
@@ -36,6 +36,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleSidebar,
 }) => {
   const activePageIndices = state.pageOrder.filter(idx => !state.deletedPages.has(idx));
+  const thumbItemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = thumbItemRefs.current.get(currentPage);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [currentPage, isOpen]);
 
   return (
     <>
@@ -110,6 +119,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <div
                   key={origIdx}
+                  ref={(el) => {
+                    if (el) thumbItemRefs.current.set(displayPageNum, el);
+                    else thumbItemRefs.current.delete(displayPageNum);
+                  }}
                   onClick={() => onSelectPage(displayPageNum)}
                   className={`group relative border rounded-xl p-2 transition cursor-pointer flex flex-col items-center ${
                     isSelected

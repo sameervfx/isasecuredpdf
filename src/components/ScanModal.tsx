@@ -866,6 +866,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [pages, setPages] = useState<ScannedPage[]>([]);
   const [activePageIndex, setActivePageIndex] = useState<number>(0);
+  const [exportScope, setExportScope] = useState<'selected' | 'all'>('selected');
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string>('');
   const [isAssembling, setIsAssembling] = useState<boolean>(false);
@@ -1930,14 +1931,59 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   };
 
   const handleRotatePage = (index: number) => {
+    setActivePageIndex(index);
     setPages((prev) =>
       prev.map((p, idx) => (idx === index ? { ...p, rotation: (p.rotation + 90) % 360 } : p))
     );
   };
 
+  // Resolve target pages based on user selection ('selected' vs 'all')
+  const getTargetExportPages = (): { page: ScannedPage; pageNumber: number }[] => {
+    if (pages.length === 0) return [];
+    if (exportScope === 'selected' || pages.length === 1) {
+      const safeIdx = Math.min(Math.max(0, activePageIndex), pages.length - 1);
+      return [{ page: pages[safeIdx], pageNumber: safeIdx + 1 }];
+    }
+    return pages.map((page, idx) => ({ page, pageNumber: idx + 1 }));
+  };
+
+  // Bake rotation into an image canvas so exported JPG, PNG, and PDF pages are always upright
+  const renderPageWithRotationToCanvas = (
+    dataUrl: string,
+    rotationDeg: number,
+    fillWhiteBg: boolean
+  ): Promise<HTMLCanvasElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const rot = ((rotationDeg % 360) + 360) % 360;
+        const swapDims = rot === 90 || rot === 270;
+        const canvas = document.createElement('canvas');
+        canvas.width = swapDims ? img.height : img.width;
+        canvas.height = swapDims ? img.width : img.height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+          if (fillWhiteBg) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+          ctx.save();
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate((rot * Math.PI) / 180);
+          ctx.drawImage(img, -img.width / 2, -img.height / 2);
+          ctx.restore();
+        }
+        resolve(canvas);
+      };
+      img.onerror = (e) => reject(e);
+      img.src = dataUrl;
+    });
+  };
+
   // Export Images as JPG or PNG with user-friendly naming & Save to Phone vs Share / Cloud Drive
   const handleDownloadImages = async (format: 'jpg' | 'png') => {
-    if (pages.length === 0) return;
+    const targetList = getTargetExportPages();
+    if (targetList.length === 0) return;
     const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
 
     // Monthly 5-Document Limit check for free tier image export
@@ -1954,49 +2000,40 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
 
     const items: ExportItem[] = [];
-    for (let idx = 0; idx < pages.length; idx++) {
-      const p = pages[idx];
-      const img = new Image();
+    for (let i = 0; i < targetList.length; i++) {
+      const { page: p, pageNumber } = targetList[i];
+      const canvas = await renderPageWithRotationToCanvas(p.dataUrl, p.rotation, format === 'jpg');
       await new Promise<void>((resolve) => {
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
-          if (ctx) {
-            if (format === 'jpg') {
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-            ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const fileName =
+              targetList.length === 1
+                ? `${cleanBaseName}.${format}`
+                : `${cleanBaseName}_Page_${pageNumber}.${format}`;
+            items.push({ fileName, blob, mimeType });
           }
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const fileName =
-                pages.length === 1
-                  ? `${cleanBaseName}.${format}`
-                  : `${cleanBaseName}_Page_${idx + 1}.${format}`;
-              items.push({ fileName, blob, mimeType });
-            }
-            resolve();
-          }, mimeType, 0.95);
-        };
-        img.src = p.dataUrl;
+          resolve();
+        }, mimeType, 0.95);
       });
     }
 
     if (items.length > 0) {
       setExportModalFiles(items);
-      setExportModalFileName(`${cleanBaseName}.${format}`);
+      setExportModalFileName(items[0].fileName);
       setExportModalMimeType(mimeType);
-      setExportModalTitle(`Export Scanned ${format.toUpperCase()}`);
+      setExportModalTitle(
+        targetList.length === 1
+          ? `Export Scanned ${format.toUpperCase()} (Page ${targetList[0].pageNumber})`
+          : `Export All ${targetList.length} Scanned ${format.toUpperCase()}s`
+      );
       setExportModalOpen(true);
     }
   };
 
   // Assemble Scanned PDF & Open Export Save Modal (Save to Phone or Cloud)
   const handleExportScannedPDF = async () => {
-    if (pages.length === 0) return;
+    const targetList = getTargetExportPages();
+    if (targetList.length === 0) return;
     const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
 
     // Monthly 5-Document Limit check for free tier PDF export
@@ -2015,12 +2052,11 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     try {
       const pdfDoc = await PDFDocument.create();
 
-      for (const pageItem of pages) {
-        const imageBytes = await fetch(pageItem.dataUrl).then((res) => res.arrayBuffer());
-        const isPng = pageItem.dataUrl.startsWith('data:image/png');
-        const imageEmbed = isPng
-          ? await pdfDoc.embedPng(imageBytes)
-          : await pdfDoc.embedJpg(imageBytes);
+      for (const { page: pageItem } of targetList) {
+        const rotatedCanvas = await renderPageWithRotationToCanvas(pageItem.dataUrl, pageItem.rotation, true);
+        const bakedJpgDataUrl = rotatedCanvas.toDataURL('image/jpeg', 0.94);
+        const imageBytes = await fetch(bakedJpgDataUrl).then((res) => res.arrayBuffer());
+        const imageEmbed = await pdfDoc.embedJpg(imageBytes);
 
         const stdWidth = 612;
         const aspectRatio = imageEmbed.height / imageEmbed.width;
@@ -2033,22 +2069,21 @@ export const ScanModal: React.FC<ScanModalProps> = ({
           width: stdWidth,
           height: stdHeight,
         });
-
-        if (pageItem.rotation !== 0) {
-          page.setRotation({ type: 'degrees', angle: pageItem.rotation } as any);
-        }
       }
 
       applyStandardMetadata(pdfDoc);
       const pdfBytes = await pdfDoc.save();
-      const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
       const fileName = `${cleanBaseName}.pdf`;
       const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
 
       setExportModalFiles([{ fileName, blob, mimeType: 'application/pdf' }]);
       setExportModalFileName(fileName);
       setExportModalMimeType('application/pdf');
-      setExportModalTitle('Export Scanned PDF');
+      setExportModalTitle(
+        targetList.length === 1
+          ? `Export Scanned PDF (Page ${targetList[0].pageNumber})`
+          : `Export Combined PDF (${targetList.length} Pages)`
+      );
       setExportModalOpen(true);
     } catch (err: any) {
       console.error('Failed to generate scanned PDF:', err);
@@ -2060,18 +2095,18 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
   // Assemble PDF & Launch in PDF Editor Workspace
   const handleAssemblePDF = async () => {
-    if (pages.length === 0) return;
+    const targetList = getTargetExportPages();
+    if (targetList.length === 0) return;
     setIsAssembling(true);
 
     try {
       const pdfDoc = await PDFDocument.create();
 
-      for (const pageItem of pages) {
-        const imageBytes = await fetch(pageItem.dataUrl).then((res) => res.arrayBuffer());
-        const isPng = pageItem.dataUrl.startsWith('data:image/png');
-        const imageEmbed = isPng
-          ? await pdfDoc.embedPng(imageBytes)
-          : await pdfDoc.embedJpg(imageBytes);
+      for (const { page: pageItem } of targetList) {
+        const rotatedCanvas = await renderPageWithRotationToCanvas(pageItem.dataUrl, pageItem.rotation, true);
+        const bakedJpgDataUrl = rotatedCanvas.toDataURL('image/jpeg', 0.94);
+        const imageBytes = await fetch(bakedJpgDataUrl).then((res) => res.arrayBuffer());
+        const imageEmbed = await pdfDoc.embedJpg(imageBytes);
 
         const stdWidth = 612;
         const aspectRatio = imageEmbed.height / imageEmbed.width;
@@ -2084,10 +2119,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({
           width: stdWidth,
           height: stdHeight,
         });
-
-        if (pageItem.rotation !== 0) {
-          page.setRotation({ type: 'degrees', angle: pageItem.rotation } as any);
-        }
       }
 
       applyStandardMetadata(pdfDoc);
@@ -3177,22 +3208,58 @@ export const ScanModal: React.FC<ScanModalProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-cyan-400">Document Pages Overview</h4>
-              <button
-                onClick={() => setCurrentStep('camera')}
-                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-extrabold rounded-xl shadow-lg flex items-center space-x-1.5 transition transform active:scale-95"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Another Page</span>
-              </button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-cyan-400">Document Pages Overview</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Click any page card to select it for export, or click <span className="text-cyan-300 font-bold">Edit</span> to adjust crop & filters.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {pages.length > 1 && (
+                  <div className="flex items-center bg-slate-900 border border-slate-700 rounded-xl p-1 shadow-inner">
+                    <button
+                      type="button"
+                      onClick={() => setExportScope('selected')}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-extrabold transition ${
+                        exportScope === 'selected'
+                          ? 'bg-cyan-500 text-slate-950 shadow'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      ✓ Selected Page Only (Page {Math.min(activePageIndex + 1, pages.length)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExportScope('all')}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-extrabold transition ${
+                        exportScope === 'all'
+                          ? 'bg-cyan-500 text-slate-950 shadow'
+                          : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      Combine All ({pages.length} Pages)
+                    </button>
+                  </div>
+                )}
+                <button
+                  onClick={() => setCurrentStep('camera')}
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-extrabold rounded-xl shadow-lg flex items-center space-x-1.5 transition transform active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Another Page</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {pages.map((p, idx) => (
                 <div
                   key={p.id}
-                  onClick={() => openEditStepForPage(p, idx)}
+                  onClick={() => {
+                    setActivePageIndex(idx);
+                    setExportScope('selected');
+                  }}
                   className={`group relative bg-slate-900 border-2 rounded-2xl overflow-hidden cursor-pointer transition transform hover:scale-105 ${
                     activePageIndex === idx ? 'border-cyan-400 shadow-xl ring-2 ring-cyan-400/40' : 'border-slate-800 hover:border-slate-700'
                   }`}
@@ -3207,6 +3274,11 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                     <span className="absolute bottom-2 left-2 text-[10px] font-black px-2 py-0.5 bg-slate-950/90 text-cyan-300 rounded-lg border border-cyan-500/30">
                       Page {idx + 1}
                     </span>
+                    {activePageIndex === idx && (
+                      <span className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 bg-cyan-400 text-slate-950 rounded-lg shadow-lg flex items-center gap-1">
+                        ✓ Selected
+                      </span>
+                    )}
                   </div>
 
                   <div className="p-2.5 bg-slate-950 flex items-center justify-between border-t border-slate-800">
@@ -3251,13 +3323,20 @@ export const ScanModal: React.FC<ScanModalProps> = ({
 
           {/* Export Action Bar Footer - Compact Sleek Proportional Buttons */}
           <div className="p-3.5 pb-[max(1.5rem,env(safe-area-inset-bottom)+1rem)] bg-slate-900 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 max-w-4xl mx-auto w-full">
-            <button
-              onClick={() => setCurrentStep('camera')}
-              className="w-full sm:w-auto px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-extrabold rounded-xl border border-slate-700 transition flex items-center justify-center space-x-1.5"
-            >
-              <Plus className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Snap More Pages</span>
-            </button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => setCurrentStep('camera')}
+                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-extrabold rounded-xl border border-slate-700 transition flex items-center justify-center space-x-1.5"
+              >
+                <Plus className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Snap More Pages</span>
+              </button>
+              {pages.length > 1 && (
+                <span className="text-[11px] font-bold text-cyan-300 bg-slate-950 border border-cyan-500/30 px-2.5 py-1.5 rounded-xl">
+                  Exporting: {exportScope === 'selected' ? `Page ${Math.min(activePageIndex + 1, pages.length)} Only` : `All ${pages.length} Pages`}
+                </span>
+              )}
+            </div>
 
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
               <button
@@ -3287,7 +3366,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                 title="Save PDF to Phone Storage or Cloud Drive"
               >
                 <Save className="w-3.5 h-3.5 text-white" />
-                <span>Save PDF</span>
+                <span>Save PDF{pages.length > 1 ? (exportScope === 'selected' ? ` (Page ${Math.min(activePageIndex + 1, pages.length)})` : ` (All ${pages.length})`) : ''}</span>
               </button>
 
               <div className="relative group p-[1.5px] rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 shadow-lg hover:shadow-cyan-500/40 transition-all duration-300 flex-1 sm:flex-none">
@@ -3302,7 +3381,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
                   ) : (
                     <>
                       <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Open in Editor</span>
+                      <span>Open in Editor{pages.length > 1 ? (exportScope === 'selected' ? ` (Page ${Math.min(activePageIndex + 1, pages.length)})` : ` (All ${pages.length})`) : ''}</span>
                       <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
                     </>
                   )}
