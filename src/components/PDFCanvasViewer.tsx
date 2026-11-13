@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { pdfRenderer } from '../services/pdfRenderer';
-import { isNativeMobileApp } from '../utils/platform';
+import { isNativeMobileApp, isIOSPlatform } from '../utils/platform';
 import { PDFDocumentState, ToolMode, TextAnnotation, SignatureAnnotation, StampAnnotation, StrikeoutAnnotation, FreehandDrawing } from '../types/pdf';
 import { AcroFormOverlay } from './AcroFormOverlay';
 import { TextAnnotationEditor } from './TextAnnotationEditor';
@@ -985,8 +985,46 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     );
   }
 
+  const isMobileDevice = isNativeMobileApp() || isIOSPlatform() || (typeof window !== 'undefined' && window.innerWidth < 768);
+
   return (
     <div className="relative flex-1 h-full w-full overflow-hidden flex flex-col select-none">
+      {/* Fullscreen Mobile Safe-Area Header: Keeps PDF completely below the Dynamic Island, camera notch, and status bar */}
+      {isFullscreen && isMobileDevice ? (
+        <div
+          className="w-full shrink-0 bg-slate-950/95 border-b border-white/5 backdrop-blur-md flex items-center justify-center relative z-40 select-none animate-fadeIn"
+          style={{
+            paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)',
+            paddingBottom: '8px',
+          }}
+        >
+          {onToggleFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-white/80 hover:text-white border border-white/15 hover:border-cyan-500/50 rounded-full shadow-lg backdrop-blur-md transition active:scale-95 text-xs font-bold"
+              title="Exit Fullscreen"
+            >
+              <Minimize2 className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Exit Fullscreen</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        /* Floating Exit Fullscreen pill on desktop web */
+        isFullscreen && onToggleFullscreen && (
+          <div className="absolute top-3 sm:top-4 left-1/2 transform -translate-x-1/2 z-40 pointer-events-auto">
+            <button
+              onClick={onToggleFullscreen}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-950/40 hover:bg-slate-900/80 text-white/70 hover:text-white border border-white/15 hover:border-cyan-500/40 rounded-full shadow-2xl backdrop-blur-md transition active:scale-95 text-xs font-bold group"
+              title="Exit Fullscreen (Esc)"
+            >
+              <Minimize2 className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition" />
+              <span className="text-white/70 group-hover:text-white transition">Exit Fullscreen</span>
+            </button>
+          </div>
+        )
+      )}
+
       {/* Floating Close Button: Anchored to page viewer, in line with viewer on desktop web */}
       {onCloseDocument && !isNativeMobileApp() && (
         <div className="absolute top-3 sm:top-4 right-3 sm:right-6 z-40 pointer-events-auto">
@@ -996,20 +1034,6 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
             title="Close document"
           >
             <X className="w-4 h-4 text-rose-400/50 group-hover:text-rose-300 group-hover:scale-110 transition duration-200" />
-          </button>
-        </div>
-      )}
-
-      {/* Floating Exit Fullscreen pill when reading mode active: 80% transparent backdrop, 50% transparent text & symbols */}
-      {isFullscreen && onToggleFullscreen && (
-        <div className="absolute top-3 sm:top-4 left-1/2 transform -translate-x-1/2 z-40 pointer-events-auto">
-          <button
-            onClick={onToggleFullscreen}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-950/20 hover:bg-slate-900/60 text-white/50 hover:text-white border border-white/10 hover:border-cyan-500/40 rounded-full shadow-2xl backdrop-blur-md transition active:scale-95 text-xs font-bold group"
-            title="Exit Fullscreen (Esc)"
-          >
-            <Minimize2 className="w-3.5 h-3.5 text-white/50 group-hover:text-cyan-300 transition" />
-            <span className="text-white/50 group-hover:text-white transition">Exit Fullscreen</span>
           </button>
         </div>
       )}
@@ -1291,7 +1315,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         ref={containerRef}
         tabIndex={0}
         style={{ touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
-        className={`flex-1 h-full overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center relative focus:outline-none min-w-0 transition-colors duration-500`}
+        className={`flex-1 h-full min-h-0 overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center relative focus:outline-none min-w-0 transition-colors duration-500`}
       >
         <div
           ref={pagesWrapperRef}
