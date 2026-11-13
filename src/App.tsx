@@ -14,6 +14,7 @@ import { WatermarkOptions } from './components/WatermarkModal';
 import { ExportFormatType } from './components/PremiumExportModal';
 import { ExportSaveModal } from './components/ExportSaveModal';
 import { checkAndConsumeMonthlyQuota, canUseMonthlyQuotaFeature, FREE_MONTHLY_DOC_LIMIT } from './utils/monthlyUsageLimit';
+import { isNativeMobileApp, isIOSPlatform } from './utils/platform';
 
 // Code-split heavy editor modals and canvas viewer so LandingPage loads instantly in < 5ms
 const PDFCanvasViewer = React.lazy(() => import('./components/PDFCanvasViewer').then(m => ({ default: m.PDFCanvasViewer })));
@@ -1053,14 +1054,37 @@ export const App: React.FC = () => {
   const handleToggleFullscreen = useCallback(() => {
     if (window.electronAPI?.toggleFullscreen) {
       window.electronAPI.toggleFullscreen();
-    } else {
+      return;
+    }
+
+    // On native mobile apps (iOS & Android) or iOS WKWebView (capacitor://localhost), the app already
+    // occupies the entire physical device screen. Calling the browser's DOM Fullscreen API throws
+    // "TypeError: Not allowed" in iOS WKWebView. Instead, seamlessly toggle distraction-free reading mode!
+    if (isNativeMobileApp() || isIOSPlatform()) {
+      setIsFullscreen((prev) => !prev);
+      return;
+    }
+
+    try {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.().catch(() => {});
+        if (document.fullscreenEnabled && typeof document.documentElement.requestFullscreen === 'function') {
+          const req = document.documentElement.requestFullscreen();
+          if (req && typeof req.catch === 'function') {
+            req.catch(() => {});
+          }
+        }
         setIsFullscreen(true);
       } else {
-        document.exitFullscreen?.().catch(() => {});
+        if (typeof document.exitFullscreen === 'function') {
+          const ex = document.exitFullscreen();
+          if (ex && typeof ex.catch === 'function') {
+            ex.catch(() => {});
+          }
+        }
         setIsFullscreen(false);
       }
+    } catch (e) {
+      setIsFullscreen((prev) => !prev);
     }
   }, []);
 
@@ -1074,7 +1098,9 @@ export const App: React.FC = () => {
         if (window.electronAPI?.setFullscreen) {
           window.electronAPI.setFullscreen(false);
         } else if (document.fullscreenElement) {
-          document.exitFullscreen?.().catch(() => {});
+          try {
+            document.exitFullscreen?.().catch(() => {});
+          } catch (e) {}
           setIsFullscreen(false);
         } else {
           setIsFullscreen(false);
@@ -1084,6 +1110,17 @@ export const App: React.FC = () => {
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [isFullscreen, handleToggleFullscreen]);
+
+  // Sync fullscreen state if user exits via browser chrome or OS gesture
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && !isNativeMobileApp() && !isIOSPlatform()) {
+        setIsFullscreen(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // Wire up Electron native menu events & system file association events
   useEffect(() => {
