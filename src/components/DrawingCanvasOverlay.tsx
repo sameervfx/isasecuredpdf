@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Move, Plus, Minus, Maximize2 } from 'lucide-react';
+import { Trash2, Move, Plus, Minus, Maximize2, Check } from 'lucide-react';
 import { FreehandDrawing, SignatureAnnotation, StampAnnotation, StrikeoutAnnotation, ToolMode } from '../types/pdf';
 
 interface DrawingCanvasOverlayProps {
@@ -9,6 +9,7 @@ interface DrawingCanvasOverlayProps {
   originalWidth: number;
   originalHeight: number;
   toolMode: ToolMode;
+  onSetToolMode?: (mode: ToolMode) => void;
   pendingSignatureDataUrl?: string | null;
   drawings: FreehandDrawing[];
   stamps: StampAnnotation[];
@@ -67,6 +68,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   originalWidth,
   originalHeight,
   toolMode,
+  onSetToolMode,
   pendingSignatureDataUrl,
   drawings,
   stamps,
@@ -198,6 +200,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         size: defaultSize,
         color: '#10b981', // Emerald Green
       });
+      if (onSetToolMode) onSetToolMode('select');
     } else if (toolMode === 'crossmark') {
       const defaultSize = 14;
       onAddStamp({
@@ -208,6 +211,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         size: defaultSize,
         color: '#ef4444', // Red
       });
+      if (onSetToolMode) onSetToolMode('select');
     } else if (toolMode === 'strikeout') {
       onAddStrikeout({
         pageIndex,
@@ -217,6 +221,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         thickness: 3,
         color: '#ef4444', // Red strikeout line
       });
+      if (onSetToolMode) onSetToolMode('select');
     } else if (toolMode === 'sign') {
       if (pendingSignatureDataUrl && onAddSignatureAtCoords) {
         onAddSignatureAtCoords({
@@ -227,11 +232,31 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
           height: 70,
           dataUrl: pendingSignatureDataUrl,
         });
+        if (onSetToolMode) onSetToolMode('select');
       } else if (onOpenSignatureModal) {
         onOpenSignatureModal('draw');
       }
     }
   };
+
+  // Outside click listener to cleanly deselect any active stamp
+  useEffect(() => {
+    if (!selectedStampId) return;
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('.stamp-controls-box') || target.closest('.stamp-element')) {
+        return;
+      }
+      setSelectedStampId(null);
+    };
+    window.addEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('touchstart', handleOutsideClick);
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [selectedStampId]);
 
   const prevStampsCountRef = useRef<number>(pageStamps.length);
   useEffect(() => {
@@ -314,9 +339,9 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
 
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     const pt = getPdfCoords(e);
-    if (toolMode !== 'checkmark' && toolMode !== 'crossmark') {
-      setSelectedStampId(null);
-    }
+    // Clicking on background canvas immediately deselects active stamp
+    setSelectedStampId(null);
+
     if (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') {
       setIsDrawing(true);
       setCurrentPoints([pt]);
@@ -329,7 +354,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       setIsDrawingShape(true);
       setShapeStartPt(pt);
       setShapeCurrentPt(pt);
-    } else {
+    } else if (toolMode === 'checkmark' || toolMode === 'crossmark' || toolMode === 'strikeout' || toolMode === 'sign') {
       handleDropPoint(pt);
     }
   };
@@ -526,6 +551,9 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
     }
     const pt = getPdfCoordsFromTouch(e);
     if (!pt) return;
+    // Tapping on background canvas immediately deselects active stamp
+    setSelectedStampId(null);
+
     if (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') {
       setIsDrawing(true);
       setCurrentPoints([pt]);
@@ -538,7 +566,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
       setIsDrawingShape(true);
       setShapeStartPt(pt);
       setShapeCurrentPt(pt);
-    } else {
+    } else if (toolMode === 'checkmark' || toolMode === 'crossmark' || toolMode === 'strikeout' || toolMode === 'sign') {
       handleDropPoint(pt);
     }
   };
@@ -747,7 +775,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
                 e.stopPropagation();
                 setSelectedStampId(stamp.id);
               }}
-              className="pointer-events-auto cursor-pointer group"
+              className="stamp-element pointer-events-auto cursor-pointer group"
             >
               {stamp.type === 'checkmark' ? (
                 <path
@@ -806,7 +834,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
         return (
           <div
             key={`sel_${selectedStamp.id}`}
-            className="absolute pointer-events-auto z-40 select-none animate-fadeIn"
+            className="stamp-controls-box absolute pointer-events-auto z-40 select-none animate-fadeIn"
             style={{
               left: `${sx - 4}px`,
               top: `${sy - 4}px`,
@@ -901,6 +929,22 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
                 title="Remove Stamp"
               >
                 <Trash2 className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="w-[1px] h-3.5 bg-slate-700 mx-0.5" />
+
+              {/* Done / Deselect Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStampId(null);
+                  if (onSetToolMode) onSetToolMode('select');
+                }}
+                className="px-2 py-0.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white rounded-md transition flex items-center space-x-1 font-bold active:scale-95 text-[11px]"
+                title="Done (Finish & Deselect)"
+              >
+                <Check className="w-3 h-3 text-emerald-300" />
+                <span>Done</span>
               </button>
             </div>
 

@@ -1424,6 +1424,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                       originalWidth={origW}
                       originalHeight={origH}
                       toolMode={toolMode}
+                      onSetToolMode={onSetToolMode}
                       drawColor={drawColor}
                       thickness={drawThickness}
                       highlightColor={highlightColor}
