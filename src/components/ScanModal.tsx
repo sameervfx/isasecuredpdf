@@ -863,6 +863,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const [currentStep, setCurrentStep] = useState<'camera' | 'crop' | 'edit' | 'summary'>('camera');
   const [activeTab, setActiveTab] = useState<'camera' | 'qr'>('camera');
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [pages, setPages] = useState<ScannedPage[]>([]);
   const [activePageIndex, setActivePageIndex] = useState<number>(0);
@@ -1135,8 +1136,22 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     const currentReqId = ++cameraRequestIdRef.current;
 
     try {
+      if (streamRef.current) {
+        try {
+          streamRef.current.getTracks().forEach((t) => {
+            t.stop();
+            t.enabled = false;
+          });
+        } catch (e) {}
+        streamRef.current = null;
+      }
       if (stream) {
-        stream.getTracks().forEach((t) => t.stop());
+        try {
+          stream.getTracks().forEach((t) => {
+            t.stop();
+            t.enabled = false;
+          });
+        } catch (e) {}
       }
 
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -1150,8 +1165,13 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       });
 
       // If camera was stopped or another request was initiated while awaiting, discard stream immediately
-      if (cameraRequestIdRef.current !== currentReqId) {
-        mediaStream.getTracks().forEach((t) => t.stop());
+      if (cameraRequestIdRef.current !== currentReqId || !isOpen || activeTab !== 'camera' || currentStep !== 'camera') {
+        try {
+          mediaStream.getTracks().forEach((t) => {
+            t.stop();
+            t.enabled = false;
+          });
+        } catch (e) {}
         return;
       }
 
@@ -1170,6 +1190,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         }
       }
 
+      streamRef.current = mediaStream;
       setStream(mediaStream);
       setIsCameraActive(true);
 
@@ -1198,12 +1219,73 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   const stopCamera = () => {
     cameraRequestIdRef.current++; // Invalidate any in-flight request
     isCameraStartingRef.current = false;
+
+    // Immediately stop and disable all hardware tracks on the ref
+    if (streamRef.current) {
+      try {
+        streamRef.current.getTracks().forEach((t) => {
+          t.stop();
+          t.enabled = false;
+        });
+      } catch (e) {}
+      streamRef.current = null;
+    }
+
+    // Also stop tracks on the state stream
     if (stream) {
-      stream.getTracks().forEach((t) => t.stop());
+      try {
+        stream.getTracks().forEach((t) => {
+          t.stop();
+          t.enabled = false;
+        });
+      } catch (e) {}
       setStream(null);
     }
+
+    // Disconnect and release the HTML video element reference
+    if (videoRef.current) {
+      try {
+        const vStream = videoRef.current.srcObject as MediaStream;
+        if (vStream && typeof vStream.getTracks === 'function') {
+          vStream.getTracks().forEach((t) => {
+            t.stop();
+            t.enabled = false;
+          });
+        }
+      } catch (e) {}
+      videoRef.current.srcObject = null;
+    }
+
     setIsCameraActive(false);
   };
+
+  const handleClose = () => {
+    stopCamera();
+    onClose();
+  };
+
+  // Unconditionally kill all camera hardware tracks on modal close or unmount
+  useEffect(() => {
+    if (!isOpen) {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleUnload = () => {
+      stopCamera();
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+      stopCamera();
+    };
+  }, []);
 
   const toggleCameraFacing = () => {
     setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
@@ -2127,7 +2209,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
       const fileName = `${cleanBaseName}.pdf`;
 
       onScanComplete(pdfBytes, fileName);
-      onClose();
+      handleClose();
     } catch (err: any) {
       console.error('Failed to assemble scanned PDF:', err);
       alert('Failed to generate PDF from scanned images. Please try again.');
@@ -2191,7 +2273,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 shadow-lg backdrop-blur-md transition transform active:scale-90 flex items-center justify-center"
               title="Close Camera"
             >
@@ -3179,7 +3261,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition"
             >
               <X className="w-5 h-5" />

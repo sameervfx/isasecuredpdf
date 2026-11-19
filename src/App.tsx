@@ -1603,16 +1603,18 @@ export const App: React.FC = () => {
       )}
 
       {/* Document Camera Scanner Modal */}
-      <ScanModal
-        isOpen={isScanModalOpen}
-        onClose={() => setIsScanModalOpen(false)}
-        isProActive={isProActive}
-        onRequirePro={notifyMonthlyQuotaReached}
-        onScanComplete={(pdfBytes, fileName) => {
-          loadPDFData(pdfBytes, fileName);
-          setCurrentView('editor');
-        }}
-      />
+      {isScanModalOpen && (
+        <ScanModal
+          isOpen={isScanModalOpen}
+          onClose={() => setIsScanModalOpen(false)}
+          isProActive={isProActive}
+          onRequirePro={notifyMonthlyQuotaReached}
+          onScanComplete={(pdfBytes, fileName) => {
+            loadPDFData(pdfBytes, fileName);
+            setCurrentView('editor');
+          }}
+        />
+      )}
 
       {/* App & Mobile Download Modal */}
       <AppDownloadModal
