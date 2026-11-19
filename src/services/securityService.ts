@@ -33,6 +33,7 @@ export interface EncryptOptions {
   ownerPassword?: string;
   preventPrinting?: boolean;
   preventCopying?: boolean;
+  algorithm?: 'aes-256' | 'aes-128';
 }
 
 export interface CompressionResult {
@@ -71,7 +72,8 @@ export const securityService = {
       throw new Error('Failed to parse PDF document for encryption.');
     }
 
-    let optString = `encrypt=aes-128,user-password=${userPass},owner-password=${ownerPass}`;
+    const algorithm = options.algorithm || 'aes-256';
+    let optString = `encrypt=${algorithm},user-password=${userPass},owner-password=${ownerPass}`;
     if (permMask > 0) {
       optString += `,permissions=${permMask}`;
     }

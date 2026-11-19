@@ -481,7 +481,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       x: parseFloat(clickX.toFixed(2)),
       y: parseFloat(clickY.toFixed(2)),
       text: '',
-      fontSize: textFontSize || 14,
+      fontSize: textFontSize || 11,
       fontFamily: textFontFamily || "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
       color: textColor || '#000000',
       backgroundColor: bgHex,
@@ -547,6 +547,9 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       width: parseFloat(totalW.toFixed(2)),
       height: line.height,
     });
+    if (setTextFontSize) {
+      setTextFontSize(line.fontSize);
+    }
   };
 
   const handleMouseDownDrag = (e: React.MouseEvent, ann: TextAnnotation) => {

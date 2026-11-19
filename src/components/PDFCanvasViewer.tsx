@@ -31,6 +31,7 @@ interface PDFCanvasViewerProps {
   onAddDrawing: (drawing: Omit<FreehandDrawing, 'id'>) => void;
   onDeleteDrawing: (id: string) => void;
   onAddStamp: (stamp: Omit<StampAnnotation, 'id'>) => void;
+  onUpdateStamp?: (id: string, updates: Partial<StampAnnotation>) => void;
   onDeleteStamp: (id: string) => void;
   onAddStrikeout: (strike: Omit<StrikeoutAnnotation, 'id'>) => void;
   onDeleteStrikeout: (id: string) => void;
@@ -96,6 +97,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   onAddDrawing,
   onDeleteDrawing,
   onAddStamp,
+  onUpdateStamp,
   onDeleteStamp,
   onAddStrikeout,
   onDeleteStrikeout,
@@ -1441,6 +1443,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                       onAddDrawing={onAddDrawing}
                       onDeleteDrawing={onDeleteDrawing}
                       onAddStamp={onAddStamp}
+                      onUpdateStamp={onUpdateStamp}
                       onDeleteStamp={onDeleteStamp}
                       onAddStrikeout={onAddStrikeout}
                       onDeleteStrikeout={onDeleteStrikeout}

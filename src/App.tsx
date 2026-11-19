@@ -209,8 +209,8 @@ export const App: React.FC = () => {
     } catch (e) {}
   }, []);
 
-  // Text Tool Formatting Defaults
-  const [textFontSize, setTextFontSize] = useState<number>(14);
+  // Text Tool Formatting Defaults (Standard 11pt Document Body Size)
+  const [textFontSize, setTextFontSize] = useState<number>(11);
   const [textFontFamily, setTextFontFamily] = useState<string>("'Times New Roman', Times, serif");
   const [textColor, setTextColor] = useState<string>('#000000');
   const [textIsRedact, setTextIsRedact] = useState<boolean>(false);
@@ -731,6 +731,13 @@ export const App: React.FC = () => {
       id: `stamp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     };
     setDocState((prev) => ({ ...prev, stamps: [...prev.stamps, newStamp] }));
+  };
+
+  const handleUpdateStamp = (id: string, updates: Partial<StampAnnotation>) => {
+    setDocState((prev) => ({
+      ...prev,
+      stamps: prev.stamps.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+    }));
   };
 
   const handleDeleteStamp = (id: string) => {
@@ -1372,6 +1379,7 @@ export const App: React.FC = () => {
           onAddDrawing={handleAddDrawing}
           onDeleteDrawing={handleDeleteDrawing}
           onAddStamp={handleAddStamp}
+          onUpdateStamp={handleUpdateStamp}
           onDeleteStamp={handleDeleteStamp}
           onAddStrikeout={handleAddStrikeout}
           onDeleteStrikeout={handleDeleteStrikeout}

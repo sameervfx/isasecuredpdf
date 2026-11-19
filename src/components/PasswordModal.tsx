@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Unlock, ShieldCheck, Printer, Copy, AlertCircle, KeyRound, Download, CheckCircle2 } from 'lucide-react';
+import { X, Lock, Unlock, Shield, ShieldCheck, Printer, Copy, AlertCircle, KeyRound, Download, CheckCircle2 } from 'lucide-react';
 import { securityService, EncryptOptions } from '../services/securityService';
 import { ExportSaveModal } from './ExportSaveModal';
 
@@ -31,6 +31,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [preventPrinting, setPreventPrinting] = useState(false);
   const [preventCopying, setPreventCopying] = useState(false);
+  const [encryptionAlgorithm, setEncryptionAlgorithm] = useState<'aes-256' | 'aes-128'>('aes-256');
 
   // Dual Export Modal State
   const [isExportSaveModalOpen, setIsExportSaveModalOpen] = useState(false);
@@ -84,6 +85,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
         ownerPassword: password,
         preventPrinting,
         preventCopying,
+        algorithm: encryptionAlgorithm,
       };
 
       const encryptedBytes = await securityService.encryptPDF(pdfBytes, encryptOpts);
@@ -265,6 +267,45 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                   className="w-full px-3.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition"
                   required
                 />
+              </div>
+
+              {/* Encryption Algorithm Selection (AES-256 vs AES-128) */}
+              <div className="space-y-1.5 pt-1">
+                <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center space-x-1.5">
+                    <Shield className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Encryption Standard</span>
+                  </span>
+                  <span className="text-[10px] text-cyan-300 font-mono font-bold bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-800">
+                    {encryptionAlgorithm === 'aes-256' ? 'AES-256 (ISO 32000-2)' : 'AES-128 (Legacy)'}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEncryptionAlgorithm('aes-256')}
+                    className={`p-2 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center text-center ${
+                      encryptionAlgorithm === 'aes-256'
+                        ? 'bg-cyan-950/70 border-cyan-400 text-cyan-300 shadow-md ring-1 ring-cyan-500/50'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="font-extrabold text-xs">AES-256</span>
+                    <span className="text-[9px] text-slate-400 mt-0.5">Military-Grade (Default)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEncryptionAlgorithm('aes-128')}
+                    className={`p-2 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center text-center ${
+                      encryptionAlgorithm === 'aes-128'
+                        ? 'bg-cyan-950/70 border-cyan-400 text-cyan-300 shadow-md ring-1 ring-cyan-500/50'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <span className="font-extrabold text-xs">AES-128</span>
+                    <span className="text-[9px] text-slate-400 mt-0.5">Standard Compatibility</span>
+                  </button>
+                </div>
               </div>
 
               {/* Permission Checkboxes */}

@@ -873,7 +873,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             },
             {
               q: 'How does client-side AES password protection work?',
-              a: 'PDF password encryption and decryption use in-memory AES-128 algorithms. Passwords are validated locally without sending password credentials or unencrypted PDF data over the web.'
+              a: 'PDF password encryption and decryption use in-memory military-grade AES-256 and AES-128 algorithms via WebAssembly. Passwords and cryptographic keys are derived locally on your device without sending password credentials or unencrypted PDF data over the web.'
             },
             {
               q: 'Can I use the app offline without an internet connection?',
@@ -1257,7 +1257,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div>
                 <h3 className="text-base font-extrabold text-white">Pro Monthly Subscription</h3>
                 <p className="text-xs text-cyan-400 font-semibold">
-                  {livePrices[PLAY_PRODUCT_IDS.monthly] || 'CA$3.99'} / month • Cancel Anytime
+                  {livePrices[PLAY_PRODUCT_IDS.monthly] || initialPricing.monthly} / month • Cancel Anytime
                 </p>
               </div>
             </div>
@@ -1300,7 +1300,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   }}
                   className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition text-center block"
                 >
-                  💳 Unlock Pro Access {livePrices[PLAY_PRODUCT_IDS.monthly] ? `(${livePrices[PLAY_PRODUCT_IDS.monthly]}/mo)` : '(CA$3.99/mo)'}
+                  💳 Unlock Pro Access ({livePrices[PLAY_PRODUCT_IDS.monthly] || initialPricing.monthly}/mo)
                 </button>
               </div>
             </div>
@@ -1323,7 +1323,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white">
-                  Pro Annual Plan {livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '(CA$39.99/yr)'}
+                  Pro Annual Plan ({livePrices[PLAY_PRODUCT_IDS.annual] || initialPricing.annual}/yr)
                 </h3>
                 <p className="text-xs text-emerald-400 font-bold">Best Value • Web & Desktop Access</p>
               </div>
@@ -1352,7 +1352,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 }}
                 className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition text-center block"
               >
-                💳 Unlock Annual Pro {livePrices[PLAY_PRODUCT_IDS.annual] ? `(${livePrices[PLAY_PRODUCT_IDS.annual]}/yr)` : '(CA$39.99/yr)'} →
+                💳 Unlock Annual Pro ({livePrices[PLAY_PRODUCT_IDS.annual] || initialPricing.annual}/yr) →
               </button>
             </div>
           </div>
@@ -1375,7 +1375,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div>
                 <h3 className="text-base font-extrabold text-white">Lifetime VIP License</h3>
                 <p className="text-xs text-purple-400 font-bold">
-                  {livePrices[PLAY_PRODUCT_IDS.lifetime] || 'CA$129.99'} One-Time • Own Forever
+                  {livePrices[PLAY_PRODUCT_IDS.lifetime] || initialPricing.lifetime} One-Time • Own Forever
                 </p>
               </div>
             </div>
@@ -1401,7 +1401,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 }}
                 className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 transition text-center block"
               >
-                💎 Unlock Lifetime VIP Access {livePrices[PLAY_PRODUCT_IDS.lifetime] ? `(${livePrices[PLAY_PRODUCT_IDS.lifetime]})` : '(CA$129.99)'} →
+                💎 Unlock Lifetime VIP Access ({livePrices[PLAY_PRODUCT_IDS.lifetime] || initialPricing.lifetime}) →
               </button>
             </div>
           </div>

@@ -195,10 +195,16 @@ export const initPlayStore = (onPricesLoaded?: (prices: Record<string, string>) 
             (store.products && store.products.find((p: any) => p.id === id));
           if (prod) {
             const offer = typeof prod.getOffer === 'function' ? prod.getOffer() : (prod.offers && prod.offers[0]);
-            const currency = offer?.pricingPhases?.[0]?.currency || prod?.pricing?.currency || prod?.currency || 'CAD';
+            const currency =
+              offer?.pricingPhases?.[0]?.currency ||
+              prod?.pricing?.currency ||
+              prod?.raw?.oneTimePurchaseOfferDetails?.priceCurrencyCode ||
+              prod?.currency ||
+              detectUserCurrency();
             const priceVal =
               offer?.pricingPhases?.[0]?.price ||
               prod?.pricing?.price ||
+              prod?.raw?.oneTimePurchaseOfferDetails?.formattedPrice ||
               prod?.price ||
               (prod?.pricing && typeof prod.pricing === 'string' ? prod.pricing : null);
             if (priceVal) {

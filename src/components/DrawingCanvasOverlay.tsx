@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trash2, Move, Plus, Minus, Maximize2 } from 'lucide-react';
 import { FreehandDrawing, SignatureAnnotation, StampAnnotation, StrikeoutAnnotation, ToolMode } from '../types/pdf';
 
 interface DrawingCanvasOverlayProps {
@@ -27,6 +28,7 @@ interface DrawingCanvasOverlayProps {
   onAddDrawing: (drawing: Omit<FreehandDrawing, 'id'>) => void;
   onDeleteDrawing: (id: string) => void;
   onAddStamp: (stamp: Omit<StampAnnotation, 'id'>) => void;
+  onUpdateStamp?: (id: string, updates: Partial<StampAnnotation>) => void;
   onDeleteStamp: (id: string) => void;
   onAddStrikeout: (strike: Omit<StrikeoutAnnotation, 'id'>) => void;
   onDeleteStrikeout: (id: string) => void;
@@ -84,6 +86,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   onAddDrawing,
   onDeleteDrawing,
   onAddStamp,
+  onUpdateStamp,
   onDeleteStamp,
   onAddStrikeout,
   onDeleteStrikeout,
@@ -120,8 +123,25 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
   const [shapeStartPt, setShapeStartPt] = useState<{ x: number; y: number } | null>(null);
   const [shapeCurrentPt, setShapeCurrentPt] = useState<{ x: number; y: number } | null>(null);
 
-  // Selected item for deletion
+  // Selected item for deletion or editing
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedStampId, setSelectedStampId] = useState<string | null>(null);
+
+  // Stamp Dragging & Resizing State
+  const [stampDrag, setStampDrag] = useState<{
+    stampId: string;
+    startPdfX: number;
+    startPdfY: number;
+    startClientX: number;
+    startClientY: number;
+  } | null>(null);
+
+  const [stampResize, setStampResize] = useState<{
+    stampId: string;
+    startSize: number;
+    startClientX: number;
+    startClientY: number;
+  } | null>(null);
 
   if (originalWidth <= 0 || originalHeight <= 0) return null;
 
@@ -169,21 +189,23 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
 
   const handleDropPoint = (pt: { x: number; y: number }) => {
     if (toolMode === 'checkmark') {
+      const defaultSize = 14;
       onAddStamp({
         pageIndex,
         type: 'checkmark',
-        x: pt.x,
-        y: pt.y,
-        size: 24,
+        x: Math.round(pt.x - defaultSize / 2),
+        y: Math.round(pt.y - defaultSize / 2),
+        size: defaultSize,
         color: '#10b981', // Emerald Green
       });
     } else if (toolMode === 'crossmark') {
+      const defaultSize = 14;
       onAddStamp({
         pageIndex,
         type: 'crossmark',
-        x: pt.x,
-        y: pt.y,
-        size: 22,
+        x: Math.round(pt.x - defaultSize / 2),
+        y: Math.round(pt.y - defaultSize / 2),
+        size: defaultSize,
         color: '#ef4444', // Red
       });
     } else if (toolMode === 'strikeout') {
@@ -211,8 +233,90 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
     }
   };
 
+  const prevStampsCountRef = useRef<number>(pageStamps.length);
+  useEffect(() => {
+    if (pageStamps.length > prevStampsCountRef.current && pageStamps.length > 0) {
+      const newest = pageStamps[pageStamps.length - 1];
+      if (newest) setSelectedStampId(newest.id);
+    }
+    prevStampsCountRef.current = pageStamps.length;
+  }, [pageStamps]);
+
+  useEffect(() => {
+    if (!stampDrag && !stampResize) return;
+
+    const handleWindowMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      const clientY = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientY : (e as MouseEvent).clientY;
+
+      if (stampDrag && onUpdateStamp) {
+        const dx = (clientX - stampDrag.startClientX) / scaleX;
+        const dy = (clientY - stampDrag.startClientY) / scaleY;
+        const newX = Math.max(0, Math.min(originalWidth - 10, Math.round(stampDrag.startPdfX + dx)));
+        const newY = Math.max(0, Math.min(originalHeight - 10, Math.round(stampDrag.startPdfY + dy)));
+        onUpdateStamp(stampDrag.stampId, { x: newX, y: newY });
+      } else if (stampResize && onUpdateStamp) {
+        const dx = (clientX - stampResize.startClientX) / scaleX;
+        const newSize = Math.max(6, Math.min(60, Math.round(stampResize.startSize + dx)));
+        onUpdateStamp(stampResize.stampId, { size: newSize });
+      }
+    };
+
+    const handleWindowUp = () => {
+      setStampDrag(null);
+      setStampResize(null);
+    };
+
+    window.addEventListener('mousemove', handleWindowMove);
+    window.addEventListener('mouseup', handleWindowUp);
+    window.addEventListener('touchmove', handleWindowMove, { passive: false });
+    window.addEventListener('touchend', handleWindowUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMove);
+      window.removeEventListener('mouseup', handleWindowUp);
+      window.removeEventListener('touchmove', handleWindowMove);
+      window.removeEventListener('touchend', handleWindowUp);
+    };
+  }, [stampDrag, stampResize, scaleX, scaleY, originalWidth, originalHeight, onUpdateStamp]);
+
+  const handleStartStampDrag = (e: React.MouseEvent | React.TouchEvent, stamp: StampAnnotation) => {
+    e.stopPropagation();
+    const clientX = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    setStampDrag({
+      stampId: stamp.id,
+      startPdfX: stamp.x,
+      startPdfY: stamp.y,
+      startClientX: clientX,
+      startClientY: clientY,
+    });
+  };
+
+  const handleStartStampResize = (e: React.MouseEvent | React.TouchEvent, stamp: StampAnnotation) => {
+    e.stopPropagation();
+    const clientX = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e && e.touches.length > 0 ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    setStampResize({
+      stampId: stamp.id,
+      startSize: stamp.size,
+      startClientX: clientX,
+      startClientY: clientY,
+    });
+  };
+
+  const handleUpdateStampSize = (stamp: StampAnnotation, newSize: number) => {
+    const clamped = Math.max(6, Math.min(60, newSize));
+    if (onUpdateStamp) {
+      onUpdateStamp(stamp.id, { size: clamped });
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     const pt = getPdfCoords(e);
+    if (toolMode !== 'checkmark' && toolMode !== 'crossmark') {
+      setSelectedStampId(null);
+    }
     if (toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') {
       setIsDrawing(true);
       setCurrentPoints([pt]);
@@ -641,7 +745,7 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
               key={stamp.id}
               onClick={(e) => {
                 e.stopPropagation();
-                setSelectedId(stamp.id);
+                setSelectedStampId(stamp.id);
               }}
               className="pointer-events-auto cursor-pointer group"
             >
@@ -689,6 +793,130 @@ export const DrawingCanvasOverlay: React.FC<DrawingCanvasOverlayProps> = ({
           );
         })}
       </svg>
+
+      {/* Selected Stamp Interactive Controls (Resize, Move, Presets, Delete) */}
+      {(() => {
+        const selectedStamp = pageStamps.find((s) => s.id === selectedStampId);
+        if (!selectedStamp) return null;
+
+        const sx = selectedStamp.x * scaleX;
+        const sy = selectedStamp.y * scaleY;
+        const sz = selectedStamp.size * scaleX;
+
+        return (
+          <div
+            key={`sel_${selectedStamp.id}`}
+            className="absolute pointer-events-auto z-40 select-none animate-fadeIn"
+            style={{
+              left: `${sx - 4}px`,
+              top: `${sy - 4}px`,
+              width: `${sz + 8}px`,
+              height: `${sz + 8}px`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Dashed Bounding Box & Drag Zone */}
+            <div
+              onMouseDown={(e) => handleStartStampDrag(e, selectedStamp)}
+              onTouchStart={(e) => handleStartStampDrag(e, selectedStamp)}
+              className="w-full h-full border-2 border-dashed border-cyan-400/90 bg-cyan-500/15 rounded-md cursor-grab active:cursor-grabbing shadow-md"
+              title="Click and drag to position stamp"
+            />
+
+            {/* Floating Quick Action Mini-Toolbar */}
+            <div
+              className="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center space-x-1 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-2 py-1 text-white shadow-2xl z-50 whitespace-nowrap text-xs ring-1 ring-cyan-500/40"
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
+              {/* Decrease Size Button */}
+              <button
+                type="button"
+                onClick={() => handleUpdateStampSize(selectedStamp, Math.max(6, selectedStamp.size - 2))}
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition flex items-center justify-center active:scale-95"
+                title="Make Smaller (-2pt)"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Size Badge */}
+              <span className="text-[11px] font-mono font-bold text-cyan-300 px-1 select-none">
+                {Math.round(selectedStamp.size)}pt
+              </span>
+
+              {/* Increase Size Button */}
+              <button
+                type="button"
+                onClick={() => handleUpdateStampSize(selectedStamp, Math.min(50, selectedStamp.size + 2))}
+                className="p-1 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition flex items-center justify-center active:scale-95"
+                title="Make Bigger (+2pt)"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="w-[1px] h-3.5 bg-slate-700 mx-0.5" />
+
+              {/* Quick Size Presets: S (10pt), M (14pt), L (18pt) */}
+              <button
+                type="button"
+                onClick={() => handleUpdateStampSize(selectedStamp, 10)}
+                className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition ${
+                  selectedStamp.size <= 10 ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+                title="Small (10pt - fits tight checkboxes)"
+              >
+                S
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUpdateStampSize(selectedStamp, 14)}
+                className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition ${
+                  selectedStamp.size > 10 && selectedStamp.size <= 15 ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+                title="Medium (14pt - standard form box)"
+              >
+                M
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUpdateStampSize(selectedStamp, 18)}
+                className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition ${
+                  selectedStamp.size > 15 ? 'bg-cyan-500 text-white shadow' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+                title="Large (18pt - prominent mark)"
+              >
+                L
+              </button>
+
+              <div className="w-[1px] h-3.5 bg-slate-700 mx-0.5" />
+
+              {/* Delete Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteStamp(selectedStamp.id);
+                  setSelectedStampId(null);
+                }}
+                className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition active:scale-95"
+                title="Remove Stamp"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Corner Resize Drag Handle */}
+            <div
+              onMouseDown={(e) => handleStartStampResize(e, selectedStamp)}
+              onTouchStart={(e) => handleStartStampResize(e, selectedStamp)}
+              style={{ touchAction: 'none' }}
+              className="absolute -bottom-2.5 -right-2.5 w-5 h-5 bg-cyan-500 border-2 border-white rounded-full cursor-se-resize shadow-lg flex items-center justify-center z-50 hover:scale-125 transition-transform"
+              title="Drag corner to scale stamp smoothly"
+            >
+              <Maximize2 className="w-2.5 h-2.5 text-white" />
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

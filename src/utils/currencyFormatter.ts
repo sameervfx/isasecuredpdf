@@ -157,21 +157,21 @@ export const SUPPORTED_CURRENCIES: Record<string, CurrencyConfig> = {
     symbol: '₹',
     name: 'INR (₹) - India',
     country: 'India',
-    monthly: '₹249',
-    annual: '₹2,499',
-    lifetime: '₹7,999',
-    monthlyNum: 249,
-    annualNum: 2499,
-    lifetimeNum: 7999,
-    usdMonthlyNum: 2.99,
-    usdAnnualNum: 29.99,
-    usdLifetimeNum: 99.99,
-    usdMonthlyFormatted: '$2.99 USD',
-    usdAnnualFormatted: '$29.99 USD',
-    usdLifetimeFormatted: '$99.99 USD',
-    originalMonthly: '₹499',
-    originalAnnual: '₹5,988',
-    originalLifetime: '₹15,999',
+    monthly: '₹99',
+    annual: '₹999',
+    lifetime: '₹2,999',
+    monthlyNum: 99,
+    annualNum: 999,
+    lifetimeNum: 2999,
+    usdMonthlyNum: 1.19,
+    usdAnnualNum: 11.99,
+    usdLifetimeNum: 35.99,
+    usdMonthlyFormatted: '₹99 INR',
+    usdAnnualFormatted: '₹999 INR',
+    usdLifetimeFormatted: '₹2,999 INR',
+    originalMonthly: '₹199',
+    originalAnnual: '₹2,399',
+    originalLifetime: '₹5,999',
     monthlyDiscountPercent: '50% OFF',
     annualDiscountPercent: '58% OFF',
     lifetimeDiscountPercent: '50% OFF',
@@ -218,6 +218,20 @@ export function detectUserCurrency(): string {
     const langStr = languages.join(',').toUpperCase();
     const allHints = `${timeZone} ${resolvedLocale} ${numberLocale} ${langStr}`.toUpperCase();
 
+    // India detection (MUST run before Canada check because 'ASIA/CALCUTTA' contains '/CA'!)
+    if (
+      allHints.includes('CALCUTTA') ||
+      allHints.includes('KOLKATA') ||
+      allHints.includes('MUMBAI') ||
+      allHints.includes('CHENNAI') ||
+      allHints.includes('DELHI') ||
+      allHints.includes('INDIA') ||
+      allHints.includes('-IN') ||
+      allHints.includes('_IN')
+    ) {
+      return 'INR';
+    }
+
     // Canada detection (timezones, locales, and language tags)
     if (
       allHints.includes('TORONTO') ||
@@ -231,8 +245,7 @@ export function detectUserCurrency(): string {
       allHints.includes('CANADA') ||
       allHints.includes('REGINA') ||
       allHints.includes('-CA') ||
-      allHints.includes('_CA') ||
-      allHints.includes('/CA')
+      allHints.includes('_CA')
     ) {
       return 'CAD';
     }
@@ -240,11 +253,6 @@ export function detectUserCurrency(): string {
     // UK detection
     if (timeZone.includes('London') || langStr.includes('-GB')) {
       return 'GBP';
-    }
-
-    // India detection
-    if (timeZone.includes('Calcutta') || timeZone.includes('Kolkata') || langStr.includes('-IN')) {
-      return 'INR';
     }
 
     // Australia detection

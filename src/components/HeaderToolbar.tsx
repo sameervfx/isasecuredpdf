@@ -162,7 +162,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   isExporting = false,
   isPrinting = false,
   hasDocument = false,
-  textFontSize = 14,
+  textFontSize = 11,
   setTextFontSize,
   textFontFamily,
   setTextFontFamily,
@@ -198,9 +198,9 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   const [savedSigs, setSavedSigs] = useState<SavedSignature[]>([]);
   const [recentFilesList, setRecentFilesList] = useState<RecentFileItem[]>([]);
   const [popoverPos, setPopoverPos] = useState<{ name: string; left: number; top: number }>({ name: '', left: 0, top: 0 });
-  const [headerFontSizeStr, setHeaderFontSizeStr] = useState<string>(String(textFontSize || 14));
+  const [headerFontSizeStr, setHeaderFontSizeStr] = useState<string>(String(textFontSize || 11));
   useEffect(() => {
-    setHeaderFontSizeStr(String(textFontSize || 14));
+    setHeaderFontSizeStr(String(textFontSize || 11));
   }, [textFontSize]);
 
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
