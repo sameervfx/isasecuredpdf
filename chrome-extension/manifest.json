@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "ISA Secured PDF - Offline Editor & Redactor",
+  "short_name": "ISASecuredPDF",
+  "version": "1.0.0",
+  "description": "100% private, client-side PDF Editor, Redactor & Scanner. Zero cloud uploads. Open, redact, sign, and annotate any PDF with 1 click.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ISA Secured PDF",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://isasecuredpdf.com/*",
+    "http://localhost:5173/*"
+  ]
+}

@@ -1156,6 +1156,76 @@ export const App: React.FC = () => {
     };
   }, [handleExportPDF, handleOpenPayloadData]);
 
+  // Android native file association (Intent ACTION_VIEW / ACTION_SEND) listener & Chrome Extension bridge
+  useEffect(() => {
+    // 1. Android runtime listener (when app is already running in background)
+    const handleAndroidOpenPdf = (event: any) => {
+      const payload = event?.detail;
+      if (payload && payload.base64Data) {
+        handleOpenPayloadData(payload);
+      }
+    };
+    window.addEventListener('androidOpenPdf', handleAndroidOpenPdf);
+
+    // 2. Android cold-boot check (when app is launched by tapping a PDF while closed)
+    const checkAndroidColdBoot = () => {
+      try {
+        const bridge = (window as any).AndroidPdfBridge;
+        if (bridge && typeof bridge.getPendingPdf === 'function') {
+          const raw = bridge.getPendingPdf();
+          if (raw && raw.length > 10) {
+            const payload = JSON.parse(raw);
+            if (payload && payload.base64Data) {
+              handleOpenPayloadData(payload);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load cold boot Android PDF:', err);
+      }
+    };
+    checkAndroidColdBoot();
+    const tCold = setTimeout(checkAndroidColdBoot, 500);
+
+    // 3. Chrome Extension bridge (dropped or opened via right-click / popup)
+    const checkExtensionPendingPdf = () => {
+      try {
+        const incoming = localStorage.getItem('__isa_incoming_pdf__');
+        if (incoming) {
+          localStorage.removeItem('__isa_incoming_pdf__');
+          const payload = JSON.parse(incoming);
+          if (payload && payload.base64Data) {
+            handleOpenPayloadData(payload);
+          }
+        }
+      } catch (e) {}
+    };
+    checkExtensionPendingPdf();
+
+    // 4. Remote PDF URL query param (e.g. ?pdfUrl=https://... or ?openPdf=...)
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pdfUrl = urlParams.get('pdfUrl');
+      if (pdfUrl) {
+        fetch(pdfUrl)
+          .then((res) => res.arrayBuffer())
+          .then((buf) => {
+            const fileName = pdfUrl.split('/').pop()?.split('?')[0] || 'remote_document.pdf';
+            setCurrentView('editor');
+            loadPDFData(new Uint8Array(buf), fileName);
+          })
+          .catch((err) => {
+            console.warn('Could not auto-fetch remote PDF URL from parameter:', err);
+          });
+      }
+    } catch (e) {}
+
+    return () => {
+      window.removeEventListener('androidOpenPdf', handleAndroidOpenPdf);
+      clearTimeout(tCold);
+    };
+  }, [handleOpenPayloadData, loadPDFData]);
+
   // Automatically launch into PDF Editor Workspace for Desktop App (Electron) or direct link
   useEffect(() => {
     try {
