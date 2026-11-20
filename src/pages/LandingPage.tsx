@@ -1047,9 +1047,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
 
                   <div>
-                    <h4 className="font-bold text-white mb-1">2. Free Starter Usage Limit (5 Documents / 3 Months)**</h4>
+                    <h4 className="font-bold text-white mb-1">2. Free Starter Usage Limit (6 Documents / 3 Months)**</h4>
                     <p>
-                      Free Starter tier users are permitted to use <b>Sign Document (Digital Signatures)</b>, <b>Split PDF / Extract Multiple PDFs</b>, and <b>Add Image / Logo</b> on up to <b>5 documents every 3 months</b> across the web and mobile app. Once the 5-document limit is reached, an active <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> license is required to continue using unlimited signatures, document splitting, image/logo placement, and advanced Pro tools.
+                      Free Starter tier users are permitted to use <b>Sign Document (Digital Signatures)</b>, <b>Split PDF / Extract Multiple PDFs</b>, and <b>Add Image / Logo</b> on up to <b>6 documents every 3 months</b> across the web and mobile app. Once the 6-document limit is reached, an active <b>Pro Monthly</b>, <b>Pro Annual</b>, or <b>Lifetime VIP</b> license is required to continue using unlimited signatures, document splitting, image/logo placement, and advanced Pro tools.
                     </p>
                   </div>
 

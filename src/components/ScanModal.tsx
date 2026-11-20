@@ -2068,13 +2068,13 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     if (targetList.length === 0) return;
     const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
 
-    // 3-Month 5-Document Limit check for free tier image export
+    // 3-Month 6-Document Limit check for free tier image export
     const quota = checkAndConsumeMonthlyQuota(isProActive, 'scan_export', cleanBaseName);
     if (!quota.allowed) {
       if (onRequirePro) {
-        onRequirePro(`Free limit reached (5 documents per 3 months). Upgrade to Pro for unlimited exports!`);
+        onRequirePro(`Free limit reached (6 documents per 3 months). Upgrade to Pro for unlimited exports!`);
       } else {
-        alert(`Free limit reached (5 documents per 3 months). Upgrade to Pro for unlimited exports!`);
+        alert(`Free limit reached (6 documents per 3 months). Upgrade to Pro for unlimited exports!`);
       }
       return;
     }
@@ -2118,13 +2118,13 @@ export const ScanModal: React.FC<ScanModalProps> = ({
     if (targetList.length === 0) return;
     const cleanBaseName = exportFileName.trim().replace(/[^a-zA-Z0-9_\-\s]/g, '_') || 'Scanned_Document';
 
-    // 3-Month 5-Document Limit check for free tier PDF export
+    // 3-Month 6-Document Limit check for free tier PDF export
     const quota = checkAndConsumeMonthlyQuota(isProActive, 'save', cleanBaseName);
     if (!quota.allowed) {
       if (onRequirePro) {
-        onRequirePro(`Free limit reached (5 documents per 3 months). Upgrade to Pro for unlimited exports!`);
+        onRequirePro(`Free limit reached (6 documents per 3 months). Upgrade to Pro for unlimited exports!`);
       } else {
-        alert(`Free limit reached (5 documents per 3 months). Upgrade to Pro for unlimited exports!`);
+        alert(`Free limit reached (6 documents per 3 months). Upgrade to Pro for unlimited exports!`);
       }
       return;
     }

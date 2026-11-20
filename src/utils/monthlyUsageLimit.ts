@@ -1,8 +1,8 @@
 // Usage Quota Tracker (Save, Export, Sign, Split, Add Image / Logo, Scanner)
-// Free Starter users can process up to 5 documents per 3-month period (90 days) before upgrading to Pro.
+// Free Starter users can process up to 6 documents per 3-month period (90 days) before upgrading to Pro.
 
-export const FREE_DOC_LIMIT_PER_PERIOD = 5;
-export const FREE_MONTHLY_DOC_LIMIT = 5; // Retained for backwards compatibility
+export const FREE_DOC_LIMIT_PER_PERIOD = 6;
+export const FREE_MONTHLY_DOC_LIMIT = 6; // Retained for backwards compatibility
 const STORAGE_KEY = 'isa_usage_quota_v2';
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000; // 90 days in milliseconds
 
