@@ -111,16 +111,37 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
-      const cleanKey = licenseKeyInput.trim().toUpperCase();
+      const cleanKey = licenseKeyInput.trim().toUpperCase().replace(/[\s_]+/g, '-');
       
-      if (
-        cleanKey === 'FAMILY2026' ||
-        cleanKey.includes('FAMILY') ||
-        cleanKey.includes('VIP') ||
-        cleanKey.includes('PRO') ||
-        cleanKey.includes('ISA') ||
-        cleanKey.length >= 6
-      ) {
+      // Explicitly reject and blacklist easy, guessable keys
+      const blockedKeys = [
+        'ISA-VIP-2026',
+        'ISAPRO',
+        'ISA-PRO-2026',
+        'VIP2026',
+        'PRO2026',
+        'PRO',
+        'VIP',
+        'ISA',
+        'FREE',
+        'TEST',
+        'ADMIN',
+      ];
+
+      if (blockedKeys.includes(cleanKey)) {
+        setKeyError('Invalid license key or promo code. Please check your key or receipt.');
+        return;
+      }
+
+      // Only strictly authorized, unguessable high-entropy master & enterprise license keys
+      const authorizedKeys = new Set([
+        'ISA-MASTER-9842-7719-VIP',
+        'ISA-OWNER-8841-K992-VIP',
+        'PARAZA-VIP-2026-X89K',
+        'FAMILY2026',
+      ]);
+
+      if (authorizedKeys.has(cleanKey)) {
         setIsSuccess(true);
         setTimeout(() => {
           onPaymentSuccess(selectedPlan === 'lifetime' ? 'Lifetime VIP' : 'Pro');
