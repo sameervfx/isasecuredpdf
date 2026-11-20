@@ -609,13 +609,25 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
 
   const handlePasteClipboard = async (annId: string) => {
     try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        onUpdateAnnotation(annId, { text });
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          const ann = pageAnnotations.find((a) => a.id === annId);
+          const lines = text.split('\n');
+          const fontSize = ann ? ann.fontSize : (textFontSize || 11);
+          const maxLineW = Math.max(...lines.map((l) => measureTextWidth(l, fontSize, ann?.fontFamily || textFontFamily, ann?.fontWeight)));
+          const availW = Math.max(120, Math.min(originalWidth - (ann?.x || 54) - 20, maxLineW + 24));
+          onUpdateAnnotation(annId, {
+            text: text.trim(),
+            width: availW,
+            height: Math.max(30, lines.length * fontSize * 1.35 + 16),
+          });
+          return;
+        }
       }
-    } catch (err) {
-      alert('Please use Ctrl+V inside the text area to paste external text.');
-    }
+    } catch (err) {}
+    // If direct clipboard reading is blocked by browser permissions, trigger the Quick Paste modal
+    window.dispatchEvent(new CustomEvent('isa-open-quick-paste'));
   };
 
   return (
@@ -740,10 +752,30 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                   ann.fontFamily || textFontFamily,
                   ann.fontWeight
                 );
+                const lines = newText.split('\n');
                 onUpdateAnnotation(ann.id, {
                   text: newText,
                   width: Math.max(32, measuredW + 16),
+                  height: Math.max(24, lines.length * ann.fontSize * 1.35 + 8),
                 });
+              }}
+              onPaste={(e) => {
+                const pasted = e.clipboardData?.getData('text/plain');
+                if (pasted) {
+                  setTimeout(() => {
+                    if (e.target) {
+                      const newText = (e.target as HTMLTextAreaElement).value;
+                      const lines = newText.split('\n');
+                      const maxW = Math.max(...lines.map((l) => measureTextWidth(l, ann.fontSize, ann.fontFamily || textFontFamily, ann.fontWeight)));
+                      const availW = Math.max(120, Math.min(originalWidth - ann.x - 20, maxW + 24));
+                      onUpdateAnnotation(ann.id, {
+                        text: newText,
+                        width: availW,
+                        height: Math.max(30, lines.length * ann.fontSize * 1.35 + 16),
+                      });
+                    }
+                  }, 0);
+                }
               }}
               placeholder="Type text..."
               rows={lineCount}
@@ -762,7 +794,8 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                 letterSpacing: 'normal',
                 width: '100%',
                 minWidth: '0px',
-                whiteSpace: 'pre',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
                 overflow: 'visible',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',

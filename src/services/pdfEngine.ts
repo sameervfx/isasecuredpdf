@@ -306,7 +306,41 @@ export class PDFEngineService {
       const { height: pageH } = targetPage.getSize();
       const textColor = parseHexColor(textAnn.color || '#000000');
 
-      const lines = (textAnn.text || '').split(/\r?\n/);
+      const annFont = getFontForFamily(textAnn.fontFamily, textAnn.fontWeight);
+      const isCustomFont = annFont === fontNunitoBold || annFont === fontNunitoSemiBold;
+
+      // Smart word-wrapping: prevents pasted text/paragraphs from rendering off the page
+      const maxLineWidth = textAnn.width || Math.max(280, targetPage.getWidth() - textAnn.x - 36);
+      const rawLines = (textAnn.text || '').split(/\r?\n/);
+      const lines: string[] = [];
+      for (const rLine of rawLines) {
+        if (!rLine.trim()) {
+          lines.push('');
+          continue;
+        }
+        const words = rLine.split(' ');
+        let curLine = '';
+        for (const w of words) {
+          const testLine = curLine ? `${curLine} ${w}` : w;
+          const cleanTest = isCustomFont ? testLine : testLine.replace(/[^\x00-\x7F]/g, '');
+          let wLen = 0;
+          try {
+            wLen = annFont.widthOfTextAtSize(cleanTest, textAnn.fontSize);
+          } catch {
+            wLen = testLine.length * (textAnn.fontSize * 0.55);
+          }
+          if (wLen > maxLineWidth && curLine) {
+            lines.push(curLine);
+            curLine = w;
+          } else {
+            curLine = testLine;
+          }
+        }
+        if (curLine) {
+          lines.push(curLine);
+        }
+      }
+
       const lineHeight = textAnn.fontSize * 1.15;
       const totalHeight = textAnn.height || Math.max(lines.length * lineHeight, textAnn.fontSize * 1.15);
       const totalWidth = textAnn.width || 320;
@@ -323,9 +357,6 @@ export class PDFEngineService {
           borderWidth: 0,
         });
       }
-
-      const annFont = getFontForFamily(textAnn.fontFamily, textAnn.fontWeight);
-      const isCustomFont = annFont === fontNunitoBold || annFont === fontNunitoSemiBold;
 
       for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
         const cleanLine = isCustomFont ? lines[lineIdx] : lines[lineIdx].replace(/[^\x00-\x7F]/g, '');

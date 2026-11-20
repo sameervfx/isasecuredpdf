@@ -543,6 +543,7 @@ export const App: React.FC = () => {
   const handleCreateBlankPDF = async (options: CreatePDFOptions) => {
     const blankBytes = await createBlankPDF(options);
     await loadPDFData(blankBytes, `New_Document_${options.pageSize}.pdf`);
+    setToolMode('text');
   };
 
   const handleCloseDocument = () => {

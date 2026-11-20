@@ -57,7 +57,8 @@ import {
   Crown,
   Camera,
   Smartphone,
-  Apple
+  Apple,
+  Clipboard
 } from 'lucide-react';
 import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
@@ -928,6 +929,28 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                       <span>Whiteout</span>
                     </button>
                   </div>
+
+                  {/* Row 4: Paste Clipboard Text Quick Button */}
+                  <button
+                    onClick={async () => {
+                      setIsTextDropdownOpen(false);
+                      try {
+                        if (navigator.clipboard && navigator.clipboard.readText) {
+                          const text = await navigator.clipboard.readText();
+                          if (text && text.trim()) {
+                            window.dispatchEvent(new CustomEvent('isa-paste-text', { detail: { text: text.trim() } }));
+                            return;
+                          }
+                        }
+                      } catch (e) {}
+                      window.dispatchEvent(new CustomEvent('isa-open-quick-paste'));
+                    }}
+                    className="w-full py-1.5 px-2 bg-gradient-to-r from-cyan-600/40 to-blue-600/40 hover:from-cyan-600 hover:to-blue-600 text-cyan-200 hover:text-white rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition border border-cyan-500/40 shadow mt-1"
+                    title="Paste text from clipboard onto the active PDF page (Ctrl+V)"
+                  >
+                    <Clipboard className="w-3.5 h-3.5" />
+                    <span>Paste Text (Ctrl+V)</span>
+                  </button>
                 </div>,
                 document.body
               )}

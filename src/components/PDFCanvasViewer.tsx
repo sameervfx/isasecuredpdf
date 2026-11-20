@@ -9,7 +9,7 @@ import { DrawingCanvasOverlay } from './DrawingCanvasOverlay';
 import { ShapeOverlay } from './ShapeOverlay';
 import { ImageStampOverlay } from './ImageStampOverlay';
 import { ShapeAnnotation, ImageStampAnnotation } from '../types/pdf';
-import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, XCircle, X, Camera, Minus, Plus, Bold, Underline, Type, Palette, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, XCircle, X, Camera, Minus, Plus, Bold, Underline, Type, Palette, Eye, EyeOff, Trash2, Clipboard } from 'lucide-react';
 import appLogo from '../assets/app_logo.jpg';
 
 interface PDFCanvasViewerProps {
@@ -155,6 +155,97 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       setMousePos(null);
     }
   }, [toolMode, pendingSignatureDataUrl]);
+
+  const lastMousePagePosRef = useRef<{ pageIndex: number; x: number; y: number } | null>(null);
+  const [isQuickPasteModalOpen, setIsQuickPasteModalOpen] = useState(false);
+  const [quickPasteInput, setQuickPasteInput] = useState('');
+
+  const insertPastedText = (rawText: string, specificPage?: number, clickCoords?: { x: number; y: number }) => {
+    if (!state.fileBytes || state.numPages === 0 || !rawText || !rawText.trim()) return;
+
+    let targetPageIndex = specificPage !== undefined ? specificPage : Math.max(0, Math.min(state.numPages - 1, currentPage - 1));
+    let pasteX = 54;
+    let pasteY = 72;
+
+    if (clickCoords) {
+      pasteX = clickCoords.x;
+      pasteY = clickCoords.y;
+    } else if (lastMousePagePosRef.current && lastMousePagePosRef.current.pageIndex >= 0 && lastMousePagePosRef.current.pageIndex < state.numPages) {
+      targetPageIndex = lastMousePagePosRef.current.pageIndex;
+      pasteX = lastMousePagePosRef.current.x;
+      pasteY = lastMousePagePosRef.current.y;
+    }
+
+    const pageDim = pageDims[targetPageIndex];
+    const pageW = pageDim?.originalWidth || 612;
+    const pageH = pageDim?.originalHeight || 792;
+
+    pasteX = Math.max(36, Math.min(pageW - 140, pasteX));
+    pasteY = Math.max(36, Math.min(pageH - 60, pasteY));
+
+    const availableWidth = Math.max(220, Math.min(pageW - pasteX - 36, 520));
+    const fontSize = textFontSize || 11;
+
+    const newId = `text_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    onAddAnnotation({
+      pageIndex: targetPageIndex,
+      x: pasteX,
+      y: pasteY,
+      width: availableWidth,
+      text: rawText.trim(),
+      fontSize,
+      fontFamily: textFontFamily || 'Inter',
+      color: textColor || '#000000',
+      fontWeight: 'normal',
+      isRedact: false,
+      isUnderline: false,
+    });
+
+    setSelectedTextAnnId(newId);
+    if (onSetToolMode) onSetToolMode('text');
+  };
+
+  // Global Keyboard Paste (Ctrl+V / Cmd+V) Listener across Document
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT' || (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+
+      if (!state.fileBytes || state.numPages === 0) return;
+
+      const pastedText = e.clipboardData?.getData('text/plain') || e.clipboardData?.getData('text');
+      if (!pastedText || !pastedText.trim()) return;
+
+      e.preventDefault();
+      insertPastedText(pastedText);
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [state.fileBytes, state.numPages, currentPage, pageDims, textFontSize, textFontFamily, textColor, onAddAnnotation, onSetToolMode]);
+
+  // Listen for custom paste events from toolbar buttons
+  useEffect(() => {
+    const handleCustomPaste = (e: any) => {
+      if (e.detail?.text) {
+        insertPastedText(e.detail.text);
+      }
+    };
+    const handleCustomOpenModal = () => {
+      setIsQuickPasteModalOpen(true);
+    };
+    window.addEventListener('isa-paste-text', handleCustomPaste);
+    window.addEventListener('isa-open-quick-paste', handleCustomOpenModal);
+    return () => {
+      window.removeEventListener('isa-paste-text', handleCustomPaste);
+      window.removeEventListener('isa-open-quick-paste', handleCustomOpenModal);
+    };
+  }, [state.fileBytes, state.numPages, currentPage, pageDims, textFontSize, textFontFamily, textColor, onAddAnnotation, onSetToolMode]);
 
   const pageOrder = state?.pageOrder || [];
   const deletedPages = state?.deletedPages || new Set<number>();
@@ -331,6 +422,40 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
     ) {
       return;
     }
+
+    // Double-clicking on empty page canvas immediately places an editable text box
+    const pageDiv = (e.currentTarget as HTMLElement).closest('.pdf-document-page') as HTMLElement | null;
+    if (pageDiv) {
+      const origIdxStr = pageDiv.getAttribute('data-orig-idx');
+      const pageIndex = origIdxStr ? parseInt(origIdxStr, 10) : (currentPage - 1);
+      const rect = pageDiv.getBoundingClientRect();
+      const dims = pageDims[pageIndex];
+      const origW = dims?.originalWidth || 612;
+      const origH = dims?.originalHeight || 792;
+      const w = rect.width;
+      const h = rect.height;
+      const clickX = Math.round((e.clientX - rect.left) / (w / origW));
+      const clickY = Math.round((e.clientY - rect.top) / (h / origH));
+
+      const newId = `text_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      onAddAnnotation({
+        pageIndex,
+        x: Math.max(10, Math.min(origW - 80, clickX)),
+        y: Math.max(10, Math.min(origH - 30, clickY)),
+        text: '',
+        fontSize: textFontSize || 11,
+        fontFamily: textFontFamily || 'Inter',
+        color: textColor || '#000000',
+        fontWeight: 'normal',
+        width: 140,
+        isRedact: false,
+        isUnderline: false,
+      });
+      setSelectedTextAnnId(newId);
+      if (onSetToolMode) onSetToolMode('text');
+      return;
+    }
+
     if (Math.abs(zoom - 1.0) < 0.05) {
       handleFitToScreen();
     } else {
@@ -1160,7 +1285,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       </div>
 
       {/* Secondary Tool Options Bar - Docked at Top in Normal Flow on Mobile App, Floating on Web */}
-      {(toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser') && (
+      {(toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser' || toolMode === 'text') && (
         <div
           className={
             isNativeMobileApp()
@@ -1360,6 +1485,70 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
             </>
           )}
 
+          {toolMode === 'text' && (
+            <>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-300 shrink-0">
+                    <Type className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Text Tool</span>
+                  </div>
+
+                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+                  {/* Paste Text (Ctrl+V) Quick Button */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        if (navigator.clipboard && navigator.clipboard.readText) {
+                          const text = await navigator.clipboard.readText();
+                          if (text && text.trim()) {
+                            insertPastedText(text.trim());
+                            return;
+                          }
+                        }
+                      } catch (e) {}
+                      setIsQuickPasteModalOpen(true);
+                    }}
+                    className="px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-white rounded-lg transition flex items-center gap-1 text-[11px] font-bold active:scale-95 border border-cyan-500/30"
+                    title="Paste Text from Clipboard (Ctrl+V)"
+                  >
+                    <Clipboard className="w-3.5 h-3.5" />
+                    <span>Paste Text (Ctrl+V)</span>
+                  </button>
+
+                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+
+                  {/* Font Size Quick Adjustment */}
+                  <div className="flex items-center space-x-1 bg-slate-800 rounded-lg px-2 py-0.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setTextFontSize && setTextFontSize(Math.max(4, (textFontSize || 11) - 1))}
+                      className="text-slate-400 hover:text-white font-bold text-xs px-1"
+                      title="Smaller font (-1pt)"
+                    >
+                      -
+                    </button>
+                    <span className="font-mono text-cyan-300 font-bold text-xs select-none">
+                      {Math.round(textFontSize || 11)}pt
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setTextFontSize && setTextFontSize(Math.min(100, (textFontSize || 11) + 1))}
+                      className="text-slate-400 hover:text-white font-bold text-xs px-1"
+                      title="Bigger font (+1pt)"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0 hidden md:block" />
+
+                  <span className="text-[10px] text-slate-400 hidden md:inline">
+                    Click anywhere on page to type, or double-click to add text box
+                  </span>
+                </>
+              )}
+
           {/* Swift Tool Switch / Done Button (Desktop only, mobile uses tool icons) */}
           <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0 hidden sm:block" />
           <button
@@ -1404,6 +1593,16 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                 data-orig-idx={origIdx}
                 onTouchEnd={handlePageTouchEnd}
                 onDoubleClick={handlePageDoubleClick}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const screenX = e.clientX - rect.left;
+                  const screenY = e.clientY - rect.top;
+                  lastMousePagePosRef.current = {
+                    pageIndex: origIdx,
+                    x: Math.round(screenX / (w / origW)),
+                    y: Math.round(screenY / (h / origH)),
+                  };
+                }}
                 className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0 cursor-default"
                 style={{ width: `${w}px`, height: `${h}px`, touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
               >
@@ -1562,6 +1761,76 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
         </div>
       )}
     </main>
+
+    {/* Quick Paste Modal: Guarantees 100% paste compatibility on web & offline without clipboard restrictions */}
+    {isQuickPasteModalOpen && (
+      <div
+        className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+        onClick={() => setIsQuickPasteModalOpen(false)}
+      >
+        <div
+          className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 shadow-2xl animate-scaleUp text-slate-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center space-x-2.5">
+              <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400">
+                <Clipboard className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-white">Paste Text onto Document</h3>
+                <p className="text-xs text-slate-400">Paste text from Word, email, browser, or any notes</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsQuickPasteModalOpen(false)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="mt-4">
+            <textarea
+              autoFocus
+              value={quickPasteInput}
+              onChange={(e) => setQuickPasteInput(e.target.value)}
+              placeholder="Press Ctrl+V here to paste your text..."
+              className="w-full h-36 bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-100 placeholder-slate-500 outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-mono resize-none select-text"
+            />
+          </div>
+
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-[11px] text-slate-400">
+              Shortcut: You can also press <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-cyan-300 font-mono text-[10px]">Ctrl+V</kbd> anywhere on page
+            </span>
+            <div className="flex space-x-2">
+              <button
+                type="button"
+                onClick={() => setIsQuickPasteModalOpen(false)}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (quickPasteInput.trim()) {
+                    insertPastedText(quickPasteInput.trim());
+                    setQuickPasteInput('');
+                    setIsQuickPasteModalOpen(false);
+                  }
+                }}
+                disabled={!quickPasteInput.trim()}
+                className="px-4 py-1.5 text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl shadow-lg transition active:scale-95 disabled:opacity-50"
+              >
+                Insert onto Page
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 };
