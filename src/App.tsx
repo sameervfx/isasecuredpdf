@@ -646,7 +646,7 @@ export const App: React.FC = () => {
   }, []);
 
   const notifyMonthlyQuotaReached = useCallback(() => {
-    setStorageToastMessage(`Monthly free limit reached (${FREE_MONTHLY_DOC_LIMIT} documents/month). Upgrade to Pro for unlimited access!`);
+    setStorageToastMessage(`Free limit reached (5 documents per 3 months). Upgrade to Pro for unlimited access!`);
     setTimeout(() => setStorageToastMessage(null), 5000);
     handleOpenCheckout('annual');
   }, [handleOpenCheckout]);

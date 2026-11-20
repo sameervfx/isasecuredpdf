@@ -1,34 +1,30 @@
-// Monthly Free-Tier Usage Quota Tracker (Save, Export, Sign, Split, Add Image / Logo, Scanner)
-// Free Starter users can process up to 5 documents per calendar month before upgrading to Pro.
+// Usage Quota Tracker (Save, Export, Sign, Split, Add Image / Logo, Scanner)
+// Free Starter users can process up to 5 documents per 3-month period (90 days) before upgrading to Pro.
 
-export const FREE_MONTHLY_DOC_LIMIT = 5;
-const STORAGE_KEY = 'isa_monthly_quota_v1';
+export const FREE_DOC_LIMIT_PER_PERIOD = 5;
+export const FREE_MONTHLY_DOC_LIMIT = 5; // Retained for backwards compatibility
+const STORAGE_KEY = 'isa_usage_quota_v2';
+const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000; // 90 days in milliseconds
 
 export type QuotaFeatureType = 'sign' | 'split' | 'image' | 'save' | 'scan_export' | 'export';
 
-interface MonthlyQuotaData {
-  monthKey: string; // e.g. "2026-10"
+interface QuotaData {
+  periodStart: number; // Timestamp when the 3-month window started
   usedCount: number;
   processedDocTokens: string[];
 }
 
-function getCurrentMonthKey(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}`;
-}
-
-function loadQuotaData(): MonthlyQuotaData {
-  const currentMonth = getCurrentMonthKey();
+function loadQuotaData(): QuotaData {
+  const now = Date.now();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as MonthlyQuotaData;
-      if (parsed && parsed.monthKey === currentMonth && typeof parsed.usedCount === 'number') {
+      const parsed = JSON.parse(raw) as QuotaData;
+      // Check if current 90-day (3 months) period is still active
+      if (parsed && typeof parsed.periodStart === 'number' && (now - parsed.periodStart) < NINETY_DAYS_MS) {
         return {
-          monthKey: currentMonth,
-          usedCount: parsed.usedCount,
+          periodStart: parsed.periodStart,
+          usedCount: typeof parsed.usedCount === 'number' ? parsed.usedCount : 0,
           processedDocTokens: Array.isArray(parsed.processedDocTokens) ? parsed.processedDocTokens : [],
         };
       }
@@ -36,14 +32,16 @@ function loadQuotaData(): MonthlyQuotaData {
   } catch (e) {
     // Ignore storage parse errors
   }
+
+  // Brand new or refreshed 3-month period
   return {
-    monthKey: currentMonth,
+    periodStart: now,
     usedCount: 0,
     processedDocTokens: [],
   };
 }
 
-function saveQuotaData(data: MonthlyQuotaData): void {
+function saveQuotaData(data: QuotaData): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
@@ -52,9 +50,8 @@ function saveQuotaData(data: MonthlyQuotaData): void {
 }
 
 /**
- * Checks if the free user can perform a gated action (Sign, Split, Add Image/Logo).
- * If allowed, records the document usage (counting multiple edits on the same document token as 1 document,
- * or each distinct operation/document up to 5 per month).
+ * Checks if the free user can perform a gated action (Sign, Split, Add Image/Logo, Save, Scan Export).
+ * If allowed, records document usage (5 documents per 3 months).
  */
 export function checkAndConsumeMonthlyQuota(
   isProActive: boolean,
@@ -62,27 +59,27 @@ export function checkAndConsumeMonthlyQuota(
   docIdentifier?: string
 ): { allowed: boolean; used: number; limit: number; remaining: number } {
   if (isProActive) {
-    return { allowed: true, used: 0, limit: FREE_MONTHLY_DOC_LIMIT, remaining: FREE_MONTHLY_DOC_LIMIT };
+    return { allowed: true, used: 0, limit: FREE_DOC_LIMIT_PER_PERIOD, remaining: FREE_DOC_LIMIT_PER_PERIOD };
   }
 
   const data = loadQuotaData();
   const token = docIdentifier ? `doc:${docIdentifier}` : `${feature}:${Date.now()}`;
 
-  // If this exact document was already counted in the current month, allow additional saves/stamps/signatures on the same document
+  // If this exact document was already counted in the current 3-month period, allow edits/stamps on it
   if (docIdentifier && data.processedDocTokens.includes(token)) {
     return {
       allowed: true,
       used: data.usedCount,
-      limit: FREE_MONTHLY_DOC_LIMIT,
-      remaining: Math.max(0, FREE_MONTHLY_DOC_LIMIT - data.usedCount),
+      limit: FREE_DOC_LIMIT_PER_PERIOD,
+      remaining: Math.max(0, FREE_DOC_LIMIT_PER_PERIOD - data.usedCount),
     };
   }
 
-  if (data.usedCount >= FREE_MONTHLY_DOC_LIMIT) {
+  if (data.usedCount >= FREE_DOC_LIMIT_PER_PERIOD) {
     return {
       allowed: false,
       used: data.usedCount,
-      limit: FREE_MONTHLY_DOC_LIMIT,
+      limit: FREE_DOC_LIMIT_PER_PERIOD,
       remaining: 0,
     };
   }
@@ -96,13 +93,13 @@ export function checkAndConsumeMonthlyQuota(
   return {
     allowed: true,
     used: data.usedCount,
-    limit: FREE_MONTHLY_DOC_LIMIT,
-    remaining: Math.max(0, FREE_MONTHLY_DOC_LIMIT - data.usedCount),
+    limit: FREE_DOC_LIMIT_PER_PERIOD,
+    remaining: Math.max(0, FREE_DOC_LIMIT_PER_PERIOD - data.usedCount),
   };
 }
 
 /**
- * Peek at current monthly usage without incrementing the counter.
+ * Peek at current 3-month usage without incrementing the counter.
  */
 export function canUseMonthlyQuotaFeature(
   isProActive: boolean,
@@ -115,14 +112,17 @@ export function canUseMonthlyQuotaFeature(
   if (token && data.processedDocTokens.includes(token)) {
     return true;
   }
-  return data.usedCount < FREE_MONTHLY_DOC_LIMIT;
+  return data.usedCount < FREE_DOC_LIMIT_PER_PERIOD;
 }
 
-export function getMonthlyQuotaStatus(): { used: number; limit: number; remaining: number } {
+export function getMonthlyQuotaStatus(): { used: number; limit: number; remaining: number; daysRemaining: number } {
   const data = loadQuotaData();
+  const elapsed = Date.now() - data.periodStart;
+  const daysRemaining = Math.max(1, Math.ceil((NINETY_DAYS_MS - elapsed) / (24 * 60 * 60 * 1000)));
   return {
     used: data.usedCount,
-    limit: FREE_MONTHLY_DOC_LIMIT,
-    remaining: Math.max(0, FREE_MONTHLY_DOC_LIMIT - data.usedCount),
+    limit: FREE_DOC_LIMIT_PER_PERIOD,
+    remaining: Math.max(0, FREE_DOC_LIMIT_PER_PERIOD - data.usedCount),
+    daysRemaining,
   };
 }
