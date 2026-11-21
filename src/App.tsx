@@ -507,6 +507,27 @@ export const App: React.FC = () => {
       setIsLoading(false);
       trackEvent('pdf_loaded');
 
+      // Check if a tool or modal was requested via URL query params
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const toolParam = urlParams.get('tool');
+        if (toolParam === 'redact') {
+          setToolMode('text');
+          setTextIsRedact(true);
+        } else if (toolParam === 'sign') {
+          setIsSignatureModalOpen(true);
+        }
+
+        const modalParam = urlParams.get('modal');
+        if (modalParam === 'compress') {
+          setIsCompressModalOpen(true);
+        } else if (modalParam === 'password') {
+          setIsPasswordModalOpen(true);
+        } else if (modalParam === 'pages' || modalParam === 'split') {
+          setIsPageManagerOpen(true);
+        }
+      } catch (e) {}
+
       // Asynchronously extract form fields in background without blocking opening
       setTimeout(async () => {
         try {
@@ -1058,7 +1079,7 @@ export const App: React.FC = () => {
   );
 
   const handleOpenPayloadData = useCallback(
-    (payload: { fileName: string; base64Data: string }) => {
+    (payload: { fileName: string; base64Data: string; action?: { tool?: string; modal?: string } }) => {
       try {
         const binaryString = atob(payload.base64Data);
         const bytes = new Uint8Array(binaryString.length);
@@ -1067,6 +1088,21 @@ export const App: React.FC = () => {
         }
         setCurrentView('editor');
         loadPDFData(bytes, payload.fileName);
+
+        if (payload.action?.tool === 'redact') {
+          setToolMode('text');
+          setTextIsRedact(true);
+        } else if (payload.action?.tool === 'sign') {
+          setIsSignatureModalOpen(true);
+        }
+
+        if (payload.action?.modal === 'compress') {
+          setIsCompressModalOpen(true);
+        } else if (payload.action?.modal === 'password') {
+          setIsPasswordModalOpen(true);
+        } else if (payload.action?.modal === 'pages' || payload.action?.modal === 'split') {
+          setIsPageManagerOpen(true);
+        }
       } catch (err) {
         console.error('Failed to parse system opened PDF payload:', err);
       }
@@ -1268,14 +1304,34 @@ export const App: React.FC = () => {
         if (toolParam === 'redact') {
           setToolMode('text');
           setTextIsRedact(true);
+        } else if (toolParam === 'sign') {
+          setIsSignatureModalOpen(true);
+          setTimeout(() => {
+            const fi = document.getElementById('__pdf-file-input__');
+            if (fi) fi.click();
+          }, 350);
         }
-        if (toolParam === 'sign') setIsSignatureModalOpen(true);
 
         const modalParam = urlParams.get('modal');
-        if (modalParam === 'compress') setIsCompressModalOpen(true);
-        if (modalParam === 'password') setIsPasswordModalOpen(true);
-        if (modalParam === 'pages' || modalParam === 'split') setIsPageManagerOpen(true);
-        if (modalParam === 'create' || modalParam === 'image') setIsCreateModalOpen(true);
+        if (modalParam === 'compress') {
+          setIsCompressModalOpen(true);
+          setTimeout(() => {
+            const fi = document.getElementById('__pdf-file-input__');
+            if (fi) fi.click();
+          }, 350);
+        } else if (modalParam === 'password') {
+          setIsPasswordModalOpen(true);
+          setTimeout(() => {
+            const fi = document.getElementById('__pdf-file-input__');
+            if (fi) fi.click();
+          }, 350);
+        } else if (modalParam === 'pages' || modalParam === 'split') {
+          setIsPageManagerOpen(true);
+        } else if (modalParam === 'create') {
+          setIsCreateModalOpen(true);
+        } else if (modalParam === 'image' || modalParam === 'scan') {
+          setIsScanModalOpen(true);
+        }
       } else {
         setCurrentView('landing');
       }
@@ -1294,6 +1350,13 @@ export const App: React.FC = () => {
   if (currentView === 'landing') {
     return (
       <Suspense fallback={null}>
+        <input
+          id="__pdf-file-input__"
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={handleOpenFile}
+        />
         <LandingPage
           onLaunchEditor={handleLaunchEditor}
           themePreset={themePreset}
@@ -1366,6 +1429,13 @@ export const App: React.FC = () => {
 
   return (
     <Suspense fallback={null}>
+      <input
+        id="__pdf-file-input__"
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={handleOpenFile}
+      />
       <div className={`flex flex-col h-screen w-screen ${activeTheme?.bgClass || 'bg-slate-950'} ${isLight ? 'text-slate-900' : 'text-slate-100'} overflow-hidden font-sans transition-colors duration-500`}>
       {!isFullscreen && (
         <HeaderToolbar
@@ -1598,6 +1668,7 @@ export const App: React.FC = () => {
         onRotatePage={handleRotatePage}
         onDeletePage={handleDeletePage}
         onMovePage={handleMovePage}
+        onOpenFile={() => document.getElementById('__pdf-file-input__')?.click()}
       />
 
       {/* Create Blank PDF Modal */}

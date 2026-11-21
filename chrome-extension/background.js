@@ -77,7 +77,15 @@ function injectPdfPayloadIntoTab(targetTabId, payload) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "OPEN_DROPPED_PDF" && message.payload) {
     const payload = message.payload;
-    chrome.tabs.create({ url: ISA_WEB_URL }, (newTab) => {
+    let targetUrl = ISA_WEB_URL;
+    if (payload.action?.tool) {
+      targetUrl += `&tool=${encodeURIComponent(payload.action.tool)}`;
+    }
+    if (payload.action?.modal) {
+      targetUrl += `&modal=${encodeURIComponent(payload.action.modal)}`;
+    }
+
+    chrome.tabs.create({ url: targetUrl }, (newTab) => {
       if (!newTab || !newTab.id) return;
       const targetTabId = newTab.id;
 
@@ -88,6 +96,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       };
       chrome.tabs.onUpdated.addListener(onLoaded);
+
+      // Safe timeout fallbacks
+      setTimeout(() => {
+        injectPdfPayloadIntoTab(targetTabId, payload);
+      }, 1200);
+      setTimeout(() => {
+        injectPdfPayloadIntoTab(targetTabId, payload);
+      }, 2500);
     });
     sendResponse({ status: "opening" });
   }

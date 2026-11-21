@@ -5,6 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const dropzone = document.getElementById("dropzone");
   const fileInput = document.getElementById("fileInput");
 
+  // Track which action triggered the file picker
+  let pendingAction = null;
+
   // Quick Action Buttons
   const btnActionRedact = document.getElementById("btnActionRedact");
   const btnActionSign = document.getElementById("btnActionSign");
@@ -13,47 +16,61 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnActionSplit = document.getElementById("btnActionSplit");
   const btnActionImage = document.getElementById("btnActionImage");
 
+  // Launch generic workspace
   btnLaunch.addEventListener("click", () => {
     chrome.tabs.create({ url: ISA_WEB_URL });
   });
 
+  // 1. Redact: Pick file from desktop first -> load and open with redaction ready
   if (btnActionRedact) {
     btnActionRedact.addEventListener("click", () => {
-      chrome.tabs.create({ url: `${ISA_WEB_URL}&tool=redact` });
+      pendingAction = { tool: 'redact' };
+      fileInput.click();
     });
   }
 
+  // 2. Sign: Pick file from desktop first -> load and open with digital sign ready
   if (btnActionSign) {
     btnActionSign.addEventListener("click", () => {
-      chrome.tabs.create({ url: `${ISA_WEB_URL}&tool=sign` });
+      pendingAction = { tool: 'sign' };
+      fileInput.click();
     });
   }
 
+  // 3. Compress: Pick file from desktop first -> load and open compress modal
   if (btnActionCompress) {
     btnActionCompress.addEventListener("click", () => {
-      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=compress` });
+      pendingAction = { modal: 'compress' };
+      fileInput.click();
     });
   }
 
+  // 4. Add Password: Pick file from desktop first -> load and open password modal
   if (btnActionPassword) {
     btnActionPassword.addEventListener("click", () => {
-      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=password` });
+      pendingAction = { modal: 'password' };
+      fileInput.click();
     });
   }
 
+  // 5. Split & Arrange: Pick file from desktop first -> load and open grid organizer
   if (btnActionSplit) {
     btnActionSplit.addEventListener("click", () => {
-      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=pages` });
+      pendingAction = { modal: 'pages' };
+      fileInput.click();
     });
   }
 
+  // 6. Image to PDF: Open dedicated Image-to-PDF / Scanner workspace directly
   if (btnActionImage) {
     btnActionImage.addEventListener("click", () => {
-      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=create` });
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=image` });
     });
   }
 
+  // Dropzone click
   dropzone.addEventListener("click", () => {
+    pendingAction = null;
     fileInput.click();
   });
 
@@ -86,6 +103,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const dropzoneTitle = document.querySelector(".dropzone-title");
+    if (dropzoneTitle) {
+      dropzoneTitle.textContent = "Loading " + file.name + "...";
+    }
+
     const reader = new FileReader();
     reader.onload = function (evt) {
       const arrayBuffer = evt.target.result;
@@ -98,7 +120,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const payload = {
         fileName: file.name,
-        base64Data: base64Data
+        base64Data: base64Data,
+        action: pendingAction
       };
 
       // Hand off to background service worker (persists after popup closes)

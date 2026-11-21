@@ -219,6 +219,31 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
             </div>
           )}
 
+          {!pdfBytes ? (
+            <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-white">No PDF Document Selected</h3>
+                <p className="text-xs text-slate-400 max-w-xs">
+                  Select a PDF file from your computer to protect or unlock with AES password encryption.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const fi = document.getElementById('__pdf-file-input__');
+                  if (fi) fi.click();
+                }}
+                className="mt-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition active:scale-95 flex items-center space-x-1.5"
+              >
+                <span>Select PDF from Computer</span>
+              </button>
+            </div>
+          ) : (
+            <>
+
           {activeTab === 'protect' ? (
             <div className="space-y-4">
               {!isProActive && (
@@ -409,6 +434,8 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                 </button>
               </div>
             </form>
+          )}
+          </>
           )}
         </div>
       </div>

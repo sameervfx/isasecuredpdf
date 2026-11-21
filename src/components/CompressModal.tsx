@@ -106,13 +106,35 @@ export const CompressModal: React.FC<CompressModalProps> = ({
             </div>
           )}
 
-          {/* Original Size Badge */}
-          {pdfBytes && (
-            <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-              <span className="text-slate-400 font-semibold">Current Document Size:</span>
-              <span className="font-mono font-bold text-cyan-400">{formatSize(pdfBytes.length)}</span>
+          {!pdfBytes ? (
+            <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <Zap className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-white">No PDF Document Selected</h3>
+                <p className="text-xs text-slate-400 max-w-xs">
+                  Select a PDF file from your computer to compress its file size on-device.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const fi = document.getElementById('__pdf-file-input__');
+                  if (fi) fi.click();
+                }}
+                className="mt-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition active:scale-95 flex items-center space-x-1.5"
+              >
+                <span>Select PDF from Computer</span>
+              </button>
             </div>
-          )}
+          ) : (
+            <>
+              {/* Original Size Badge */}
+              <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs">
+                <span className="text-slate-400 font-semibold">Current Document Size:</span>
+                <span className="font-mono font-bold text-cyan-400">{formatSize(pdfBytes.length)}</span>
+              </div>
 
           {/* Preset Selector */}
           <div className="space-y-2">
@@ -262,6 +284,8 @@ export const CompressModal: React.FC<CompressModalProps> = ({
               </button>
             )}
           </div>
+          </>
+          )}
         </div>
       </div>
 
