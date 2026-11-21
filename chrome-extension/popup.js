@@ -5,9 +5,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const dropzone = document.getElementById("dropzone");
   const fileInput = document.getElementById("fileInput");
 
+  // Quick Action Buttons
+  const btnActionRedact = document.getElementById("btnActionRedact");
+  const btnActionSign = document.getElementById("btnActionSign");
+  const btnActionPaste = document.getElementById("btnActionPaste");
+  const btnActionAirgap = document.getElementById("btnActionAirgap");
+
   btnLaunch.addEventListener("click", () => {
     chrome.tabs.create({ url: ISA_WEB_URL });
   });
+
+  if (btnActionRedact) {
+    btnActionRedact.addEventListener("click", () => {
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&tool=redact` });
+    });
+  }
+
+  if (btnActionSign) {
+    btnActionSign.addEventListener("click", () => {
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&tool=sign` });
+    });
+  }
+
+  if (btnActionPaste) {
+    btnActionPaste.addEventListener("click", () => {
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&tool=blank` });
+    });
+  }
+
+  if (btnActionAirgap) {
+    btnActionAirgap.addEventListener("click", () => {
+      chrome.tabs.create({ url: "https://isasecuredpdf.com/#security" });
+    });
+  }
 
   dropzone.addEventListener("click", () => {
     fileInput.click();

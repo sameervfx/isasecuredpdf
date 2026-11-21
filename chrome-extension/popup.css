@@ -1,163 +1,335 @@
+/* ISA Secured PDF — Chrome Extension Modern Dark Glassmorphic UI */
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  width: 320px;
-  background-color: #0f172a;
-  color: #f8fafc;
-  padding: 14px;
+  width: 350px;
+  background: #090e17;
+  color: #f1f5f9;
+  padding: 16px;
+  user-select: none;
 }
 
-.card {
+.extension-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
+/* ================= Header ================= */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #1e293b;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.logo-group {
+.brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.logo-icon {
-  font-size: 22px;
+.logo-wrapper {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.title {
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(14, 165, 233, 0.4));
+  z-index: 2;
+}
+
+.logo-glow {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.45) 0%, transparent 70%);
+  filter: blur(4px);
+  z-index: 1;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
   font-size: 15px;
-  font-weight: 700;
-  color: #38bdf8;
-  letter-spacing: -0.2px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  background: linear-gradient(135deg, #ffffff 0%, #bae6fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.subtitle {
-  font-size: 10px;
+.brand-tagline {
+  font-size: 10.5px;
+  font-weight: 500;
   color: #94a3b8;
+  margin-top: 1px;
 }
 
-.badge {
-  background-color: #064e3b;
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 3px 8px;
+  border-radius: 20px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.status-text {
+  font-size: 9.5px;
+  font-weight: 800;
   color: #34d399;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #059669;
+  letter-spacing: 0.5px;
 }
 
-.btn {
+/* ================= Primary CTA ================= */
+.btn-primary {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 10px;
+  padding: 11px 16px;
   border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-primary:hover {
   background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
 }
 
-.icon {
-  width: 16px;
-  height: 16px;
+.btn-primary:active {
+  transform: translateY(0);
 }
 
+.btn-icon {
+  width: 17px;
+  height: 17px;
+}
+
+/* ================= Dropzone ================= */
 .dropzone {
-  border: 2px dashed #334155;
-  border-radius: 8px;
+  border: 1.5px dashed rgba(56, 189, 248, 0.35);
+  border-radius: 10px;
   padding: 16px 12px;
   text-align: center;
-  background-color: #1e293b;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
 .dropzone:hover, .dropzone.dragover {
   border-color: #38bdf8;
-  background-color: #1e293b;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+  background: rgba(14, 165, 233, 0.08);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+  transform: translateY(-1px);
 }
 
-.drop-icon {
-  width: 28px;
-  height: 28px;
+.dropzone-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px auto;
+  transition: transform 0.2s ease;
+}
+
+.dropzone:hover .dropzone-icon-box {
+  transform: scale(1.08);
+  background: rgba(14, 165, 233, 0.2);
+}
+
+.dropzone-icon {
+  width: 20px;
+  height: 20px;
   color: #38bdf8;
-  margin: 0 auto 6px auto;
 }
 
-.drop-text {
-  font-size: 12px;
+.dropzone-title {
+  font-size: 12.5px;
+  font-weight: 700;
   color: #e2e8f0;
 }
 
-.drop-subtext {
-  font-size: 10px;
+.dropzone-subtitle {
+  font-size: 10.5px;
   color: #64748b;
   margin-top: 2px;
 }
 
-.features-grid {
+/* ================= Modern Quick Action Cards ================= */
+.quick-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 8px;
 }
 
-.feature-item {
+.action-card {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background-color: #1e293b;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  color: #cbd5e1;
+  gap: 9px;
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: inherit;
 }
 
-.feat-icon {
-  font-size: 13px;
+.action-card:hover {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.action-card:active {
+  transform: translateY(0);
+}
+
+.action-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.action-icon-wrap svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Unique Icon Backgrounds & Colors */
+.icon-redact {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.icon-sign {
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #38bdf8;
+}
+
+.icon-paste {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+
+.icon-secure {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.action-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.action-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+
+.action-hint {
+  font-size: 9.5px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+/* ================= Footer ================= */
 .footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid #1e293b;
-  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
   font-size: 10px;
   color: #64748b;
 }
 
+.footer-tip {
+  color: #64748b;
+  font-size: 10px;
+}
+
 .footer-link {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   color: #38bdf8;
   text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s ease;
 }
 
 .footer-link:hover {
+  color: #7dd3fc;
   text-decoration: underline;
+}
+
+.footer-external {
+  width: 10px;
+  height: 10px;
 }

@@ -6,62 +6,112 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="card">
+  <div class="extension-card">
     <!-- Header -->
-    <div class="header">
-      <div class="logo-group">
-        <div class="logo-icon">🛡️</div>
-        <div>
-          <h1 class="title">ISA Secured PDF</h1>
-          <p class="subtitle">100% Client-Side Privacy</p>
+    <header class="header">
+      <div class="brand">
+        <div class="logo-wrapper">
+          <img src="icons/icon48.png" alt="ISA Shield Logo" class="brand-logo" />
+          <div class="logo-glow"></div>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <h1 class="brand-name">ISA Secured PDF</h1>
+          </div>
+          <p class="brand-tagline">100% Client-Side Privacy</p>
         </div>
       </div>
-      <span class="badge">OFFLINE</span>
-    </div>
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span class="status-text">OFFLINE</span>
+      </div>
+    </header>
 
-    <!-- Main CTA -->
-    <button id="btnLaunchEditor" class="btn btn-primary">
-      <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    <!-- Primary Action -->
+    <button id="btnLaunchEditor" class="btn-primary" title="Launch Full PDF Workspace">
+      <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
       </svg>
-      Open PDF Workspace
+      <span>Open PDF Workspace</span>
     </button>
 
-    <!-- Dropzone -->
-    <div id="dropzone" class="dropzone">
+    <!-- Modern Glassmorphic Dropzone -->
+    <div id="dropzone" class="dropzone" title="Drag and drop any PDF here">
       <input type="file" id="fileInput" accept="application/pdf" style="display:none;" />
-      <svg class="drop-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-      </svg>
-      <p class="drop-text"><strong>Click or Drop PDF here</strong></p>
-      <p class="drop-subtext">Opens directly into secure local editor</p>
+      <div class="dropzone-icon-box">
+        <svg class="dropzone-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      </div>
+      <p class="dropzone-title">Click or Drop PDF here</p>
+      <p class="dropzone-subtitle">Opens instantly in local private memory</p>
     </div>
 
-    <!-- Quick Features -->
-    <div class="features-grid">
-      <div class="feature-item">
-        <span class="feat-icon">🔒</span>
-        <span>Redact Info</span>
-      </div>
-      <div class="feature-item">
-        <span class="feat-icon">✍️</span>
-        <span>Sign & Certify</span>
-      </div>
-      <div class="feature-item">
-        <span class="feat-icon">📋</span>
-        <span>Universal Paste</span>
-      </div>
-      <div class="feature-item">
-        <span class="feat-icon">⚡</span>
-        <span>Zero Uploads</span>
-      </div>
+    <!-- Quick Action Feature Cards (Ultra-Modern Glassmorphism) -->
+    <div class="quick-actions">
+      <!-- Action 1: Redact -->
+      <button class="action-card" id="btnActionRedact" title="Redact confidential information">
+        <div class="action-icon-wrap icon-redact">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <div class="action-text">
+          <span class="action-label">Blackout & Redact</span>
+          <span class="action-hint">Hide sensitive data</span>
+        </div>
+      </button>
+
+      <!-- Action 2: Sign -->
+      <button class="action-card" id="btnActionSign" title="Add digital legal signature">
+        <div class="action-icon-wrap icon-sign">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </div>
+        <div class="action-text">
+          <span class="action-label">Sign & Certify</span>
+          <span class="action-hint">DocuSign alternative</span>
+        </div>
+      </button>
+
+      <!-- Action 3: Universal Paste -->
+      <button class="action-card" id="btnActionPaste" title="Paste text & create blank PDF">
+        <div class="action-icon-wrap icon-paste">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <div class="action-text">
+          <span class="action-label">Universal Paste</span>
+          <span class="action-hint">Ctrl+V text to PDF</span>
+        </div>
+      </button>
+
+      <!-- Action 4: Zero Upload Guarantee -->
+      <button class="action-card" id="btnActionAirgap" title="Air-gapped security guarantee">
+        <div class="action-icon-wrap icon-secure">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+        <div class="action-text">
+          <span class="action-label">Air-Gapped Privacy</span>
+          <span class="action-hint">Zero cloud uploads</span>
+        </div>
+      </button>
     </div>
 
-    <!-- Footer -->
-    <div class="footer">
-      <span>Right-click any PDF link to open</span>
-      <a href="https://isasecuredpdf.com" target="_blank" class="footer-link">isasecuredpdf.com</a>
-    </div>
+    <!-- Modern Footer -->
+    <footer class="footer">
+      <span class="footer-tip">Tip: Right-click any PDF link to open</span>
+      <a href="https://isasecuredpdf.com" target="_blank" class="footer-link">
+        isasecuredpdf.com
+        <svg class="footer-external" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      </a>
+    </footer>
   </div>
 
   <script src="popup.js"></script>
