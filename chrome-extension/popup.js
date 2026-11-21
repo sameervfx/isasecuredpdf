@@ -87,30 +87,14 @@ document.addEventListener("DOMContentLoaded", () => {
         base64Data: base64Data
       };
 
-      // Open ISA Secured PDF and inject payload into localStorage
-      chrome.tabs.create({ url: ISA_WEB_URL }, (tab) => {
-        if (!tab.id) return;
-
-        // Wait until tab completes loading to inject document
-        chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
-          if (tabId === tab.id && changeInfo.status === "complete") {
-            chrome.tabs.onUpdated.removeListener(listener);
-
-            chrome.scripting.executeScript({
-              target: { tabId: tab.id },
-              func: (data) => {
-                try {
-                  localStorage.setItem("__isa_incoming_pdf__", JSON.stringify(data));
-                  window.dispatchEvent(new CustomEvent("androidOpenPdf", { detail: data }));
-                } catch (e) {
-                  console.error("Failed to inject PDF into web editor:", e);
-                }
-              },
-              args: [payload]
-            });
-          }
-        });
+      // Hand off to background service worker (persists after popup closes)
+      chrome.runtime.sendMessage({
+        action: "OPEN_DROPPED_PDF",
+        payload: payload
       });
+
+      // Close transient popup
+      setTimeout(() => window.close(), 150);
     };
 
     reader.readAsArrayBuffer(file);

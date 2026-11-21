@@ -69,7 +69,22 @@ const EMPTY_STATE: PDFDocumentState = {
 };
 
 export const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'landing' | 'editor'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'editor'>(() => {
+    try {
+      if (typeof window === 'undefined') return 'landing';
+      const isFileProtocol = window.location.protocol === 'file:';
+      const isElectronEnv = ((window as any).electronAPI !== undefined || isFileProtocol);
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasEditorQuery = urlParams.get('editor') === 'true' || 
+                             urlParams.has('pdfUrl') || 
+                             urlParams.has('tool') || 
+                             window.location.hash.includes('editor');
+      if (isElectronEnv || hasEditorQuery) {
+        return 'editor';
+      }
+    } catch (e) {}
+    return 'landing';
+  });
   const [docState, setDocState] = useState<PDFDocumentState>(EMPTY_STATE);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [zoom, setZoom] = useState<number>(1.0);
@@ -1187,6 +1202,13 @@ export const App: React.FC = () => {
     checkAndroidColdBoot();
     const tCold = setTimeout(checkAndroidColdBoot, 500);
 
+    // Expose global direct loader for Chrome Extension injection
+    (window as any).__ISA_OPEN_PAYLOAD__ = (payload: any) => {
+      if (payload && payload.base64Data) {
+        handleOpenPayloadData(payload);
+      }
+    };
+
     // 3. Chrome Extension bridge (dropped or opened via right-click / popup)
     const checkExtensionPendingPdf = () => {
       try {
@@ -1201,6 +1223,8 @@ export const App: React.FC = () => {
       } catch (e) {}
     };
     checkExtensionPendingPdf();
+    const intervalExt = setInterval(checkExtensionPendingPdf, 200);
+    const stopExtTimer = setTimeout(() => clearInterval(intervalExt), 4000);
 
     // 4. Remote PDF URL query param (e.g. ?pdfUrl=https://... or ?openPdf=...)
     try {
@@ -1223,6 +1247,9 @@ export const App: React.FC = () => {
     return () => {
       window.removeEventListener('androidOpenPdf', handleAndroidOpenPdf);
       clearTimeout(tCold);
+      clearInterval(intervalExt);
+      clearTimeout(stopExtTimer);
+      delete (window as any).__ISA_OPEN_PAYLOAD__;
     };
   }, [handleOpenPayloadData, loadPDFData]);
 
