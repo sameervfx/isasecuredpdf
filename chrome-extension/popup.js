@@ -8,8 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Quick Action Buttons
   const btnActionRedact = document.getElementById("btnActionRedact");
   const btnActionSign = document.getElementById("btnActionSign");
-  const btnActionPaste = document.getElementById("btnActionPaste");
-  const btnActionAirgap = document.getElementById("btnActionAirgap");
+  const btnActionCompress = document.getElementById("btnActionCompress");
+  const btnActionPassword = document.getElementById("btnActionPassword");
+  const btnActionSplit = document.getElementById("btnActionSplit");
+  const btnActionImage = document.getElementById("btnActionImage");
 
   btnLaunch.addEventListener("click", () => {
     chrome.tabs.create({ url: ISA_WEB_URL });
@@ -27,15 +29,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (btnActionPaste) {
-    btnActionPaste.addEventListener("click", () => {
-      chrome.tabs.create({ url: `${ISA_WEB_URL}&tool=blank` });
+  if (btnActionCompress) {
+    btnActionCompress.addEventListener("click", () => {
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=compress` });
     });
   }
 
-  if (btnActionAirgap) {
-    btnActionAirgap.addEventListener("click", () => {
-      chrome.tabs.create({ url: "https://isasecuredpdf.com/#security" });
+  if (btnActionPassword) {
+    btnActionPassword.addEventListener("click", () => {
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=password` });
+    });
+  }
+
+  if (btnActionSplit) {
+    btnActionSplit.addEventListener("click", () => {
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=pages` });
+    });
+  }
+
+  if (btnActionImage) {
+    btnActionImage.addEventListener("click", () => {
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=create` });
     });
   }
 

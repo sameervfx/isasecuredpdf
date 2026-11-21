@@ -1263,6 +1263,19 @@ export const App: React.FC = () => {
 
       if (isElectronEnv || hasEditorQuery) {
         setCurrentView('editor');
+
+        const toolParam = urlParams.get('tool');
+        if (toolParam === 'redact') {
+          setToolMode('text');
+          setTextIsRedact(true);
+        }
+        if (toolParam === 'sign') setIsSignatureModalOpen(true);
+
+        const modalParam = urlParams.get('modal');
+        if (modalParam === 'compress') setIsCompressModalOpen(true);
+        if (modalParam === 'password') setIsPasswordModalOpen(true);
+        if (modalParam === 'pages' || modalParam === 'split') setIsPageManagerOpen(true);
+        if (modalParam === 'create' || modalParam === 'image') setIsCreateModalOpen(true);
       } else {
         setCurrentView('landing');
       }
