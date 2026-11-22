@@ -3,6 +3,10 @@ name: Build & Export Android APK
 on:
   push:
     branches: [ ios-cloud-upload, main ]
+    paths:
+      - 'android/**'
+      - 'src/**'
+      - 'capacitor.config.ts'
   workflow_dispatch:
 
 jobs:
