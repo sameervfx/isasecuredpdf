@@ -78,6 +78,7 @@ export const App: React.FC = () => {
       const hasEditorQuery = urlParams.get('editor') === 'true' || 
                              urlParams.has('pdfUrl') || 
                              urlParams.has('tool') || 
+                             urlParams.has('modal') || 
                              window.location.hash.includes('editor');
       if (isElectronEnv || hasEditorQuery) {
         return 'editor';
@@ -523,7 +524,9 @@ export const App: React.FC = () => {
           setIsCompressModalOpen(true);
         } else if (modalParam === 'password') {
           setIsPasswordModalOpen(true);
-        } else if (modalParam === 'pages' || modalParam === 'split') {
+        } else if (modalParam === 'merge' || modalParam === 'combine' || modalParam === 'split' || modalParam === 'arrange') {
+          setIsMergeModalOpen(true);
+        } else if (modalParam === 'pages') {
           setIsPageManagerOpen(true);
         }
       } catch (e) {}
@@ -1325,7 +1328,9 @@ export const App: React.FC = () => {
             const fi = document.getElementById('__pdf-file-input__');
             if (fi) fi.click();
           }, 350);
-        } else if (modalParam === 'pages' || modalParam === 'split') {
+        } else if (modalParam === 'merge' || modalParam === 'combine' || modalParam === 'split' || modalParam === 'arrange') {
+          setIsMergeModalOpen(true);
+        } else if (modalParam === 'pages') {
           setIsPageManagerOpen(true);
         } else if (modalParam === 'create') {
           setIsCreateModalOpen(true);
@@ -1669,6 +1674,7 @@ export const App: React.FC = () => {
         onDeletePage={handleDeletePage}
         onMovePage={handleMovePage}
         onOpenFile={() => document.getElementById('__pdf-file-input__')?.click()}
+        onOpenMergeModal={() => setIsMergeModalOpen(true)}
       />
 
       {/* Create Blank PDF Modal */}

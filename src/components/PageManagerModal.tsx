@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, RotateCw, Trash2, ArrowLeft, ArrowRight, Grid, Upload, Plus } from 'lucide-react';
+import { X, RotateCw, Trash2, ArrowLeft, ArrowRight, Grid, Upload, Plus, Layers } from 'lucide-react';
 import { PDFDocumentState } from '../types/pdf';
 
 interface PageManagerModalProps {
@@ -11,6 +11,7 @@ interface PageManagerModalProps {
   onDeletePage: (pageIndex: number) => void;
   onMovePage: (fromIndex: number, toIndex: number) => void;
   onOpenFile?: () => void;
+  onOpenMergeModal?: () => void;
 }
 
 export const PageManagerModal: React.FC<PageManagerModalProps> = ({
@@ -22,6 +23,7 @@ export const PageManagerModal: React.FC<PageManagerModalProps> = ({
   onDeletePage,
   onMovePage,
   onOpenFile,
+  onOpenMergeModal,
 }) => {
   if (!isOpen) return null;
 
@@ -42,15 +44,28 @@ export const PageManagerModal: React.FC<PageManagerModalProps> = ({
             )}
           </div>
           <div className="flex items-center space-x-2">
+            {onOpenMergeModal && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenMergeModal();
+                }}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-semibold rounded-lg border border-slate-700 transition"
+                title="Combine multiple PDF files"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Combine Files</span>
+              </button>
+            )}
             {onOpenFile && (
               <button
                 onClick={() => {
                   onOpenFile();
                 }}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-semibold rounded-lg border border-slate-700 transition"
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition"
                 title="Open a different PDF"
               >
-                <Upload className="w-3.5 h-3.5" />
+                <Upload className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Open PDF</span>
               </button>
             )}
@@ -71,19 +86,33 @@ export const PageManagerModal: React.FC<PageManagerModalProps> = ({
             </div>
             <h4 className="text-base font-bold text-white mb-2">No Document Loaded</h4>
             <p className="text-xs text-slate-400 max-w-sm mb-6 leading-relaxed">
-              Select a PDF document from your device to rearrange, rotate, delete, or split pages.
+              Select a PDF document to rearrange, rotate, delete, or split pages — or combine multiple files into one.
             </p>
-            {onOpenFile && (
-              <button
-                onClick={() => {
-                  onOpenFile();
-                }}
-                className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-600/30 transition transform hover:-translate-y-0.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Select PDF from Computer</span>
-              </button>
-            )}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {onOpenFile && (
+                <button
+                  onClick={() => {
+                    onOpenFile();
+                  }}
+                  className="flex items-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-cyan-600/30 transition transform hover:-translate-y-0.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Select PDF from Computer</span>
+                </button>
+              )}
+              {onOpenMergeModal && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenMergeModal();
+                  }}
+                  className="flex items-center space-x-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-bold rounded-xl border border-slate-700 transition transform hover:-translate-y-0.5"
+                >
+                  <Layers className="w-4 h-4" />
+                  <span>Combine & Merge Files</span>
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 bg-slate-950">

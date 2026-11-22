@@ -53,11 +53,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 5. Split & Arrange: Pick file from desktop first -> load and open grid organizer
+  // 5. Split & Arrange / Combine: Go directly to dedicated multi-file add & arrange workspace
   if (btnActionSplit) {
     btnActionSplit.addEventListener("click", () => {
-      pendingAction = { modal: 'pages' };
-      fileInput.click();
+      chrome.tabs.create({ url: `${ISA_WEB_URL}&modal=merge` });
     });
   }
 
