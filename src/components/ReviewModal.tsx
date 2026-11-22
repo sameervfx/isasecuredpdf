@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Star, X, MessageSquare, ThumbsUp, Heart, ExternalLink, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { isIOSPlatform } from '../utils/platform';
+import { Star, X, MessageSquare, ExternalLink, CheckCircle2, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { isIOSPlatform, isAndroidPlatform } from '../utils/platform';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -19,10 +19,19 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
 
   const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.isasecuredpdf.app';
   const APP_STORE_URL = 'https://apps.apple.com/app/isasecuredpdf/id6808373104?action=write-review';
-  const storeUrl = isIOSPlatform() ? APP_STORE_URL : PLAY_STORE_URL;
+  const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/isa-secured-pdf-offline-e/chahleehgapjfgckibagbenanbkecdno/reviews';
+
+  const isIOS = isIOSPlatform();
+  const isAndroid = isAndroidPlatform();
+
+  const storeUrl = isIOS ? APP_STORE_URL : (isAndroid ? PLAY_STORE_URL : CHROME_STORE_URL);
+  const storeName = isIOS ? 'App Store' : (isAndroid ? 'Google Play Store' : 'Chrome Web Store');
 
   const handleStarClick = (num: number) => {
     setRating(num);
+    if (num >= 4) {
+      // Auto-prompt store review
+    }
   };
 
   const handleStoreReview = () => {
@@ -33,7 +42,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
     if (onRated) onRated();
     setTimeout(() => {
       onClose();
-    }, 2000);
+    }, 2200);
   };
 
   const handlePrivateFeedbackSubmit = (e: React.FormEvent) => {
@@ -44,11 +53,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
     if (onRated) onRated();
     setTimeout(() => {
       onClose();
-    }, 2000);
+    }, 2200);
   };
 
   const handleDismiss = () => {
-    // Dismiss for now, ask again later after 5 more exports
+    // Dismiss for now, allow reminder later
     localStorage.setItem('isa_export_count', '0');
     onClose();
   };
@@ -58,11 +67,12 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
       <div className="relative w-full max-w-md bg-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl overflow-hidden text-slate-100 text-center">
         {/* Glow backdrop */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -z-10" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
 
         <button
           onClick={handleDismiss}
           className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+          aria-label="Close"
         >
           <X className="w-5 h-5" />
         </button>
@@ -73,11 +83,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
               <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
             </div>
             <h3 className="text-xl font-extrabold text-white">
-              {submittedType === 'store' ? 'Thank You for Rating Us! 🎉' : 'Feedback Received! 🙏'}
+              {submittedType === 'store' ? 'Thank You for Supporting Us! 🎉' : 'Feedback Received! 🙏'}
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
               {submittedType === 'store'
-                ? 'Your 5-star support keeps ISA Secured PDF 100% free of cloud tracking and server ads.'
+                ? `Your 5-star rating on ${storeName} helps keep ISA Secured PDF 100% ad-free, fast, and completely private!`
                 : 'We truly appreciate your input and will use it to make ISA Secured PDF even better!'}
             </p>
           </div>
@@ -88,12 +98,15 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
             </div>
 
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-widest bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full">
-                Help Us Grow
+              <span className="inline-flex items-center space-x-1 text-[10px] font-extrabold uppercase tracking-widest bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full">
+                <HeartHandshake className="w-3 h-3 mr-1" />
+                Help Keep It 100% Ad-Free
               </span>
-              <h3 className="text-xl font-extrabold text-white mt-2">Enjoying ISASecured PDF?</h3>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                Tap the stars below to rate your experience. Your review helps others discover 100% client-side private PDF editing.
+              <h3 className="text-xl font-extrabold text-white mt-2">
+                Please Rate Us to Keep It Ad-Free
+              </h3>
+              <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                Your 5-star review helps us keep ISA Secured PDF <span className="text-emerald-400 font-semibold">100% private</span>, zero cloud tracking, and completely ad-free!
               </p>
             </div>
 
@@ -109,6 +122,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
                     onMouseLeave={() => setHoverRating(0)}
                     onClick={() => handleStarClick(starNum)}
                     className="p-1 transition transform active:scale-125 focus:outline-none"
+                    aria-label={`Rate ${starNum} stars`}
                   >
                     <Star
                       className={`w-8 h-8 sm:w-9 sm:h-9 transition-colors ${
@@ -122,26 +136,24 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
               })}
             </div>
 
-            {/* Conditional Branching based on selected rating */}
-            {rating >= 4 && (
-              <div className="space-y-3 animate-fade-in pt-1">
-                <div className="p-3 bg-amber-950/40 border border-amber-500/30 text-amber-200 text-xs rounded-xl font-semibold">
-                  {isIOSPlatform()
-                    ? '🌟 Wow, 5 Stars! Would you mind leaving a quick review on the App Store?'
-                    : '🌟 Wow, 5 Stars! Would you mind leaving a quick review on Google Play Store?'}
-                </div>
-
+            {/* Default or 4-5 Stars: Direct Store CTA */}
+            {rating >= 4 || rating === 0 ? (
+              <div className="space-y-3 pt-1">
                 <button
                   type="button"
                   onClick={handleStoreReview}
-                  className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xl shadow-amber-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2"
+                  className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xl shadow-amber-500/25 transition transform active:scale-95 flex items-center justify-center space-x-2"
                 >
-                  <span>{isIOSPlatform() ? 'Leave 5-Star Review on App Store' : 'Leave 5-Star Review on Google Play'}</span>
+                  <span>⭐ Rate 5 Stars on {storeName}</span>
                   <ExternalLink className="w-4 h-4" />
                 </button>
+                <p className="text-[11px] text-slate-400">
+                  Takes less than 15 seconds & keeps the tools free for everyone.
+                </p>
               </div>
-            )}
+            ) : null}
 
+            {/* 1-3 Stars Feedback Form */}
             {rating > 0 && rating <= 3 && (
               <form onSubmit={handlePrivateFeedbackSubmit} className="space-y-3 animate-fade-in text-left pt-1">
                 <div className="p-2.5 bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl font-medium">
@@ -166,28 +178,26 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
               </form>
             )}
 
-            {rating === 0 && (
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  className="hover:text-slate-200 transition"
-                >
-                  Maybe Later
-                </button>
+            <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="hover:text-slate-200 transition py-1"
+              >
+                Maybe Later
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.setItem('isa_has_rated', 'true');
-                    onClose();
-                  }}
-                  className="hover:text-slate-200 transition"
-                >
-                  Already Rated
-                </button>
-              </div>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('isa_has_rated', 'true');
+                  onClose();
+                }}
+                className="hover:text-slate-200 transition py-1"
+              >
+                Already Rated
+              </button>
+            </div>
           </div>
         )}
       </div>

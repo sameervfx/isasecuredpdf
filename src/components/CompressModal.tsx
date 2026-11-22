@@ -9,6 +9,7 @@ interface CompressModalProps {
   onClose: () => void;
   pdfBytes: Uint8Array | null;
   fileName: string;
+  onCompressSuccess?: () => void;
 }
 
 export const CompressModal: React.FC<CompressModalProps> = ({
@@ -16,6 +17,7 @@ export const CompressModal: React.FC<CompressModalProps> = ({
   onClose,
   pdfBytes,
   fileName,
+  onCompressSuccess,
 }) => {
   const [preset, setPreset] = useState<'medium' | 'high' | 'low'>('medium');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -300,6 +302,7 @@ export const CompressModal: React.FC<CompressModalProps> = ({
         onSaveSuccess={(msg) => {
           setCompressToast(msg);
           setTimeout(() => setCompressToast(null), 4000);
+          if (onCompressSuccess) onCompressSuccess();
         }}
       />
 

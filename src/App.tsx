@@ -717,6 +717,18 @@ export const App: React.FC = () => {
     setToolMode('sign');
   };
 
+  const handleTriggerExportReview = useCallback(() => {
+    const hasRated = localStorage.getItem('isa_has_rated');
+    if (hasRated === 'true') return;
+    const currentCount = parseInt(localStorage.getItem('isa_export_count') || '0', 10) + 1;
+    localStorage.setItem('isa_export_count', currentCount.toString());
+    if (currentCount >= 1) {
+      setTimeout(() => {
+        setIsReviewModalOpen(true);
+      }, 1000);
+    }
+  }, []);
+
   const handleAddSignatureAtCoords = (sigData: Omit<SignatureAnnotation, 'id'>) => {
     const quota = checkAndConsumeMonthlyQuota(isProActive, 'sign', docState.fileName || 'document.pdf');
     if (!quota.allowed) {
@@ -736,6 +748,7 @@ export const App: React.FC = () => {
     if (!isProActive) {
       notifyMonthlyQuotaStatus(quota.used, quota.limit);
     }
+    handleTriggerExportReview();
   };
 
   const handleUpdateSignature = (id: string, updated: Partial<SignatureAnnotation>) => {
@@ -941,18 +954,6 @@ export const App: React.FC = () => {
     return btoa(binary);
   };
 
-  const handleTriggerExportReview = useCallback(() => {
-    const hasRated = localStorage.getItem('isa_has_rated');
-    if (hasRated === 'true') return;
-    const currentCount = parseInt(localStorage.getItem('isa_export_count') || '0', 10) + 1;
-    localStorage.setItem('isa_export_count', currentCount.toString());
-    if (currentCount >= 2) {
-      setTimeout(() => {
-        setIsReviewModalOpen(true);
-      }, 1500);
-    }
-  }, []);
-
   const handleExportPDF = useCallback(async () => {
     if (!docState.fileBytes) return;
     const quota = checkAndConsumeMonthlyQuota(isProActive, 'export', docState.fileName || 'document.pdf');
@@ -975,6 +976,7 @@ export const App: React.FC = () => {
           if (!writeResult.success) throw new Error(writeResult.error);
           trackEvent('export_downloaded');
           setShowFeedbackPrompt(true);
+          handleTriggerExportReview();
         }
       } else {
         // Universal Export Dialog with editable filename (Save to Phone vs Share / Cloud Drive)
@@ -988,7 +990,7 @@ export const App: React.FC = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [docState, isProActive, notifyMonthlyQuotaReached]);
+  }, [docState, isProActive, notifyMonthlyQuotaReached, handleTriggerExportReview]);
 
   const handleSavePDF = useCallback(async () => {
     if (!docState.fileBytes) return;
@@ -1009,6 +1011,7 @@ export const App: React.FC = () => {
           const base64 = convertBytesToBase64(modifiedPdfBytes);
           const writeResult = await window.electronAPI.writeFile(result.filePath, base64);
           if (!writeResult.success) throw new Error(writeResult.error);
+          handleTriggerExportReview();
         }
       } else {
         const blob = new Blob([modifiedPdfBytes as any], { type: 'application/pdf' });
@@ -1613,6 +1616,7 @@ export const App: React.FC = () => {
           setStorageToastMessage(msg);
           setTimeout(() => setStorageToastMessage(null), 4000);
           setShowFeedbackPrompt(true);
+          handleTriggerExportReview();
         }}
       />
 
@@ -1777,6 +1781,7 @@ export const App: React.FC = () => {
         onClose={() => setIsCompressModalOpen(false)}
         pdfBytes={docState.fileBytes}
         fileName={docState.fileName}
+        onCompressSuccess={handleTriggerExportReview}
       />
 
       {/* Print Preview & Setup Modal */}
