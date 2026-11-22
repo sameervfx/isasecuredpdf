@@ -3,7 +3,7 @@
   "name": "ISA Secured PDF - Offline Editor & Redactor",
   "short_name": "ISASecuredPDF",
   "version": "1.0.1",
-  "description": "100% private, client-side PDF Editor, Redactor & Scanner. Zero cloud uploads. Automatically open, redact, sign, and annotate any PDF in Chrome.",
+  "description": "100% private on-device PDF Editor, Redactor & Scanner. Zero cloud uploads. View, redact, sign, and annotate offline.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
