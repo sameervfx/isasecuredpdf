@@ -148,110 +148,179 @@ const screens = [
     `
   },
   {
-    id: '02_permanent_redaction',
+    id: '02_extension_popup',
     filename: 'screenshot2_redact_1280x800.png',
-    tag: 'TRUE VECTOR-LEVEL PERMANENT REDACTION',
-    tagColor: 'text-rose-400 bg-rose-950/80 border-rose-500/40',
-    title: 'Scrub Sensitive Info, SSNs & Bank Accounts',
-    subtitle: 'Permanent Blackout • Vector-Level Removal • Cannot Be Highlighted or Unhidden',
+    tag: 'CHROME EXTENSION POPUP TOOLBAR',
+    tagColor: 'text-cyan-400 bg-cyan-950/80 border-cyan-500/40',
+    title: '1-Click Quick Access PDF Toolbar in Chrome',
+    subtitle: 'Drop any PDF, access 6 power tools, or open the full private editor directly from your browser',
     renderContent: () => `
-      <div class="w-full bg-slate-900/90 rounded-2xl border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col">
-        <!-- Window Bar -->
-        <div class="h-10 bg-slate-950 px-4 flex items-center justify-between border-b border-slate-800">
+      <!-- Desktop Chrome Window Frame -->
+      <div class="w-full bg-[#0a0f1d] rounded-2xl border border-slate-700/80 shadow-2xl overflow-hidden flex flex-col relative">
+        <!-- Chrome Top Window Header with Tab -->
+        <div class="h-9 bg-[#060a12] px-4 flex items-center justify-between border-b border-slate-800">
           <div class="flex items-center space-x-2">
-            <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
-            <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
-            <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
           </div>
-          <div class="text-xs font-bold text-rose-400 flex items-center space-x-1.5">
-            <span>⬛</span>
-            <span>Redaction & Confidential Blackout Engine</span>
+          <div class="flex items-center space-x-2 bg-[#0a0f1d] border-t border-x border-slate-700/80 px-4 py-1.5 rounded-t-lg text-xs font-semibold text-white -mb-px">
+            <div class="w-3.5 h-3.5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[9px]">🛡️</div>
+            <span>ISA Secured PDF</span>
+            <span class="text-slate-400 text-[10px] ml-1">✕</span>
           </div>
-          <span class="px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">PERMANENT VECTOR SCRUB</span>
+          <div class="w-16"></div>
         </div>
 
-        <!-- Main Body -->
-        <div class="h-[484px] bg-slate-950 flex p-8 gap-8 items-center justify-center">
-          <!-- Document with Blackouts -->
-          <div class="w-[560px] h-[420px] bg-white rounded-xl shadow-2xl p-8 text-slate-800 flex flex-col justify-between relative border border-slate-300">
-            <div>
-              <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
-                <span class="font-extrabold text-xs uppercase tracking-wider text-rose-700 bg-rose-50 px-2 py-0.5 rounded">PATIENT MEDICAL & FINANCIAL RECORD</span>
-                <span class="text-[10px] text-slate-400 font-mono">Confidential • HIPAA Compliant</span>
+        <!-- Chrome Address Bar & Extension Toolbar -->
+        <div class="h-11 bg-[#0b1120] px-4 flex items-center justify-between border-b border-slate-800 gap-3">
+          <div class="flex items-center space-x-2 text-slate-400 text-xs">
+            <span class="p-1 hover:text-white">‹</span>
+            <span class="p-1 hover:text-white">›</span>
+            <span class="p-1 hover:text-white">↻</span>
+          </div>
+          <!-- Address Input -->
+          <div class="flex-1 max-w-xl h-7 bg-[#060a12] border border-slate-800 rounded-lg px-3 flex items-center text-xs text-slate-300 space-x-2">
+            <span class="text-emerald-400 text-[11px]">🔒</span>
+            <span class="font-mono text-[11px] text-slate-200">https://www.isasecuredpdf.com</span>
+          </div>
+          <!-- Extension Toolbar Icons -->
+          <div class="flex items-center space-x-2.5">
+            <span class="text-slate-400 text-xs">🧩</span>
+            <!-- Active ISA Secured PDF Extension Icon with Glow -->
+            <div class="p-1 px-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400/80 shadow-lg shadow-cyan-500/30 flex items-center space-x-1">
+              <span class="text-xs">🛡️</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            </div>
+            <span class="w-6 h-6 rounded-full bg-slate-700 text-white text-[10px] flex items-center justify-center font-bold">S</span>
+          </div>
+        </div>
+
+        <!-- Web Page Canvas with Floating Extension Popup -->
+        <div class="h-[480px] bg-[#070b14] flex p-8 relative overflow-hidden">
+          <!-- Background Landing Page Mockup (Dimmed slightly to spotlight popup) -->
+          <div class="w-[660px] flex flex-col justify-center space-y-4 pr-6 opacity-90">
+            <div class="flex items-center space-x-2">
+              <div class="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-bold text-xs">🛡️</div>
+              <span class="font-extrabold text-white text-base tracking-tight">ISASecuredPDF</span>
+            </div>
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-[10px] font-semibold w-max">
+              <span>🔒 100% Client-Side • Zero Data Transmission • Phone, Tablet & Desktop Ready</span>
+            </div>
+            <h2 class="text-3xl font-black text-white leading-tight">
+              The 100% On-Device, <span class="text-emerald-400">Privacy-First</span><br>PDF Suite for Modern Teams.
+            </h2>
+            <p class="text-xs text-slate-300 leading-relaxed max-w-lg">
+              Fill AcroForms, edit text, add vector shapes, encrypt, and compress PDFs locally in your browser. Zero data uploaded to cloud servers. Save up to 80% compared to traditional Acrobat subscriptions.
+            </p>
+            <div class="flex items-center space-x-3 pt-1">
+              <div class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-bold text-xs shadow-lg flex items-center space-x-1.5">
+                <span>✨ Open Free Web Editor ➜</span>
               </div>
-
-              <div class="space-y-4 text-xs">
-                <div>
-                  <span class="text-slate-500 font-semibold block text-[11px]">Patient Legal Name:</span>
-                  <div class="h-6 bg-slate-950 rounded mt-1 flex items-center px-2">
-                    <span class="text-[9px] font-mono font-bold text-rose-400 tracking-wider">⬛ [REDACTED BY ISA SECURED PDF]</span>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <span class="text-slate-500 font-semibold block text-[11px]">Social Security / National ID:</span>
-                    <div class="h-6 bg-slate-950 rounded mt-1 flex items-center px-2">
-                      <span class="text-[9px] font-mono font-bold text-rose-400 tracking-wider">⬛ XXX-XX-XXXX</span>
-                    </div>
-                  </div>
-                  <div>
-                    <span class="text-slate-500 font-semibold block text-[11px]">Bank Wire Routing No:</span>
-                    <div class="h-6 bg-slate-950 rounded mt-1 flex items-center px-2">
-                      <span class="text-[9px] font-mono font-bold text-rose-400 tracking-wider">⬛ 021000021</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <span class="text-slate-500 font-semibold block text-[11px]">Confidential Diagnosis & Case Notes:</span>
-                  <div class="space-y-1.5 mt-1">
-                    <div class="h-4 bg-slate-950 rounded w-full"></div>
-                    <div class="h-4 bg-slate-950 rounded w-5/6"></div>
-                    <div class="h-4 bg-slate-950 rounded w-3/4"></div>
-                  </div>
-                </div>
+              <div class="px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 font-semibold text-xs flex items-center space-x-1.5">
+                <span>📷 Scan Document (Camera)</span>
               </div>
             </div>
-
-            <div class="pt-3 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-500 font-mono">
-              <span>Status: Vector Object Streams Cleared</span>
-              <span class="text-rose-600 font-bold">Unrecoverable</span>
+            <div class="flex items-center space-x-2 pt-2 text-[11px] text-amber-400 font-bold">
+              <span>★★★★★ 5.0 / 5.0</span>
+              <span class="text-slate-400 font-medium">• Verified 5-Star Reviews • 100% Consensus on Google Play</span>
             </div>
           </div>
 
-          <!-- Feature Benefit Callout Card -->
-          <div class="w-[420px] space-y-4">
-            <div class="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl space-y-3">
-              <div class="flex items-center space-x-2 text-rose-400 font-bold text-sm">
-                <span class="text-base">🛡️</span>
-                <span>Why ISA Redaction is Different</span>
+          <!-- Spotlight Floating Chrome Extension Card (Exact Match to User's Screenshot) -->
+          <div class="absolute right-8 top-3 w-[370px] bg-[#090e17] border border-cyan-500/40 rounded-2xl shadow-2xl shadow-cyan-950/90 p-4 space-y-3 z-20 backdrop-blur-md ring-1 ring-cyan-500/20">
+            <!-- Extension Header -->
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-800">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 text-base shadow-sm">🛡️</div>
+                <div>
+                  <h3 class="text-xs font-black text-white tracking-tight">ISA Secured PDF</h3>
+                  <p class="text-[9.5px] text-slate-400">100% Client-Side Privacy</p>
+                </div>
               </div>
-              <p class="text-xs text-slate-300 leading-relaxed">
-                Most web tools simply place a black rectangle over the text, allowing anyone to highlight, copy, or peek under the box.
-              </p>
-              <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                <div class="flex items-center space-x-2 text-xs font-bold text-emerald-400">
-                  <span>✓</span>
-                  <span>Underlying text glyphs permanently deleted</span>
+              <div class="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-extrabold text-emerald-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>OFFLINE</span>
+              </div>
+            </div>
+
+            <!-- Primary Action Button -->
+            <button class="w-full py-2 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-600/25 flex items-center justify-center space-x-1.5">
+              <span>⬆</span>
+              <span>Open PDF Workspace</span>
+            </button>
+
+            <!-- Dropzone -->
+            <div class="border-2 border-dashed border-cyan-500/40 bg-slate-900/60 rounded-xl p-3 flex flex-col items-center justify-center text-center space-y-1 hover:border-cyan-400 transition cursor-pointer">
+              <div class="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400 text-xs">☁️</div>
+              <div class="text-[11px] font-bold text-white">Click or Drop PDF here</div>
+              <div class="text-[9px] text-slate-400">Opens instantly in local private memory</div>
+            </div>
+
+            <!-- 6 Quick Action Grid -->
+            <div class="grid grid-cols-2 gap-2 pt-0.5">
+              <!-- 1: Redact -->
+              <div class="p-2 bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 rounded-xl flex items-center space-x-2 transition">
+                <div class="w-6 h-6 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center text-xs">⬛</div>
+                <div class="overflow-hidden">
+                  <div class="text-[10px] font-bold text-white truncate">Blackout & Redact</div>
+                  <div class="text-[8px] text-slate-400 truncate">Hide sensitive data</div>
                 </div>
-                <div class="flex items-center space-x-2 text-xs font-bold text-emerald-400">
-                  <span>✓</span>
-                  <span>Cannot be highlighted, selected, or exported</span>
+              </div>
+
+              <!-- 2: Sign -->
+              <div class="p-2 bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 rounded-xl flex items-center space-x-2 transition">
+                <div class="w-6 h-6 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center text-xs">✍️</div>
+                <div class="overflow-hidden">
+                  <div class="text-[10px] font-bold text-white truncate">Sign & Certify</div>
+                  <div class="text-[8px] text-slate-400 truncate">Digital signature</div>
                 </div>
-                <div class="flex items-center space-x-2 text-xs font-bold text-emerald-400">
-                  <span>✓</span>
-                  <span>Strips all unreferenced hidden PDF metadata</span>
+              </div>
+
+              <!-- 3: Compress -->
+              <div class="p-2 bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 rounded-xl flex items-center space-x-2 transition">
+                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xs">⚡</div>
+                <div class="overflow-hidden">
+                  <div class="text-[10px] font-bold text-white truncate">Compress PDF</div>
+                  <div class="text-[8px] text-slate-400 truncate">Reduce file size</div>
+                </div>
+              </div>
+
+              <!-- 4: Add Password -->
+              <div class="p-2 bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 rounded-xl flex items-center space-x-2 transition">
+                <div class="w-6 h-6 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xs">🔒</div>
+                <div class="overflow-hidden">
+                  <div class="text-[10px] font-bold text-white truncate">Add Password</div>
+                  <div class="text-[8px] text-slate-400 truncate">AES-256 protect</div>
+                </div>
+              </div>
+
+              <!-- 5: Split & Arrange -->
+              <div class="p-2 bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 rounded-xl flex items-center space-x-2 transition">
+                <div class="w-6 h-6 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-xs">📑</div>
+                <div class="overflow-hidden">
+                  <div class="text-[10px] font-bold text-white truncate">Split & Arrange</div>
+                  <div class="text-[8px] text-slate-400 truncate">Combine & arrange</div>
+                </div>
+              </div>
+
+              <!-- 6: Image to PDF -->
+              <div class="p-2 bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 rounded-xl flex items-center space-x-2 transition">
+                <div class="w-6 h-6 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-400 flex items-center justify-center text-xs">🖼️</div>
+                <div class="overflow-hidden">
+                  <div class="text-[10px] font-bold text-white truncate">Image to PDF</div>
+                  <div class="text-[8px] text-slate-400 truncate">Convert pictures</div>
                 </div>
               </div>
             </div>
 
-            <div class="p-4 bg-gradient-to-r from-rose-950/60 to-slate-900 border border-rose-500/30 rounded-2xl flex items-center justify-between">
-              <div>
-                <div class="text-xs font-bold text-white">One-Click Quick Redact</div>
-                <div class="text-[10px] text-slate-400">Drag a box over text to blackout instantly</div>
-              </div>
-              <span class="px-3 py-1 bg-rose-600 text-white rounded-lg text-xs font-bold shadow-md">Active</span>
+            <!-- Footer -->
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[8.5px] text-slate-400">
+              <span>Tip: Right-click any PDF link to open</span>
+              <span class="text-cyan-400 font-semibold flex items-center space-x-0.5">
+                <span>isasecuredpdf.com</span>
+                <span>↗</span>
+              </span>
             </div>
           </div>
         </div>
@@ -343,9 +412,9 @@ const screens = [
                   <div class="text-xs font-black text-emerald-400 uppercase tracking-wider">✓ APPROVED</div>
                   <div class="text-[9px] text-emerald-500 font-mono mt-0.5">Date: 2026-11-21</div>
                 </div>
-                <div class="p-3 bg-rose-950/40 border-2 border-rose-500/60 rounded-xl text-center shadow-lg">
-                  <div class="text-xs font-black text-rose-400 uppercase tracking-wider">CONFIDENTIAL</div>
-                  <div class="text-[9px] text-rose-500 font-mono mt-0.5">Do Not Distribute</div>
+                <div class="p-3 bg-indigo-950/40 border-2 border-indigo-500/60 rounded-xl text-center shadow-lg">
+                  <div class="text-xs font-black text-indigo-300 uppercase tracking-wider">CONFIDENTIAL</div>
+                  <div class="text-[9px] text-indigo-400 font-mono mt-0.5">Do Not Distribute</div>
                 </div>
                 <div class="p-3 bg-cyan-950/40 border-2 border-cyan-500/60 rounded-xl text-center shadow-lg">
                   <div class="text-xs font-black text-cyan-400 uppercase tracking-wider">VERIFIED SEAL</div>
