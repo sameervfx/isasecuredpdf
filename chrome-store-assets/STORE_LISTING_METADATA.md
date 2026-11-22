@@ -41,7 +41,7 @@ KEY FEATURES:
 • Permanently scrub sensitive information, SSNs, bank account numbers, names, and confidential data.
 • True vector-level redaction — cannot be highlighted, unhidden, or copied.
 
-✍️ DIGITAL SIGNATURES & DOCUSIGN ALTERNATIVE
+✍️ LEGAL DIGITAL SIGNATURES & STAMPS
 • Draw, type, or upload your legal digital signatures.
 • Apply signatures, company seals, and approval stamps directly onto documents without subscription lock-in.
 
