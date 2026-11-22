@@ -13,7 +13,7 @@ This document contains all exact copy-paste fields required by the **Google Chro
   `ISA Secured PDF - Offline Editor, Redact & Sign`
 
 * **Summary (132 characters max):**  
-  `100% private, client-side PDF Editor, Redactor & Scanner. Zero cloud uploads. Open, redact, sign, and annotate offline in Chrome.`
+  `100% private on-device PDF Editor, Redactor & Scanner. Zero cloud uploads. View, redact, sign, split, convert and compress.`
 
 * **Primary Category:**  
   `Productivity`
