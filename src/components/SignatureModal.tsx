@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { X, Eraser, Check, PenTool, Upload, Type, Image as ImageIcon, BookmarkPlus, Sparkles } from 'lucide-react';
 import SignaturePad from 'signature_pad';
+import { isNativeMobileApp } from '../utils/platform';
 
 interface SignatureModalProps {
   isOpen: boolean;
@@ -359,12 +360,28 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
       ? Boolean(typedName.trim())
       : Boolean(uploadedDataUrl);
 
+  const isNative = isNativeMobileApp();
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-3 sm:p-4 animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
+    <div
+      style={
+        isNative
+          ? {
+              paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)',
+              paddingBottom: 'max(env(safe-area-inset-bottom, 56px), 56px)',
+            }
+          : undefined
+      }
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-3 sm:p-4 animate-fadeIn"
+    >
+      <div
+        className={`bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col ${
+          isNative ? 'max-h-full' : 'max-h-[92vh]'
+        }`}
+      >
         
         {/* Header */}
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50 shrink-0">
           <div className="flex items-center space-x-2">
             <div className="p-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-lg text-cyan-400">
               <PenTool className="w-4 h-4" />
@@ -383,7 +400,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-800 bg-slate-950 px-4 pt-2.5 space-x-2">
+        <div className="flex border-b border-slate-800 bg-slate-950 px-4 pt-2.5 space-x-2 shrink-0">
           <button
             onClick={() => setActiveTab('draw')}
             className={`flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold rounded-t-xl border-t border-x transition ${
@@ -440,7 +457,8 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
           </button>
         </div>
 
-        {/* Main Body */}
+        {/* Main Body (Scrollable so Footer Insert Button never collides with Android/iOS nav bar) */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
         {activeTab === 'draw' && (
           <>
             {/* Smooth Canvas Area */}
@@ -668,9 +686,10 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
             )}
           </div>
         )}
+        </div>
 
         {/* Local Storage Save Checkbox */}
-        <div className="px-4 py-2.5 bg-slate-900 border-t border-slate-800/80 flex items-center space-x-2">
+        <div className="px-4 py-2.5 bg-slate-900 border-t border-slate-800/80 flex items-center space-x-2 shrink-0">
           <label className="flex items-center space-x-2 cursor-pointer text-xs text-slate-300 select-none">
             <input
               type="checkbox"
@@ -684,7 +703,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+        <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between shrink-0">
           <button
             onClick={handleClear}
             className="flex items-center space-x-1.5 px-3 py-2 text-xs font-medium text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition"
