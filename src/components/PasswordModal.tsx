@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Lock, Unlock, Shield, ShieldCheck, Printer, Copy, AlertCircle, KeyRound, Download, CheckCircle2 } from 'lucide-react';
 import { securityService, EncryptOptions } from '../services/securityService';
 import { ExportSaveModal } from './ExportSaveModal';
@@ -12,6 +12,7 @@ interface PasswordModalProps {
   initialMode?: 'protect' | 'unlock';
   isProActive?: boolean;
   onOpenCheckout?: () => void;
+  onExportSuccess?: () => void;
 }
 
 export const PasswordModal: React.FC<PasswordModalProps> = ({
@@ -23,8 +24,20 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
   initialMode = 'protect',
   isProActive = false,
   onOpenCheckout,
+  onExportSuccess,
 }) => {
   const [activeTab, setActiveTab] = useState<'protect' | 'unlock'>(initialMode);
+  
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialMode);
+      setErrorMessage('');
+      setSuccessMessage('');
+      setPassword('');
+      setConfirmPassword('');
+      setUnlockPassword('');
+    }
+  }, [isOpen, initialMode]);
   
   // Protect tab state
   const [password, setPassword] = useState('');
@@ -136,11 +149,9 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
       onApplyDecryptedPDF(decryptedBytes);
 
       setSuccessMessage('PDF unlocked and password removed successfully!');
-      setTimeout(() => {
-        onClose();
-        setUnlockPassword('');
-        setSuccessMessage('');
-      }, 1200);
+      onClose();
+      setUnlockPassword('');
+      setSuccessMessage('');
     } catch (err: any) {
       setErrorMessage(err?.message || 'Incorrect password. Decryption failed.');
     } finally {
@@ -456,6 +467,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
         onSaveSuccess={(msg) => {
           setPasswordToast(msg);
           setTimeout(() => setPasswordToast(null), 4000);
+          if (onExportSuccess) onExportSuccess();
         }}
       />
 

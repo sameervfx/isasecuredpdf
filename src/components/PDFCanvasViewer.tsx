@@ -9,7 +9,7 @@ import { DrawingCanvasOverlay } from './DrawingCanvasOverlay';
 import { ShapeOverlay } from './ShapeOverlay';
 import { ImageStampOverlay } from './ImageStampOverlay';
 import { ShapeAnnotation, ImageStampAnnotation } from '../types/pdf';
-import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, XCircle, X, Camera, Minus, Plus, Bold, Underline, Type, Palette, Eye, EyeOff, Trash2, Clipboard } from 'lucide-react';
+import { Upload, FileCheck2, ShieldCheck, Sparkles, FilePlus, Combine, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, RotateCcw, XCircle, X, Camera, Minus, Plus, Bold, Underline, Type, Palette, Eye, EyeOff, Trash2, Clipboard, Hand } from 'lucide-react';
 import appLogo from '../assets/app_logo.jpg';
 
 interface PDFCanvasViewerProps {
@@ -142,6 +142,95 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const inViewRef = useRef<Set<number>>(new Set());
   const [visibleTrigger, setVisibleTrigger] = useState<number>(0);
+
+  // Hand / Pan tool state (click & drag to scroll freely when zoomed in, plus Space+Drag & Middle-click drag)
+  const [isPanMode, setIsPanMode] = useState<boolean>(false);
+  const [isSpaceHeld, setIsSpaceHeld] = useState<boolean>(false);
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
+  const panActive = isPanMode || isSpaceHeld;
+
+  // Automatically exit Pan mode if user activates an editing tool (text, draw, sign, etc.)
+  useEffect(() => {
+    if (toolMode !== 'select') {
+      setIsPanMode(false);
+    }
+  }, [toolMode]);
+
+  // Spacebar temporary Hand/Pan shortcut (like Adobe Acrobat / Figma)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        const tag = (document.activeElement?.tagName || '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable) return;
+        e.preventDefault();
+        if (!e.repeat) {
+          setIsSpaceHeld(true);
+        }
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsSpaceHeld(false);
+        setIsPanning(false);
+        panStartRef.current = null;
+      }
+    };
+    const handleBlur = () => {
+      setIsSpaceHeld(false);
+      setIsPanning(false);
+      panStartRef.current = null;
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
+  // Active drag-to-pan movement across the scroll container
+  useEffect(() => {
+    if (!isPanning) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!panStartRef.current || !containerRef.current) return;
+      const dx = e.clientX - panStartRef.current.x;
+      const dy = e.clientY - panStartRef.current.y;
+      containerRef.current.scrollLeft = panStartRef.current.scrollLeft - dx;
+      containerRef.current.scrollTop = panStartRef.current.scrollTop - dy;
+    };
+    const handleMouseUp = () => {
+      setIsPanning(false);
+      panStartRef.current = null;
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isPanning]);
+
+  const handleCanvasPanMouseDown = (e: React.MouseEvent<HTMLElement>) => {
+    const isMiddleClick = e.button === 1;
+    if (!panActive && !isMiddleClick) return;
+    if (e.button !== 0 && !isMiddleClick) return;
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest('button, input, textarea, select, a, [data-popover="true"]')) return;
+    if (!containerRef.current) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    panStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: containerRef.current.scrollLeft,
+      scrollTop: containerRef.current.scrollTop,
+    };
+    setIsPanning(true);
+  };
 
   // Mouse tracking when in signature placement mode
   useEffect(() => {
@@ -1266,6 +1355,28 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
           Fit Screen
         </button>
 
+        <div className="h-4 w-px bg-white/10 my-auto mx-1" />
+
+        <button
+          type="button"
+          onClick={() => {
+            const next = !isPanMode;
+            setIsPanMode(next);
+            if (next && toolMode !== 'select' && onSetToolMode) {
+              onSetToolMode('select');
+            }
+          }}
+          className={`flex items-center space-x-1 px-2.5 py-1 text-[11px] font-bold rounded-full border transition shadow-sm ${
+            panActive
+              ? 'bg-cyan-500/25 text-cyan-200 border-cyan-400/60 shadow-cyan-500/20'
+              : 'bg-white/5 hover:bg-white/15 text-white/60 hover:text-white border-white/10'
+          }`}
+          title="Hand / Pan Tool — Click & drag anywhere to scroll around zoomed PDF (Tip: also hold Spacebar + drag)"
+        >
+          <Hand className="w-3.5 h-3.5" />
+          <span>Pan</span>
+        </button>
+
         {onToggleFullscreen && (
           <>
             <div className="h-4 w-px bg-white/10 my-auto mx-1" />
@@ -1285,7 +1396,7 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       </div>
 
       {/* Secondary Tool Options Bar - Docked at Top in Normal Flow on Mobile App, Floating on Web */}
-      {(toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser' || toolMode === 'text') && (
+      {(toolMode === 'draw' || toolMode === 'highlight' || toolMode === 'eraser' || (isNativeMobileApp() && toolMode === 'text')) && (
         <div
           className={
             isNativeMobileApp()
@@ -1485,69 +1596,81 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
             </>
           )}
 
-          {toolMode === 'text' && (
+          {isNativeMobileApp() && toolMode === 'text' && (
             <>
-              <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-300 shrink-0">
-                    <Type className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Text Tool</span>
-                  </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setTextIsRedact && setTextIsRedact(true)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                    textIsRedact
+                      ? 'bg-cyan-500 text-slate-950 shadow'
+                      : 'bg-slate-800 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Edit Text
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTextIsRedact && setTextIsRedact(false)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                    !textIsRedact
+                      ? 'bg-blue-500 text-white shadow'
+                      : 'bg-slate-800 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  Write New
+                </button>
+              </div>
 
-                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
 
-                  {/* Paste Text (Ctrl+V) Quick Button */}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        if (navigator.clipboard && navigator.clipboard.readText) {
-                          const text = await navigator.clipboard.readText();
-                          if (text && text.trim()) {
-                            insertPastedText(text.trim());
-                            return;
-                          }
-                        }
-                      } catch (e) {}
-                      setIsQuickPasteModalOpen(true);
-                    }}
-                    className="px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-white rounded-lg transition flex items-center gap-1 text-[11px] font-bold active:scale-95 border border-cyan-500/30"
-                    title="Paste Text from Clipboard (Ctrl+V)"
-                  >
-                    <Clipboard className="w-3.5 h-3.5" />
-                    <span>Paste Text (Ctrl+V)</span>
-                  </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    if (navigator.clipboard && navigator.clipboard.readText) {
+                      const text = await navigator.clipboard.readText();
+                      if (text && text.trim()) {
+                        insertPastedText(text.trim());
+                        return;
+                      }
+                    }
+                  } catch (e) {}
+                  setIsQuickPasteModalOpen(true);
+                }}
+                className="px-2 py-0.5 bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-white rounded-lg transition flex items-center gap-1 text-[10px] font-bold active:scale-95 border border-cyan-500/30 shrink-0"
+                title="Paste Text from Clipboard"
+              >
+                <Clipboard className="w-3 h-3" />
+                <span>Paste</span>
+              </button>
 
-                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
+              <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0" />
 
-                  {/* Font Size Quick Adjustment */}
-                  <div className="flex items-center space-x-1 bg-slate-800 rounded-lg px-2 py-0.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setTextFontSize && setTextFontSize(Math.max(4, (textFontSize || 11) - 1))}
-                      className="text-slate-400 hover:text-white font-bold text-xs px-1"
-                      title="Smaller font (-1pt)"
-                    >
-                      -
-                    </button>
-                    <span className="font-mono text-cyan-300 font-bold text-xs select-none">
-                      {Math.round(textFontSize || 11)}pt
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setTextFontSize && setTextFontSize(Math.min(100, (textFontSize || 11) + 1))}
-                      className="text-slate-400 hover:text-white font-bold text-xs px-1"
-                      title="Bigger font (+1pt)"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0 hidden md:block" />
-
-                  <span className="text-[10px] text-slate-400 hidden md:inline">
-                    Click anywhere on page to type, or double-click to add text box
-                  </span>
-                </>
-              )}
+              <div className="flex items-center space-x-1 bg-slate-800 rounded-lg px-1.5 py-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setTextFontSize && setTextFontSize(Math.max(4, Math.round(((textFontSize || 11) - 1) * 10) / 10))}
+                  className="text-slate-300 hover:text-white font-bold text-xs px-1"
+                  title="Smaller font"
+                >
+                  -
+                </button>
+                <span className="font-mono text-cyan-300 font-bold text-[11px] select-none">
+                  {Math.round(textFontSize || 11)}pt
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTextFontSize && setTextFontSize(Math.min(100, Math.round(((textFontSize || 11) + 1) * 10) / 10))}
+                  className="text-slate-300 hover:text-white font-bold text-xs px-1"
+                  title="Bigger font"
+                >
+                  +
+                </button>
+              </div>
+            </>
+          )}
 
           {/* Swift Tool Switch / Done Button (Desktop only, mobile uses tool icons) */}
           <div className="w-px h-3.5 bg-slate-700 mx-0.5 shrink-0 hidden sm:block" />
@@ -1566,12 +1689,19 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
       <main
         ref={containerRef}
         tabIndex={0}
+        onMouseDownCapture={handleCanvasPanMouseDown}
         style={{ touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
-        className={`flex-1 h-full min-h-0 overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start sm:items-center relative focus:outline-none min-w-0 transition-colors duration-500`}
+        className={`flex-1 h-full min-h-0 overflow-y-auto overflow-x-auto max-w-[100vw] ${activeTheme?.bgClass || 'bg-slate-950'} p-2 sm:p-8 pb-24 sm:pb-28 flex flex-col items-start ${isNativeMobileApp() ? 'sm:items-center' : ''} relative focus:outline-none min-w-0 transition-colors duration-500 ${
+          isPanning ? 'cursor-grabbing select-none' : panActive ? 'cursor-grab select-none' : ''
+        }`}
       >
         <div
           ref={pagesWrapperRef}
-          className="pdf-pages-wrapper min-w-full flex flex-col items-start sm:items-center space-y-4 sm:space-y-8"
+          className={
+            isNativeMobileApp()
+              ? "pdf-pages-wrapper min-w-full flex flex-col items-start sm:items-center space-y-4 sm:space-y-8"
+              : "pdf-pages-wrapper w-max min-w-full flex flex-col items-start space-y-4 sm:space-y-8"
+          }
         >
           {activePages.map((origIdx, seqIdx) => {
             const pageNum = seqIdx + 1;
@@ -1603,7 +1733,9 @@ export const PDFCanvasViewer: React.FC<PDFCanvasViewerProps> = ({
                     y: Math.round(screenY / (h / origH)),
                   };
                 }}
-                className="pdf-document-page relative bg-white shadow-2xl my-4 select-none overflow-hidden flex-shrink-0 cursor-default"
+                className={`pdf-document-page relative bg-white shadow-2xl my-4 ${isNativeMobileApp() ? '' : 'mx-auto'} select-none overflow-hidden flex-shrink-0 ${
+                  isPanning ? 'cursor-grabbing' : panActive ? 'cursor-grab' : 'cursor-default'
+                }`}
                 style={{ width: `${w}px`, height: `${h}px`, touchAction: isDrawingToolActive ? 'none' : 'pan-x pan-y' }}
               >
                 <canvas

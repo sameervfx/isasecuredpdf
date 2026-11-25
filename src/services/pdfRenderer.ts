@@ -14,6 +14,7 @@ export class PDFRendererService {
   private pdfDoc: PDFDocumentProxy | null = null;
   private workerReady = false;
   private activeRenderTasks: Map<HTMLCanvasElement, any> = new Map();
+  private currentPassword?: string;
 
   private ensureWorker() {
     if (!this.workerReady) {
@@ -61,7 +62,13 @@ export class PDFRendererService {
       password,
       verbosity: VerbosityLevel.ERRORS,
     });
+    // Explicitly handle onPassword callback to prevent pdf.js from invoking window.prompt()
+    loadingTask.onPassword = (updatePassword: any, reason: number) => {
+      // Rejecting immediately instructs pdfjs that authentication is required without prompting
+      updatePassword(new Error('PasswordException'));
+    };
     this.pdfDoc = await loadingTask.promise;
+    this.currentPassword = password;
     return this.pdfDoc;
   }
 
@@ -77,7 +84,7 @@ export class PDFRendererService {
     fallbackFileBytes?: Uint8Array | null
   ): Promise<{ width: number; height: number; originalWidth: number; originalHeight: number }> {
     if (!this.pdfDoc && fallbackFileBytes) {
-      await this.loadDocument(fallbackFileBytes);
+      await this.loadDocument(fallbackFileBytes, this.currentPassword);
     }
     if (!this.pdfDoc) throw new Error('PDF document not loaded');
 
@@ -88,11 +95,25 @@ export class PDFRendererService {
     const totalRotation = (page.rotate + rotationAngle) % 360;
     const viewport = page.getViewport({ scale, rotation: totalRotation });
 
-    // Retina / High-DPI crystal-clear vector rendering:
-    // Scale canvas pixels by DPR (minimum 2.0 for razor-sharp vector text matching Adobe)
+    // Retina / High-DPI crystal-clear vector rendering with strict GPU texture memory cap
+    // Prevents Android SystemWebView SIGTRAP / OOM crashes when zooming multi-page PDFs on 3x DPR phones
     const deviceDPR = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
-    const dpr = Math.max(deviceDPR, 2.0);
-    const scaledViewport = page.getViewport({ scale: scale * dpr, rotation: totalRotation });
+    const isMobileDevice =
+      typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const maxDpr = isMobileDevice ? 2.0 : 2.5;
+    let effectiveDpr = Math.min(Math.max(deviceDPR, isMobileDevice ? 1.5 : 2.0), maxDpr);
+
+    let scaledViewport = page.getViewport({ scale: scale * effectiveDpr, rotation: totalRotation });
+    const maxEdge = isMobileDevice ? 3200 : 4096;
+    const maxPixels = isMobileDevice ? 7500000 : 16000000;
+    const curW = Math.max(1, scaledViewport.width);
+    const curH = Math.max(1, scaledViewport.height);
+    const edgeRatio = Math.min(1, maxEdge / Math.max(curW, curH));
+    const areaRatio = Math.min(1, Math.sqrt(maxPixels / (curW * curH)));
+    const clampRatio = Math.min(edgeRatio, areaRatio);
+    if (clampRatio < 1) {
+      scaledViewport = page.getViewport({ scale: scale * effectiveDpr * clampRatio, rotation: totalRotation });
+    }
 
     const targetWidth = Math.max(1, Math.floor(scaledViewport.width));
     const targetHeight = Math.max(1, Math.floor(scaledViewport.height));
@@ -103,7 +124,11 @@ export class PDFRendererService {
     offscreen.width = targetWidth;
     offscreen.height = targetHeight;
     const offscreenCtx = offscreen.getContext('2d', { alpha: true, willReadFrequently: true });
-    if (!offscreenCtx) throw new Error('Could not get 2d canvas context');
+    if (!offscreenCtx) {
+      offscreen.width = 0;
+      offscreen.height = 0;
+      throw new Error('Could not get 2d canvas context');
+    }
 
     offscreenCtx.fillStyle = '#ffffff';
     offscreenCtx.fillRect(0, 0, targetWidth, targetHeight);
@@ -119,6 +144,8 @@ export class PDFRendererService {
     try {
       await renderTask.promise;
     } catch (err: any) {
+      offscreen.width = 0;
+      offscreen.height = 0;
       if (err?.name === 'RenderingCancelledException') {
         const unscaledViewport = page.getViewport({ scale: 1.0, rotation: totalRotation });
         return {
@@ -146,6 +173,9 @@ export class PDFRendererService {
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(offscreen, 0, 0);
     }
+    // Explicitly release offscreen scratch GPU backing store immediately
+    offscreen.width = 0;
+    offscreen.height = 0;
 
     const unscaledViewport = page.getViewport({ scale: 1.0, rotation: totalRotation });
     return {
@@ -218,7 +248,7 @@ export class PDFRendererService {
       const fontInfoMap = new Map<string, { fontFamily: string; fontWeight: string; ascent: number; descent: number }>();
       const styles = (textContent as any).styles || {};
       for (const [fontId, style] of Object.entries<any>(styles)) {
-        let cleanFamily = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+        let cleanFamily = "'Roboto', Arial, Helvetica, 'Segoe UI', sans-serif";
         let weight = 'normal';
 
         let postscriptName = '';
@@ -248,12 +278,25 @@ export class PDFRendererService {
           cleanFamily = "'Times New Roman', Times, Georgia, Garamond, serif";
         }
         // Friendly / Rounded / Creative
-        else if (/rounded|vag/i.test(nameLower)) {
+        else if (/rounded|vag|nunito/i.test(nameLower)) {
           cleanFamily = "'Nunito', 'VAG Rounded', 'Arial Rounded MT Bold', sans-serif";
         }
-        // Corporate / Invoice / SaaS / Banking standard sans-serif (Inter, Helvetica, Arial, Roboto, Open Sans)
+        // Google Docs / Material / Modern Invoices (Roboto)
+        else if (/roboto/i.test(nameLower)) {
+          cleanFamily = "'Roboto', Arial, Helvetica, sans-serif";
+        }
+        // Open Sans
+        else if (/open\s*sans/i.test(nameLower)) {
+          cleanFamily = "'Open Sans', Arial, Helvetica, sans-serif";
+        }
+        // Inter explicitly
+        else if (/inter/i.test(nameLower)) {
+          cleanFamily = "Inter, 'Roboto', Arial, Helvetica, sans-serif";
+        }
+        // Standard PDF Sans-Serif (Helvetica, Arial, Calibri, Segoe, Liberation, DejaVu)
+        // Avoid Inter as fallback because Inter's x-height & glyph advance are ~4-6% larger than Helvetica/Arial/Roboto
         else {
-          cleanFamily = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+          cleanFamily = "'Roboto', Arial, Helvetica, 'Segoe UI', sans-serif";
         }
 
         // CSS line-box ascent ratio calibrated to HTML textarea rendering (line-height: 1)
@@ -276,10 +319,14 @@ export class PDFRendererService {
       let opIdx = 0;
 
       for (const item of rawItems) {
-        const rawFontSize = Math.hypot(item.transform[0], item.transform[1]) || item.height || 12;
-        const itemFontSize = parseFloat(rawFontSize.toFixed(2));
+        // True font point size: item.height is Math.hypot(trm[2], trm[3]) in PDF.js, representing the vertical font size.
+        // item.transform[0] is the horizontal width/advance scale (which can be stretched or condensed).
+        const verticalScale = (item.height && item.height > 0)
+          ? item.height
+          : (Math.hypot(item.transform[2], item.transform[3]) || Math.hypot(item.transform[0], item.transform[1]) || 11);
+        const itemFontSize = parseFloat(verticalScale.toFixed(2));
         const fontMeta = fontInfoMap.get(item.fontName) || {
-          fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          fontFamily: "'Roboto', Arial, Helvetica, 'Segoe UI', sans-serif",
           fontWeight: 'normal',
           ascent: 0.83,
           descent: -0.22,

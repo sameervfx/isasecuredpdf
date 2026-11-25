@@ -42,7 +42,10 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
   const [selectedFontIndex, setSelectedFontIndex] = useState(0);
 
   // Upload State
+  const [rawUploadedDataUrl, setRawUploadedDataUrl] = useState<string | null>(null);
   const [uploadedDataUrl, setUploadedDataUrl] = useState<string | null>(null);
+  const [removeBg, setRemoveBg] = useState<boolean>(true);
+  const [bgThreshold, setBgThreshold] = useState<number>(205);
   const [hasUsedFreeUpload, setHasUsedFreeUpload] = useState<boolean>(() => {
     try {
       return localStorage.getItem('isa_free_upload_sig_used') === 'true';
@@ -125,6 +128,107 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
     };
   }, []);
 
+  // Real-time Alpha Background Subtraction (extracts transparent wet-ink from JPG/photo signatures)
+  // MUST stay above any early return to satisfy React's Rules of Hooks (prevents React error #310)
+  useEffect(() => {
+    if (!rawUploadedDataUrl) {
+      setUploadedDataUrl(null);
+      return;
+    }
+    if (!removeBg) {
+      setUploadedDataUrl(rawUploadedDataUrl);
+      return;
+    }
+
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (cancelled) return;
+      try {
+        const maxDim = 1200;
+        const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) {
+          setUploadedDataUrl(rawUploadedDataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+
+        // Smooth anti-aliased luminance alpha subtraction
+        const feather = 36;
+        const lowCut = Math.max(0, bgThreshold - feather);
+        for (let i = 0; i < data.length; i += 4) {
+          const origA = data[i + 3];
+          if (origA === 0) continue;
+          const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          if (lum >= bgThreshold) {
+            data[i + 3] = 0;
+          } else if (lum > lowCut) {
+            const ratio = (bgThreshold - lum) / feather;
+            data[i + 3] = Math.round(origA * ratio);
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        // Tightly crop transparent margins around extracted ink
+        let minX = w, minY = h, maxX = 0, maxY = 0;
+        let found = false;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            if (data[(y * w + x) * 4 + 3] > 15) {
+              found = true;
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+
+        if (!found) {
+          setUploadedDataUrl(canvas.toDataURL('image/png'));
+          return;
+        }
+
+        const pad = 12;
+        const cx = Math.max(0, minX - pad);
+        const cy = Math.max(0, minY - pad);
+        const cw = Math.min(w - cx, maxX - minX + pad * 2);
+        const ch = Math.min(h - cy, maxY - minY + pad * 2);
+
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = cw;
+        outCanvas.height = ch;
+        const outCtx = outCanvas.getContext('2d');
+        if (outCtx) {
+          outCtx.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+          setUploadedDataUrl(outCanvas.toDataURL('image/png'));
+        } else {
+          setUploadedDataUrl(canvas.toDataURL('image/png'));
+        }
+      } catch {
+        setUploadedDataUrl(rawUploadedDataUrl);
+      }
+    };
+    img.onerror = () => {
+      if (!cancelled) setUploadedDataUrl(rawUploadedDataUrl);
+    };
+    img.src = rawUploadedDataUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rawUploadedDataUrl, removeBg, bgThreshold]);
+
   if (!isOpen) return null;
 
   const handleClear = () => {
@@ -136,6 +240,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
     } else if (activeTab === 'type') {
       setTypedName('');
     } else {
+      setRawUploadedDataUrl(null);
       setUploadedDataUrl(null);
     }
   };
@@ -147,10 +252,11 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
     const reader = new FileReader();
     reader.onload = (evt) => {
       if (evt.target?.result) {
-        setUploadedDataUrl(evt.target.result as string);
+        setRawUploadedDataUrl(evt.target.result as string);
       }
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   // Auto-crop whitespace from canvas for tight, pixel-perfect signature bounding box
@@ -489,9 +595,58 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
 
             {uploadedDataUrl ? (
               <div className="flex flex-col items-center space-y-3 w-full">
-                <div className="p-3 bg-white rounded-xl border border-slate-700 max-h-40 flex items-center justify-center overflow-hidden shadow-lg w-full">
+                {/* Checkerboard preview proves transparent alpha extraction live */}
+                <div
+                  className="p-3 rounded-xl border border-slate-700 max-h-40 flex items-center justify-center overflow-hidden shadow-lg w-full"
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    backgroundImage: removeBg
+                      ? 'linear-gradient(45deg, #e2e8f0 25%, transparent 25%), linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e8f0 75%), linear-gradient(-45deg, transparent 75%, #e2e8f0 75%)'
+                      : 'none',
+                    backgroundSize: '14px 14px',
+                    backgroundPosition: '0 0, 0 7px, 7px -7px, -7px 0px',
+                  }}
+                >
                   <img src={uploadedDataUrl} alt="Uploaded Signature" className="max-h-36 object-contain" />
                 </div>
+
+                {/* Alpha Subtraction / Background Removal Controls */}
+                <div className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex flex-col space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center space-x-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={removeBg}
+                        onChange={(e) => setRemoveBg(e.target.checked)}
+                        className="rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
+                      />
+                      <span className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Remove Background (Transparent Ink)</span>
+                      </span>
+                    </label>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${removeBg ? 'bg-cyan-500/20 text-cyan-300' : 'bg-slate-800 text-slate-400'}`}>
+                      {removeBg ? 'ALPHA ON' : 'ORIGINAL'}
+                    </span>
+                  </div>
+
+                  {removeBg && (
+                    <div className="flex items-center space-x-2.5 pt-1 border-t border-slate-800/80">
+                      <span className="text-[11px] text-slate-400 font-medium shrink-0">Cutoff</span>
+                      <input
+                        type="range"
+                        min={120}
+                        max={248}
+                        value={bgThreshold}
+                        onChange={(e) => setBgThreshold(Number(e.target.value))}
+                        className="flex-1 accent-cyan-500 cursor-pointer h-1.5"
+                        title="Adjust background removal sensitivity for darker or lighter paper photos"
+                      />
+                      <span className="text-[10px] font-mono text-cyan-300 w-7 text-right">{bgThreshold}</span>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold underline"
@@ -508,7 +663,7 @@ export const SignatureModal: React.FC<SignatureModalProps> = ({
                   <ImageIcon className="w-6 h-6" />
                 </div>
                 <p className="text-xs font-semibold text-slate-200">Click to select signature image (JPG / PNG)</p>
-                <p className="text-[11px] text-slate-400">Supports transparent PNG, JPG, or WEBP desktop files</p>
+                <p className="text-[11px] text-slate-400">Auto-removes white paper background into clean transparent ink</p>
               </button>
             )}
           </div>

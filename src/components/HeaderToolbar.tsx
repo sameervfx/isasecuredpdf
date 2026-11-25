@@ -58,7 +58,10 @@ import {
   Camera,
   Smartphone,
   Apple,
-  Clipboard
+  Clipboard,
+  Key,
+  Palette,
+  Edit3
 } from 'lucide-react';
 import { ToolMode } from '../types/pdf';
 import { getSavedSignatures, deleteSavedSignature, SavedSignature } from '../utils/savedSignatures';
@@ -68,6 +71,7 @@ import { isIOSPlatform, isNativeMobileApp } from '../utils/platform';
 import appLogo from '../assets/app_logo.png';
 
 interface HeaderToolbarProps {
+  isElectron?: boolean;
   onGoToLandingPage?: () => void;
   onCloseDocument?: () => void;
   onUndo?: () => void;
@@ -84,14 +88,14 @@ interface HeaderToolbarProps {
   onFitToWidth?: () => void;
   onOpenFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onLoadSample: () => void;
-  onOpenSignatureModal: (tab?: 'draw' | 'upload') => void;
+  onOpenSignatureModal: (tab?: 'draw' | 'type' | 'upload') => void;
   onOpenWatermarkModal?: () => void;
   onOpenPageManager: () => void;
   onOpenCreateModal: () => void;
   onOpenMergeModal: () => void;
   onOpenSaveMultipleModal: () => void;
   onOpenPremiumExportModal: (format?: ExportFormatType) => void;
-  onOpenReviewModal?: () => void;
+  onOpenThemeModal?: () => void;
   onOpenRecentFile?: (fileItem: RecentFileItem) => void;
   onSelectSavedSignature: (dataUrl: string) => void;
   onRotatePage?: (pageIndex: number) => void;
@@ -130,6 +134,7 @@ interface HeaderToolbarProps {
 
 export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   activeTheme,
+  isElectron = false,
   onGoToLandingPage,
   onCloseDocument,
   onUndo,
@@ -152,7 +157,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   onOpenMergeModal,
   onOpenSaveMultipleModal,
   onOpenPremiumExportModal,
-  onOpenReviewModal,
+  onOpenThemeModal,
   onOpenRecentFile,
   onSelectSavedSignature,
   onRotatePage,
@@ -191,6 +196,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
   const [isRecentSubmenuOpen, setIsRecentSubmenuOpen] = useState(false);
+  const [recentSubmenuPos, setRecentSubmenuPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
   const [isTextDropdownOpen, setIsTextDropdownOpen] = useState(false);
   const [isSignDropdownOpen, setIsSignDropdownOpen] = useState(false);
   const [isAnnotateDropdownOpen, setIsAnnotateDropdownOpen] = useState(false);
@@ -401,7 +407,7 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
   return (
     <header
       style={{ paddingTop: 'max(env(safe-area-inset-top, 12px), 12px)' }}
-      className={`border-b ${isLight ? 'border-slate-300 bg-white/95 text-slate-900 shadow-md' : 'border-slate-800 bg-slate-900/95 text-slate-100'} backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between px-2 sm:px-4 pb-2 lg:pb-0 lg:h-16 sticky top-0 z-30 select-none gap-2 lg:gap-0 transition-colors duration-500`}
+      className={`border-b ${isLight ? 'border-slate-300 bg-white/95 text-slate-900 shadow-md' : 'border-slate-800 bg-slate-900/95 text-slate-100'} backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between px-2 xl:px-4 pb-2 lg:pb-0 lg:h-16 sticky top-0 z-30 select-none gap-2 lg:gap-1.5 transition-colors duration-500`}
     >
       <div className="flex items-center justify-between w-full lg:w-auto max-w-full overflow-x-auto no-scrollbar gap-2 shrink-0">
         {/* Brand & File Menu */}
@@ -413,9 +419,9 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           <div className="flex items-center space-x-2 xl:space-x-3 gap-2">
             <div className="flex flex-col justify-center min-w-0">
               <h1
-                onClick={onGoToLandingPage}
+                onClick={isElectron || !onGoToLandingPage ? onCloseDocument : onGoToLandingPage}
                 className={`font-extrabold text-xs sm:text-sm xl:text-base tracking-tight ${isLight ? 'text-slate-900 hover:text-cyan-700' : 'text-white hover:text-cyan-400'} cursor-pointer transition truncate max-w-[90px] xs:max-w-[120px] xl:max-w-none`}
-                title="Return to Landing Page"
+                title={isElectron || !onGoToLandingPage ? "Open / Close Workspace" : "Return to Landing Page"}
               >
                 ISASecuredPDF Suite
               </h1>
@@ -424,11 +430,19 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             {/* File Menu Dropdown */}
             <div className="relative ml-1.5 xl:ml-3 shrink-0" ref={fileMenuRef}>
               <button
-                onClick={() => toggleDropdown('file', fileMenuRef, 208)}
-                className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center space-x-1 transition shadow-sm shrink-0"
+                onClick={() => toggleDropdown('file', fileMenuRef, 220)}
+                className={`inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition shadow-sm shrink-0 border ${
+                  isFileMenuOpen
+                    ? 'bg-slate-800 text-cyan-400 border-cyan-500/40 shadow-cyan-500/10'
+                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border-slate-700/60'
+                }`}
+                title="File Operations & Document History"
               >
+                <span className="w-5 h-5 rounded-md bg-gradient-to-b from-slate-600 to-slate-800 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                  <FolderOpen className="w-3 h-3 text-cyan-300 drop-shadow-sm" />
+                </span>
                 <span>File</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
               </button>
 
               {isFileMenuOpen && popoverPos.name === 'file' && createPortal(
@@ -470,9 +484,13 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setIsFileMenuOpen(false);
-                      fileInputRef.current?.click();
+                      if (isElectron && window.electronAPI?.showOpenDialog) {
+                        await window.electronAPI.showOpenDialog();
+                      } else {
+                        fileInputRef.current?.click();
+                      }
                     }}
                     className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-white hover:bg-slate-800 rounded-xl transition"
                   >
@@ -483,17 +501,32 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     <span className="text-[10px] text-slate-500">Ctrl+O</span>
                   </button>
 
-
-
-                  {/* Open Recent Submenu Trigger */}
-                  <div
-                    className="relative"
-                    onMouseEnter={() => setIsRecentSubmenuOpen(true)}
-                    onMouseLeave={() => setIsRecentSubmenuOpen(false)}
-                  >
+                  {/* Open Recent Right-Side Flyout Trigger */}
+                  <div className="flex flex-col">
                     <button
-                      onClick={() => setIsRecentSubmenuOpen(!isRecentSubmenuOpen)}
-                      className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-white hover:bg-slate-800 rounded-xl transition"
+                      type="button"
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const flyoutW = 256;
+                        const preferredLeft = rect.right + 8;
+                        const clampedLeft = Math.min(preferredLeft, window.innerWidth - flyoutW - 12);
+                        const clampedTop = Math.min(rect.top, window.innerHeight - 280);
+                        setRecentSubmenuPos({ left: Math.max(8, clampedLeft), top: Math.max(8, clampedTop) });
+                        setIsRecentSubmenuOpen(true);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const flyoutW = 256;
+                        const preferredLeft = rect.right + 8;
+                        const clampedLeft = Math.min(preferredLeft, window.innerWidth - flyoutW - 12);
+                        const clampedTop = Math.min(rect.top, window.innerHeight - 280);
+                        setRecentSubmenuPos({ left: Math.max(8, clampedLeft), top: Math.max(8, clampedTop) });
+                        setIsRecentSubmenuOpen(!isRecentSubmenuOpen);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-white rounded-xl transition ${
+                        isRecentSubmenuOpen ? 'bg-slate-800' : 'hover:bg-slate-800'
+                      }`}
                     >
                       <div className="flex items-center space-x-2.5">
                         <History className="w-4 h-4 text-amber-400" />
@@ -502,13 +535,23 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                       <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     </button>
 
-                    {/* Open Recent Submenu */}
-                    {isRecentSubmenuOpen && (
-                      <div className="absolute top-0 left-full ml-1 w-56 sm:w-64 bg-slate-900 border border-slate-700/90 rounded-2xl shadow-2xl p-2 z-50 flex flex-col space-y-1">
-                        <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between border-b border-slate-800 pb-1.5 mb-1">
-                          <span>Recent Files</span>
+                    {/* Open Recent Right-Side Portal Flyout (Never clipped by overflow-y-auto and never covers File tools) */}
+                    {isRecentSubmenuOpen && createPortal(
+                      <div
+                        data-popover="true"
+                        style={{
+                          position: 'fixed',
+                          left: `${recentSubmenuPos.left}px`,
+                          top: `${recentSubmenuPos.top}px`,
+                          zIndex: 1000000,
+                        }}
+                        className="w-60 sm:w-64 max-w-[calc(100vw-16px)] max-h-[65vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1 ring-1 ring-cyan-500/30 text-slate-100 animate-fadeIn touch-manipulation"
+                      >
+                        <div className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between border-b border-slate-800 pb-1.5 mb-1">
+                          <span>Recent Documents</span>
                           {recentFilesList.length > 0 && (
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 clearRecentFiles();
@@ -522,27 +565,31 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                         </div>
 
                         {recentFilesList.length === 0 ? (
-                          <p className="text-xs text-slate-500 px-3 py-2 italic">No recent files opened yet</p>
+                          <p className="text-xs text-slate-500 px-2 py-2 italic">No recent files opened yet</p>
                         ) : (
                           recentFilesList.map((item) => (
                             <button
+                              type="button"
                               key={item.id}
                               onClick={() => {
                                 setIsFileMenuOpen(false);
                                 setIsRecentSubmenuOpen(false);
                                 if (onOpenRecentFile) onOpenRecentFile(item);
                               }}
-                              className="w-full text-left px-3 py-2 hover:bg-slate-800 rounded-xl transition flex flex-col"
+                              className="w-full text-left px-2.5 py-2 hover:bg-slate-800 rounded-lg transition flex flex-col group"
                             >
-                              <span className="text-xs font-semibold text-slate-200 truncate">{item.name}</span>
+                              <span className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300 truncate" title={item.filePath || item.name}>
+                                {item.name}
+                              </span>
                               <span className="text-[10px] text-slate-500 flex items-center mt-0.5">
-                                <Clock className="w-3 h-3 mr-1" />
-                                {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                <Clock className="w-3 h-3 mr-1 text-slate-500" />
+                                {new Date(item.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })} • {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </button>
                           ))
                         )}
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </div>
 
@@ -679,6 +726,42 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
 
                   <div className="my-1 border-t border-slate-800" />
 
+                  {onOpenThemeModal && (
+                    <button
+                      onClick={() => {
+                        setIsFileMenuOpen(false);
+                        onOpenThemeModal();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-slate-200 hover:bg-slate-800 rounded-xl transition"
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <Palette className="w-4 h-4 text-teal-400" />
+                        <span>Appearance & Themes...</span>
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20">
+                        THEME
+                      </span>
+                    </button>
+                  )}
+
+                  {onOpenCheckout && (
+                    <button
+                      onClick={() => {
+                        setIsFileMenuOpen(false);
+                        onOpenCheckout();
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-left font-semibold text-amber-300 hover:bg-slate-800 rounded-xl transition"
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <Crown className="w-4 h-4 text-amber-400" />
+                        <span>{isProActive ? "License & Activation (Pro Active)" : (isElectron ? "Enter License Key / Activate..." : "Upgrade to Pro / License Key...")}</span>
+                      </div>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30">
+                        {isProActive ? "PRO" : "KEY"}
+                      </span>
+                    </button>
+                  )}
+
                   <a
                     href="mailto:support@isasecuredpdf.com"
                     onClick={() => setIsFileMenuOpen(false)}
@@ -692,109 +775,156 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               )}
             </div>
 
-            {onGoToLandingPage && (
-              <>
-                <input type="file" ref={fileInputRef} onChange={onOpenFile} accept="application/pdf" className="hidden" />
-                <input type="file" ref={imageFileInputRef} onChange={handleImageFileSelect} accept="image/png, image/jpeg, image/jpg" className="hidden" />
-                <button
-                  onClick={onGoToLandingPage}
-                  className="inline-flex items-center px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shrink-0 shadow-sm"
-                  title="Return to Landing Page"
-                >
-                  Home
-                </button>
-              </>
+            {/* Hidden file inputs must always be mounted for desktop & web */}
+            <input type="file" ref={fileInputRef} onChange={onOpenFile} accept="application/pdf" className="hidden" />
+            <input type="file" ref={imageFileInputRef} onChange={handleImageFileSelect} accept="image/png, image/jpeg, image/jpg" className="hidden" />
+
+            {!isElectron && onGoToLandingPage && (
+              <button
+                onClick={onGoToLandingPage}
+                className="inline-flex items-center px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shrink-0 shadow-sm"
+                title="Return to Landing Page"
+              >
+                Home
+              </button>
             )}
 
-            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+            <span className="hidden 2xl:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
               <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
               100% Offline
             </span>
-            <span className="sm:hidden inline-flex items-center p-1 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0" title="100% Offline">
-              <ShieldCheck className="w-3.5 h-3.5" />
-            </span>
           </div>
-          <p className="hidden 2xl:block text-xs text-slate-400 truncate">Zero Server Data Transmission Guarantee</p>
         </div>
 
         {/* Mobile-Only Action Buttons in Row 1 */}
-        {hasDocument && (
-          <div className="flex lg:hidden items-center space-x-1.5 shrink-0 ml-auto">
+        <div className="flex lg:hidden items-center space-x-1 shrink-0 ml-auto">
+          {onOpenThemeModal && (
             <button
-              onClick={onPrintPDF}
-              disabled={isPrinting}
-              title="Print Document"
-              className="flex items-center space-x-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition active:scale-95 disabled:opacity-50"
+              type="button"
+              onClick={onOpenThemeModal}
+              title="Switch Theme"
+              aria-label="Switch Theme"
+              className="p-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700/80 transition active:scale-95 shrink-0"
             >
-              <Printer className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{isPrinting ? '...' : 'Print'}</span>
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-teal-500 to-emerald-700 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)]">
+                <Palette className="w-3 h-3 text-white drop-shadow-sm" />
+              </span>
             </button>
+          )}
+          {hasDocument && (
+            <>
+              {onOpenCheckout && (
+                <button
+                  type="button"
+                  onClick={onOpenCheckout}
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold transition shadow-sm shrink-0 ${
+                    isProActive
+                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/35'
+                      : 'bg-gradient-to-r from-amber-500/20 to-cyan-500/20 text-white border border-cyan-500/40'
+                  }`}
+                  title={isProActive ? "Pro Active" : "Enter License Key"}
+                >
+                  {isProActive ? (
+                    <>
+                      <Crown className="w-3 h-3 text-amber-400 mr-1" />
+                      <span>Pro</span>
+                    </>
+                  ) : (
+                    <>
+                      <Key className="w-3 h-3 text-cyan-400 mr-1" />
+                      <span>Key</span>
+                    </>
+                  )}
+                </button>
+              )}
+              <button
+                onClick={onPrintPDF}
+                disabled={isPrinting}
+                title="Print Document"
+                className="flex items-center space-x-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition active:scale-95 disabled:opacity-50"
+              >
+                <Printer className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{isPrinting ? '...' : 'Print'}</span>
+              </button>
 
-            <button
-              onClick={onExportPDF}
-              disabled={isExporting}
-              title="Export PDF"
-              className="flex items-center space-x-1 px-2.5 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>{isExporting ? '...' : 'Export'}</span>
-            </button>
-          </div>
-        )}
+              <button
+                onClick={onExportPDF}
+                disabled={isExporting}
+                title="Export PDF"
+                className="flex items-center space-x-1 px-2.5 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{isExporting ? '...' : 'Export'}</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
       </div>
 
-      {/* Center Toolbar Tool Modes: Dedicated 2nd Row on Mobile, Fluid Centered Flex Item on Desktop */}
+      {/* Center Toolbar Tool Modes: Dedicated 2nd Row on Mobile, Flex Centered on Desktop (Zero Overlap Guaranteed) */}
       {hasDocument && (
         <div className="w-full lg:w-auto lg:flex-1 lg:flex lg:justify-center min-w-0 z-20 px-1">
-          <div className="bg-slate-950/90 p-1 sm:p-1.5 rounded-xl border border-slate-800/80 shadow-inner relative w-full lg:max-w-fit overflow-x-auto no-scrollbar whitespace-nowrap">
-            <div className="flex items-center space-x-1 sm:space-x-1.5 flex-nowrap overflow-x-auto no-scrollbar touch-pan-x w-full py-0.5 px-1 justify-start lg:justify-center">
+          <div className="bg-slate-950/95 p-1 rounded-xl border border-slate-800/80 shadow-md relative w-full lg:max-w-fit overflow-x-auto no-scrollbar whitespace-nowrap">
+            <div className="flex items-center space-x-1 flex-nowrap overflow-x-auto no-scrollbar touch-pan-x w-full py-0.5 px-0.5 justify-start">
             {/* Select Mode */}
             <button
               onClick={() => handleToolSelect('select')}
               title="Select & Navigate (S)"
-              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 ${
                 toolMode === 'select'
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md ring-1 ring-cyan-400/40'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <MousePointer className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-cyan-400 to-blue-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <MousePointer className="w-3 h-3 text-white drop-shadow-sm" />
+              </span>
               <span>Select</span>
             </button>
 
             {/* Edit / Redact Text Dropdown */}
             <div className="relative shrink-0 flex items-center" ref={textDropdownRef}>
               <button
-                onClick={() => handleToolSelect('text')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isNativeMobileApp()) {
+                    handleToolSelect('text');
+                    toggleDropdown('text', textDropdownRef, 256);
+                  } else {
+                    handleToolSelect('text');
+                  }
+                }}
                 title="Edit Existing Text & Type on PDF (T) - Hover any text to edit in-place, or click anywhere to type"
-                className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-l-lg text-xs font-semibold transition-all ${
+                className={`flex items-center space-x-1.5 px-2 py-1 rounded-l-lg text-xs font-semibold transition-all ${
                   toolMode === 'text'
-                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md ring-1 ring-cyan-400/40'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                <Type className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="w-5 h-5 rounded-md bg-gradient-to-b from-indigo-400 to-indigo-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                  <Type className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />
+                </span>
                 <span>Text</span>
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleToolSelect('text');
-                  toggleDropdown('text', textDropdownRef, 224);
+                  toggleDropdown('text', textDropdownRef, 256);
                 }}
                 title="Text style & formatting options"
-                className={`px-1 py-1.5 rounded-r-lg text-xs font-semibold transition-all border-l border-slate-700/60 ${
+                className={`px-1.5 py-1 rounded-r-lg text-xs font-semibold transition-all border-l border-slate-700/60 ${
                   toolMode === 'text' || (isTextDropdownOpen && popoverPos.name === 'text')
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <ChevronDown className="w-3 h-3 text-slate-300" />
               </button>
 
-              {/* Text Formatting Options Dropdown Popover */}
-              {!isNativeMobileApp() && isTextDropdownOpen && popoverPos.name === 'text' && createPortal(
+              {/* Text Formatting Options Dropdown Popover (Desktop, Web & Mobile) */}
+              {isTextDropdownOpen && popoverPos.name === 'text' && createPortal(
                 <div
                   data-popover="true"
                   style={{
@@ -803,8 +933,62 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     top: `${popoverPos.top}px`,
                     zIndex: 999999,
                   }}
-                  className="w-56 max-w-[calc(100vw-16px)] bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2 flex flex-col space-y-1.5 animate-fadeIn opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
+                  className="w-64 max-w-[calc(100vw-16px)] bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-2 animate-fadeIn opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
                 >
+                  {/* Mode Selector: Edit Existing Text vs Write New Text */}
+                  <div className="flex flex-col space-y-1 pb-2 border-b border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolMode('text');
+                        setTextIsRedact && setTextIsRedact(true);
+                        setIsTextDropdownOpen(false);
+                      }}
+                      className={`w-full text-left p-2 rounded-xl transition flex items-start space-x-2.5 ${
+                        toolMode === 'text' && textIsRedact
+                          ? 'bg-cyan-500/20 border border-cyan-400/60 text-white shadow-sm'
+                          : 'hover:bg-slate-900 border border-transparent text-slate-200'
+                      }`}
+                    >
+                      <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 mt-0.5 shrink-0">
+                        <Edit3 className="w-4 h-4" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-white flex items-center">
+                          Edit Existing Text
+                          <span className="ml-1.5 px-1 py-0.2 bg-cyan-500/30 text-[9px] text-cyan-300 rounded font-normal">In-Place</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                          Click any printed text on the PDF to edit numbers, names or words directly
+                        </span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolMode('text');
+                        setTextIsRedact && setTextIsRedact(false);
+                        setIsTextDropdownOpen(false);
+                      }}
+                      className={`w-full text-left p-2 rounded-xl transition flex items-start space-x-2.5 ${
+                        toolMode === 'text' && !textIsRedact
+                          ? 'bg-blue-600/20 border border-blue-400/60 text-white shadow-sm'
+                          : 'hover:bg-slate-900 border border-transparent text-slate-200'
+                      }`}
+                    >
+                      <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 mt-0.5 shrink-0">
+                        <Type className="w-4 h-4" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-white">Write New Text</span>
+                        <span className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                          Click anywhere on the document to add a new text box or comment
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+
                   {/* Row 1: Font Family Selector */}
                   <select
                     value={textFontFamily || "'Times New Roman', Times, serif"}
@@ -821,18 +1005,19 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     <option value="Impact, Charcoal, sans-serif">Impact (Bold)</option>
                   </select>
 
-                  {/* Row 2: Font Size Stepper & Colors Inline */}
+                  {/* Row 2: Font Size Stepper (0.2 pt step) & Colors Inline */}
                   <div className="flex items-center justify-between gap-1.5">
                     {/* Stepper with Direct Number Input */}
                     <div className="flex items-center space-x-0.5 bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-0.5 shrink-0">
                       <button
                         onClick={() => {
-                          const next = Math.max(4, (textFontSize || 14) - 1);
+                          const cur = parseFloat(headerFontSizeStr) || textFontSize || 11;
+                          const next = Math.max(1, Math.round((cur - 0.2) * 10) / 10);
                           setHeaderFontSizeStr(String(next));
                           setTextFontSize && setTextFontSize(next);
                         }}
-                        className="px-1 text-slate-400 hover:text-white font-bold text-xs"
-                        title="Decrease Font Size"
+                        className="px-1.5 py-0.5 text-slate-400 hover:text-white font-bold text-xs"
+                        title="Decrease Font Size (-0.2 pt)"
                       >
                         -
                       </button>
@@ -844,16 +1029,16 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                           const val = e.target.value;
                           setHeaderFontSizeStr(val);
                           const n = parseFloat(val);
-                          if (!isNaN(n) && n > 0 && n <= 150) {
+                          if (!isNaN(n) && n > 0 && n <= 500) {
                             setTextFontSize && setTextFontSize(n);
                           }
                         }}
                         onBlur={() => {
                           const n = parseFloat(headerFontSizeStr);
                           if (isNaN(n) || n < 1) {
-                            setHeaderFontSizeStr(String(textFontSize || 14));
+                            setHeaderFontSizeStr(String(textFontSize || 11));
                           } else {
-                            const clamped = Math.max(4, Math.min(150, n));
+                            const clamped = Math.max(1, Math.min(500, Math.round(n * 10) / 10));
                             setHeaderFontSizeStr(String(clamped));
                             setTextFontSize && setTextFontSize(clamped);
                           }
@@ -863,18 +1048,19 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                             (e.target as HTMLInputElement).blur();
                           }
                         }}
-                        className="w-7 bg-transparent text-cyan-300 font-mono font-bold text-xs text-center border-0 outline-none p-0 select-text"
+                        className="w-8 bg-transparent text-cyan-300 font-mono font-bold text-xs text-center border-0 outline-none p-0 select-text"
                         title="Direct Font Size (pt)"
                       />
                       <span className="text-[9px] font-mono text-slate-400 select-none pr-0.5">pt</span>
                       <button
                         onClick={() => {
-                          const next = Math.min(150, (textFontSize || 14) + 1);
+                          const cur = parseFloat(headerFontSizeStr) || textFontSize || 11;
+                          const next = Math.min(500, Math.round((cur + 0.2) * 10) / 10);
                           setHeaderFontSizeStr(String(next));
                           setTextFontSize && setTextFontSize(next);
                         }}
-                        className="px-1 text-slate-400 hover:text-white font-bold text-xs"
-                        title="Increase Font Size"
+                        className="px-1.5 py-0.5 text-slate-400 hover:text-white font-bold text-xs"
+                        title="Increase Font Size (+0.2 pt)"
                       >
                         +
                       </button>
@@ -961,23 +1147,25 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <button
               onClick={() => toggleDropdown('annotate', annotateDropdownRef, 256)}
               title="Annotations, Markups, Vector Shapes, Stamps & Forms"
-              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 isAnnotateActive || (isAnnotateDropdownOpen && popoverPos.name === 'annotate')
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md ring-1 ring-cyan-400/40'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              {toolMode === 'draw' && <Pencil className="w-3.5 h-3.5 text-yellow-400" />}
-              {toolMode === 'highlight' && <Highlighter className="w-3.5 h-3.5 text-yellow-400" />}
-              {toolMode === 'eraser' && <Eraser className="w-3.5 h-3.5 text-amber-400" />}
-              {toolMode === 'strikeout' && <Strikethrough className="w-3.5 h-3.5 text-rose-400" />}
-              {toolMode === 'checkmark' && <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />}
-              {toolMode === 'crossmark' && <XSquare className="w-3.5 h-3.5 text-rose-400" />}
-              {toolMode === 'form' && <FormInput className="w-3.5 h-3.5 text-cyan-400" />}
-              {toolMode === 'line' && <Minus className="w-3.5 h-3.5 text-blue-400" />}
-              {toolMode === 'rectangle' && <Square className="w-3.5 h-3.5 text-blue-400" />}
-              {toolMode === 'oval' && <Circle className="w-3.5 h-3.5 text-blue-400" />}
-              {!isAnnotateActive && <Pencil className="w-3.5 h-3.5 text-cyan-400" />}
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-emerald-400 to-teal-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                {toolMode === 'draw' && <Pencil className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'highlight' && <Highlighter className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'eraser' && <Eraser className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'strikeout' && <Strikethrough className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'checkmark' && <CheckSquare className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'crossmark' && <XSquare className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'form' && <FormInput className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'line' && <Minus className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'rectangle' && <Square className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {toolMode === 'oval' && <Circle className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+                {!isAnnotateActive && <Pencil className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />}
+              </span>
               <span>
                 {toolMode === 'draw'
                   ? 'Draw'
@@ -1217,13 +1405,15 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <button
               onClick={() => toggleDropdown('sign', dropdownRef, 224)}
               title="Signature Options & Saved Signatures"
-              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 toolMode === 'sign' || (isSignDropdownOpen && popoverPos.name === 'sign')
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md ring-1 ring-cyan-400/40'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <PenTool className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-sky-400 to-blue-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <PenTool className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />
+              </span>
               <span>Sign</span>
               <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
@@ -1238,17 +1428,38 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   top: `${popoverPos.top}px`,
                   zIndex: 999999,
                 }}
-                className="w-56 max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-2.5 flex flex-col space-y-2 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
+                className="w-64 max-w-[calc(100vw-16px)] max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-700/80 rounded-2xl shadow-2xl p-2.5 flex flex-col space-y-2 opacity-100 ring-1 ring-cyan-500/30 text-slate-100 touch-manipulation"
               >
                 <button
                   onClick={() => {
                     setIsSignDropdownOpen(false);
                     onOpenSignatureModal('draw');
                   }}
-                  className="w-full flex items-center space-x-2.5 px-3 py-2 text-left text-xs font-semibold text-white hover:bg-slate-800 rounded-lg transition"
+                  className="w-full flex items-center space-x-3 p-2.5 text-left rounded-xl bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/40 transition group shadow-sm"
                 >
-                  <PenTool className="w-4 h-4 text-cyan-400" />
-                  <span>Draw New Signature...</span>
+                  <span className="w-8 h-8 rounded-lg bg-gradient-to-b from-cyan-400 to-blue-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_2px_4px_rgba(0,0,0,0.4)] group-hover:scale-105 transition shrink-0">
+                    <PenTool className="w-4 h-4 text-white drop-shadow-sm" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-white group-hover:text-cyan-300 transition">Draw Signature</div>
+                    <div className="text-[10px] text-slate-400 truncate">Handwrite with pen, mouse, or stylus</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsSignDropdownOpen(false);
+                    onOpenSignatureModal('type');
+                  }}
+                  className="w-full flex items-center space-x-3 p-2.5 text-left rounded-xl bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/40 transition group shadow-sm"
+                >
+                  <span className="w-8 h-8 rounded-lg bg-gradient-to-b from-emerald-400 to-teal-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_2px_4px_rgba(0,0,0,0.4)] group-hover:scale-105 transition shrink-0">
+                    <Type className="w-4 h-4 text-white drop-shadow-sm stroke-[2.5]" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-white group-hover:text-emerald-300 transition">Type Signature</div>
+                    <div className="text-[10px] text-slate-400 truncate">Choose executive cursive fonts</div>
+                  </div>
                 </button>
 
                 <button
@@ -1260,39 +1471,48 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     }
                     onOpenSignatureModal('upload');
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left text-xs font-semibold text-white hover:bg-slate-800 rounded-lg transition group"
+                  className="w-full flex items-center space-x-3 p-2.5 text-left rounded-xl bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-purple-500/40 transition group shadow-sm"
                 >
-                  <div className="flex items-center space-x-2.5">
-                    <Upload className="w-4 h-4 text-cyan-400" />
-                    <span>Upload Image (JPG/PNG)...</span>
+                  <span className="w-8 h-8 rounded-lg bg-gradient-to-b from-purple-400 to-indigo-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_2px_4px_rgba(0,0,0,0.4)] group-hover:scale-105 transition shrink-0">
+                    <Upload className="w-4 h-4 text-white drop-shadow-sm" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white group-hover:text-purple-300 transition">Upload Stamp / Seal</span>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/30">PRO</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate">Import PNG signature or seal</div>
                   </div>
-                  {!isProActive && (
-                    <span className="text-[9px] font-extrabold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">PRO</span>
-                  )}
                 </button>
 
                 {/* Saved Signatures Section */}
                 <div className="pt-2 border-t border-slate-800">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 mb-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1.5">
                     Saved Signatures ({savedSigs.length})
                   </p>
 
                   {savedSigs.length === 0 ? (
-                    <p className="text-xs text-slate-500 px-3 py-2 italic">
+                    <p className="text-xs text-slate-500 px-1 py-1 italic">
                       No saved signatures yet. Create one with "Save for future reuse" checked.
                     </p>
                   ) : (
-                    <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 pr-0.5">
                       {savedSigs.map((sig) => (
                         <div
                           key={sig.id}
                           onClick={() => handlePickSavedSig(sig.dataUrl)}
-                          className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-700 hover:border-cyan-500 cursor-pointer group shadow-sm transition"
+                          className="group relative flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 shadow-sm cursor-pointer transition"
                         >
-                          <img src={sig.dataUrl} alt="Saved Sig" className="h-8 max-w-[150px] object-contain" />
+                          <div className="h-8 w-24 bg-white/95 rounded-lg flex items-center justify-center p-1 overflow-hidden shadow-inner shrink-0">
+                            <img src={sig.dataUrl} alt="Saved Sig" className="max-h-full max-w-full object-contain filter invert" />
+                          </div>
+                          <div className="min-w-0 flex-1 px-2.5">
+                            <div className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300 truncate">Saved Signature</div>
+                            <div className="text-[9px] text-slate-400">Click to place on page</div>
+                          </div>
                           <button
                             onClick={(e) => handleDeleteSavedSig(e, sig.id)}
-                            className="p-1 text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition"
+                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg opacity-0 group-hover:opacity-100 transition shrink-0"
                             title="Delete Saved Signature"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1312,13 +1532,15 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
             <button
               onClick={() => toggleDropdown('security', securityDropdownRef, 288)}
               title="Protect PDF (AES-256 Password) & Unlock PDF (Remove Password)"
-              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 isSecurityDropdownOpen && popoverPos.name === 'security'
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md ring-1 ring-cyan-400/40'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-amber-400 to-amber-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-950 drop-shadow-sm stroke-[2.5]" />
+              </span>
               <span>Security</span>
               {!isProActive && <Crown className="w-3 h-3 text-amber-400 shrink-0 ml-0.5" />}
               <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
@@ -1397,14 +1619,16 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
           <div className="relative shrink-0" ref={moreToolsRef}>
             <button
               onClick={() => toggleDropdown('tools', moreToolsRef, 280)}
-              title="More Feature Modules (Compress, Watermark, Split, Templates)"
-              className={`flex items-center space-x-1.5 px-2 xl:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              title="More Feature Modules (Add Image, Camera Scan, Compress, Watermark, Split, Templates)"
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
                 isMoreToolsOpen && popoverPos.name === 'tools'
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md ring-1 ring-cyan-400/40'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-pulse" />
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-teal-500 to-emerald-700 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <Sparkles className="w-3 h-3 text-white drop-shadow-sm" />
+              </span>
               <span>Tools</span>
               <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
             </button>
@@ -1426,7 +1650,25 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                   <span className="text-[9px] font-bold text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">PDF Suite Tools</span>
                 </div>
 
-                {/* Scan Document via Camera */}
+                {/* 1. Add Image to PDF */}
+                <button
+                  onClick={() => {
+                    setIsMoreToolsOpen(false);
+                    imageFileInputRef.current?.click();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
+                >
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    <ImageIcon className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0 self-center" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">Add Image to PDF</div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">Insert JPG, PNG, or logo directly onto document</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30 shrink-0 self-center">Image</span>
+                </button>
+
+                {/* 2. Scan Document via Camera */}
                 <button
                   onClick={() => {
                     setIsMoreToolsOpen(false);
@@ -1442,24 +1684,6 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
                     </div>
                   </div>
                   <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/30 shrink-0 self-center">Scanner</span>
-                </button>
-
-                {/* Add Image / Logo Attachment */}
-                <button
-                  onClick={() => {
-                    setIsMoreToolsOpen(false);
-                    imageFileInputRef.current?.click();
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-left rounded-xl text-slate-200 hover:bg-slate-800/80 transition group gap-2.5"
-                >
-                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
-                    <ImageIcon className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition shrink-0 self-center" />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-bold text-white truncate">Add Image / Logo</div>
-                      <div className="text-[10px] text-slate-400 leading-tight truncate mt-0.5">Attach PNG/JPG stamp on page</div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold uppercase px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/30 shrink-0 self-center">Stamp</span>
                 </button>
 
                 {/* Compress PDF */}
@@ -1631,9 +1855,9 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
         </div>
       )}
 
-      {/* Right Header Action Buttons: Rotate, Pages, Undo/Redo, Print & Export PDF (Web Desktop Only) */}
+      {/* Right Header Action Buttons: Rotate, Pages, Undo/Redo, Theme, Print & Export PDF */}
       {hasDocument && (
-        <div className="hidden lg:flex items-center space-x-1 sm:space-x-1.5 shrink-0 ml-auto z-20 pl-2">
+        <div className="hidden lg:flex items-center space-x-1 shrink-0 ml-auto z-20 pl-1">
           {/* Rotate Current Page */}
           <button
             onClick={() => {
@@ -1642,19 +1866,23 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               }
             }}
             title="Rotate Current Page 90° Clockwise"
-            className="flex items-center space-x-1.5 p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all shrink-0"
+            className="flex items-center space-x-1 p-1 xl:px-2 xl:py-1 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700/60 transition-all shrink-0"
           >
-            <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden 2xl:inline">Rotate ↻</span>
+            <span className="w-5 h-5 rounded-md bg-gradient-to-b from-slate-700 to-slate-800 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+              <RotateCw className="w-3 h-3 text-cyan-400 drop-shadow-sm" />
+            </span>
+            <span className="hidden 2xl:inline">Rotate</span>
           </button>
 
           {/* Manage Pages / Reorder */}
           <button
             onClick={onOpenPageManager}
             title="Manage, Split & Reorder Pages"
-            className="flex items-center space-x-1.5 p-1.5 2xl:px-2.5 2xl:py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all shrink-0"
+            className="flex items-center space-x-1 p-1 xl:px-2 xl:py-1 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700/60 transition-all shrink-0"
           >
-            <Grid className="w-3.5 h-3.5 text-purple-400" />
+            <span className="w-5 h-5 rounded-md bg-gradient-to-b from-blue-600 to-indigo-700 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+              <Grid className="w-3 h-3 text-white drop-shadow-sm" />
+            </span>
             <span className="hidden 2xl:inline">Pages</span>
           </button>
 
@@ -1664,52 +1892,86 @@ export const HeaderToolbar: React.FC<HeaderToolbarProps> = ({
               disabled={!canUndo}
               onClick={onUndo}
               title="Undo Action (Ctrl+Z)"
-              className="flex items-center space-x-1 p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
+              className="flex items-center p-1 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden 2xl:inline">Undo</span>
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-slate-700 to-slate-800 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <RotateCcw className="w-3 h-3 text-cyan-400 drop-shadow-sm" />
+              </span>
             </button>
             <button
               disabled={!canRedo}
               onClick={onRedo}
               title="Redo Action (Ctrl+Y / Ctrl+Shift+Z)"
-              className="flex items-center space-x-1 p-1.5 2xl:px-2 2xl:py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
+              className="flex items-center p-1 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
             >
-              <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden 2xl:inline">Redo</span>
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-slate-700 to-slate-800 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <RotateCw className="w-3 h-3 text-cyan-400 drop-shadow-sm" />
+              </span>
             </button>
           </div>
 
+          {/* Theme Switcher Button */}
+          {onOpenThemeModal && (
+            <button
+              onClick={onOpenThemeModal}
+              title="Switch Themes & Visual Appearance"
+              className="flex items-center space-x-1 p-1 xl:px-2 xl:py-1 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700/60 transition-all shrink-0"
+            >
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-teal-500 to-emerald-700 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <Palette className="w-3 h-3 text-white drop-shadow-sm" />
+              </span>
+              <span className="hidden xl:inline">Theme</span>
+            </button>
+          )}
+
           {/* Right-Side Action Group: Print & Export PDF */}
-          <div className="flex items-center space-x-1.5 border-l border-slate-800 pl-1.5 shrink-0">
+          <div className="flex items-center space-x-1 border-l border-slate-800 pl-1 shrink-0">
             <button
               onClick={onPrintPDF}
               disabled={isPrinting}
               title="Print Document or Open Print Preview (Ctrl+P)"
-              className="hidden xl:flex items-center space-x-1 p-1.5 2xl:px-2.5 2xl:py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition active:scale-95 disabled:opacity-50 shrink-0"
+              className="hidden xl:flex items-center space-x-1 p-1 xl:px-2 xl:py-1 bg-slate-800/80 hover:bg-slate-700/80 text-indigo-300 hover:text-white text-xs font-bold rounded-lg border border-slate-700/60 transition active:scale-95 disabled:opacity-50 shrink-0 shadow-sm"
             >
-              <Printer className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden 2xl:inline">{isPrinting ? 'Preparing...' : 'Print'}</span>
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-indigo-500 to-blue-700 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <Printer className="w-3 h-3 text-white drop-shadow-sm" />
+              </span>
+              <span className="hidden 2xl:inline">{isPrinting ? '...' : 'Print'}</span>
             </button>
 
             <button
               onClick={onExportPDF}
               disabled={isExporting}
               title="Export & Download PDF File"
-              className="flex items-center space-x-1 px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg sm:rounded-xl shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50 shrink-0"
+              className="flex items-center space-x-1 px-2.5 py-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-lg shadow-md border border-cyan-400/30 transition active:scale-95 disabled:opacity-50 shrink-0"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>{isExporting ? 'Exporting...' : 'Export'}</span>
+              <span className="w-5 h-5 rounded-md bg-gradient-to-b from-cyan-300 to-blue-600 flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0">
+                <Download className="w-3 h-3 text-white drop-shadow-sm stroke-[2.5]" />
+              </span>
+              <span>{isExporting ? '...' : 'Export'}</span>
             </button>
 
-            {onOpenReviewModal && (
+            {/* Desktop & Web Pro License Status & Key Redemption */}
+            {onOpenCheckout && (
               <button
-                onClick={onOpenReviewModal}
-                title={isIOSPlatform() ? "Rate ISASecured PDF 5-Stars on App Store" : "Rate ISASecured PDF 5-Stars on Google Play Store"}
-                className="hidden 2xl:flex items-center space-x-1 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-extrabold rounded-lg sm:rounded-xl border border-amber-500/40 transition active:scale-95 shrink-0"
+                type="button"
+                onClick={onOpenCheckout}
+                className={`inline-flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-bold transition shadow-sm shrink-0 border ${
+                  isProActive
+                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/35 hover:bg-amber-500/25'
+                    : 'bg-gradient-to-r from-amber-500/20 to-cyan-500/20 text-white border-cyan-500/40 hover:border-cyan-400'
+                }`}
+                title={isProActive ? "Lifetime / Pro License Active" : "Click to enter License Key or Upgrade"}
               >
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span>Rate 5★</span>
+                <span className={`w-5 h-5 rounded-md flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.45),0_1.5px_3px_rgba(0,0,0,0.35)] shrink-0 ${
+                  isProActive ? 'bg-gradient-to-b from-amber-400 to-amber-600' : 'bg-gradient-to-b from-cyan-500 to-blue-600'
+                }`}>
+                  {isProActive ? (
+                    <Crown className="w-3 h-3 text-slate-950 stroke-[2.5]" />
+                  ) : (
+                    <Key className="w-3 h-3 text-white stroke-[2.5]" />
+                  )}
+                </span>
+                <span>{isProActive ? "Pro Active" : (isElectron ? "License" : "Upgrade")}</span>
               </button>
             )}
           </div>

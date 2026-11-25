@@ -248,7 +248,7 @@ export const ShapeOverlay: React.FC<ShapeOverlayProps> = ({
             key={shape.id}
             onMouseDown={(e) => handleStartDrag(e, shape)}
             onTouchStart={(e) => handleStartDrag(e, shape)}
-            className={`shape-element absolute pointer-events-auto cursor-grab active:cursor-grabbing select-none rounded p-0.5 transition-all ${
+            className={`shape-element absolute pointer-events-auto cursor-grab active:cursor-grabbing select-none rounded p-0.5 transition-shadow ${
               isSelected
                 ? 'ring-2 ring-blue-500 bg-blue-500/10 shadow-2xl z-30'
                 : 'hover:ring-1 hover:ring-slate-400/50 z-20'

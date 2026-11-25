@@ -16,6 +16,7 @@ interface ScanModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScanComplete: (pdfBytes: Uint8Array, fileName: string) => void;
+  onExportSuccess?: () => void;
   isProActive?: boolean;
   onRequirePro?: (msg?: string) => void;
 }
@@ -856,6 +857,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
   isOpen,
   onClose,
   onScanComplete,
+  onExportSuccess,
   isProActive = false,
   onRequirePro,
 }) => {
@@ -3485,6 +3487,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({
         onSaveSuccess={(msg) => {
           setScannerToast(msg);
           setTimeout(() => setScannerToast(null), 4000);
+          if (onExportSuccess) onExportSuccess();
         }}
       />
 

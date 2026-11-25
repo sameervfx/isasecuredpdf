@@ -2,8 +2,11 @@ import { PDFDocument, rgb, degrees, StandardFonts, PDFTextField, PDFCheckBox, PD
 import { TextAnnotation, SignatureAnnotation, AcroFormField, PDFDocumentState, StampAnnotation, StrikeoutAnnotation, FreehandDrawing } from '../types/pdf';
 import { createZipBundle, ZipFileEntry } from '../utils/zipBuilder';
 
-function parseHexColor(hexColor: string) {
-  const hex = hexColor.replace('#', '');
+function parseHexColor(hexColor?: string) {
+  let hex = (hexColor || '#000000').trim().replace('#', '');
+  if (hex.length === 3) {
+    hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+  }
   const r = parseInt(hex.substring(0, 2), 16) / 255 || 0;
   const g = parseInt(hex.substring(2, 4), 16) / 255 || 0;
   const b = parseInt(hex.substring(4, 6), 16) / 255 || 0;
@@ -119,14 +122,48 @@ export class PDFEngineService {
     return fields;
   }
 
+  private async normalizePdfBytesWithMuPDF(rawBytes: Uint8Array): Promise<Uint8Array> {
+    const { securityService } = await import('./securityService');
+    return await securityService.decryptPDF(rawBytes, '');
+  }
+
   async exportDocument(state: PDFDocumentState): Promise<Uint8Array> {
     if (!state.fileBytes) {
       throw new Error('No PDF file loaded');
     }
 
-    // 1. Load original document using isolated bytes copy
     const copyBytes = new Uint8Array(state.fileBytes.slice(0));
-    const pdfDoc = await PDFDocument.load(copyBytes, { ignoreEncryption: true });
+    try {
+      return await this.exportDocumentFromBytes(copyBytes, state, false);
+    } catch (firstErr) {
+      console.warn('Primary pdf-lib export failed, normalizing PDF via MuPDF and retrying:', firstErr);
+      try {
+        const cleanedBytes = await this.normalizePdfBytesWithMuPDF(copyBytes);
+        return await this.exportDocumentFromBytes(cleanedBytes, state, true);
+      } catch (retryErr) {
+        console.error('MuPDF normalized export retry failed:', retryErr);
+        throw firstErr;
+      }
+    }
+  }
+
+  private async exportDocumentFromBytes(
+    sourceBytes: Uint8Array,
+    state: PDFDocumentState,
+    alreadyNormalized: boolean
+  ): Promise<Uint8Array> {
+    // 1. Load original document; if owner-password encrypted (common on bank statements like RBC),
+    // strip empty-user-password encryption via MuPDF first so pdf-lib never crashes on encrypted ObjStm refs
+    let workingBytes = sourceBytes;
+    let pdfDoc = await PDFDocument.load(workingBytes, { ignoreEncryption: true });
+    if (pdfDoc.isEncrypted && !alreadyNormalized) {
+      try {
+        workingBytes = await this.normalizePdfBytesWithMuPDF(workingBytes);
+        pdfDoc = await PDFDocument.load(workingBytes, { ignoreEncryption: true });
+      } catch (decryptErr) {
+        console.warn('Auto-decrypt before export failed, continuing with original bytes:', decryptErr);
+      }
+    }
     
     // Register fontkit to support embedding true vector WOFF/TTF fonts
     try {
@@ -310,7 +347,8 @@ export class PDFEngineService {
       const isCustomFont = annFont === fontNunitoBold || annFont === fontNunitoSemiBold;
 
       // Smart word-wrapping: prevents pasted text/paragraphs from rendering off the page
-      const maxLineWidth = textAnn.width || Math.max(280, targetPage.getWidth() - textAnn.x - 36);
+      // Tolerance (+8pt) prevents single-line edited text from accidentally wrapping due to font metric variance
+      const maxLineWidth = textAnn.width ? textAnn.width + 8 : Math.max(280, targetPage.getWidth() - textAnn.x - 36);
       const rawLines = (textAnn.text || '').split(/\r?\n/);
       const lines: string[] = [];
       for (const rLine of rawLines) {
@@ -362,7 +400,7 @@ export class PDFEngineService {
         const cleanLine = isCustomFont ? lines[lineIdx] : lines[lineIdx].replace(/[^\x00-\x7F]/g, '');
         if (cleanLine) {
           let drawX = textAnn.x;
-          let drawY = pageH - textAnn.y - (textAnn.fontSize * 0.88) - (lineIdx * lineHeight);
+          let drawY = pageH - textAnn.y - (textAnn.fontSize * 0.83) - (lineIdx * lineHeight);
 
           if (textAnn.rotation && textAnn.rotation !== 0) {
             const rotDeg = -textAnn.rotation;
@@ -604,7 +642,13 @@ export class PDFEngineService {
     const mergedDoc = await PDFDocument.create();
 
     for (const fileBytes of fileList) {
-      const srcDoc = await PDFDocument.load(fileBytes, { ignoreEncryption: true });
+      let srcDoc = await PDFDocument.load(fileBytes, { ignoreEncryption: true });
+      if (srcDoc.isEncrypted) {
+        try {
+          const cleanBytes = await this.normalizePdfBytesWithMuPDF(new Uint8Array(fileBytes.slice(0)));
+          srcDoc = await PDFDocument.load(cleanBytes, { ignoreEncryption: true });
+        } catch (e) {}
+      }
       const copiedPages = await mergedDoc.copyPages(srcDoc, srcDoc.getPageIndices());
       for (const page of copiedPages) {
         mergedDoc.addPage(page);

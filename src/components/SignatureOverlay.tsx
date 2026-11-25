@@ -206,7 +206,7 @@ export const SignatureOverlay: React.FC<SignatureOverlayProps> = ({
             key={sig.id}
             onMouseDown={(e) => handleStartDrag(e, sig)}
             onTouchStart={(e) => handleStartDrag(e, sig)}
-            className={`signature-element absolute pointer-events-auto group cursor-grab active:cursor-grabbing select-none rounded p-1 transition-all ${
+            className={`signature-element absolute pointer-events-auto group cursor-grab active:cursor-grabbing select-none rounded p-1 transition-shadow ${
               isSelected
                 ? 'ring-2 ring-cyan-500 bg-cyan-500/10 shadow-2xl z-30'
                 : 'hover:ring-1 hover:ring-slate-400/50 z-20'

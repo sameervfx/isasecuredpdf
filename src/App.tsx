@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
-import { CheckCircle2, Zap, Save, Download, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, Zap, Save, Download, Sparkles, X, Lock, Unlock, Eye, EyeOff } from 'lucide-react';
 import { HeaderToolbar } from './components/HeaderToolbar';
 import { Sidebar } from './components/Sidebar';
 import { ThemePreset, getActiveTheme } from './utils/themeManager';
@@ -16,24 +16,51 @@ import { ExportSaveModal } from './components/ExportSaveModal';
 import { checkAndConsumeMonthlyQuota, canUseMonthlyQuotaFeature, FREE_MONTHLY_DOC_LIMIT } from './utils/monthlyUsageLimit';
 import { isNativeMobileApp, isIOSPlatform } from './utils/platform';
 
+// Resilient lazy loader: automatically recovers once if a live deploy replaced chunk hashes
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return React.lazy(async () => {
+    try {
+      return await factory();
+    } catch (err: any) {
+      const msg = String(err?.message || err || '');
+      const isChunkError =
+        msg.includes('Failed to fetch dynamically imported module') ||
+        msg.includes('Importing a module script failed') ||
+        msg.includes('Loading chunk');
+      if (isChunkError && typeof window !== 'undefined') {
+        const key = 'isa_chunk_reload_at';
+        const last = Number(sessionStorage.getItem(key) || '0');
+        if (Date.now() - last > 10000) {
+          sessionStorage.setItem(key, String(Date.now()));
+          window.location.reload();
+          return new Promise<{ default: T }>(() => {});
+        }
+      }
+      throw err;
+    }
+  });
+}
+
 // Code-split heavy editor modals and canvas viewer so LandingPage loads instantly in < 5ms
-const PDFCanvasViewer = React.lazy(() => import('./components/PDFCanvasViewer').then(m => ({ default: m.PDFCanvasViewer })));
-const SignatureModal = React.lazy(() => import('./components/SignatureModal').then(m => ({ default: m.SignatureModal })));
-const PageManagerModal = React.lazy(() => import('./components/PageManagerModal').then(m => ({ default: m.PageManagerModal })));
-const CreatePDFModal = React.lazy(() => import('./components/CreatePDFModal').then(m => ({ default: m.CreatePDFModal })));
-const MergePDFModal = React.lazy(() => import('./components/MergePDFModal').then(m => ({ default: m.MergePDFModal })));
-const SaveMultiplePDFsModal = React.lazy(() => import('./components/SaveMultiplePDFsModal').then(m => ({ default: m.SaveMultiplePDFsModal })));
-const WatermarkModal = React.lazy(() => import('./components/WatermarkModal').then(m => ({ default: m.WatermarkModal })));
-const PremiumExportModal = React.lazy(() => import('./components/PremiumExportModal').then(m => ({ default: m.PremiumExportModal })));
-const ThemeModal = React.lazy(() => import('./components/ThemeModal').then(m => ({ default: m.ThemeModal })));
-const UserGuideModal = React.lazy(() => import('./components/UserGuideModal').then(m => ({ default: m.UserGuideModal })));
-const HelcimCheckoutModal = React.lazy(() => import('./components/HelcimCheckoutModal').then(m => ({ default: m.HelcimCheckoutModal })));
+const PDFCanvasViewer = lazyWithRetry(() => import('./components/PDFCanvasViewer').then(m => ({ default: m.PDFCanvasViewer })));
+const SignatureModal = lazyWithRetry(() => import('./components/SignatureModal').then(m => ({ default: m.SignatureModal })));
+const PageManagerModal = lazyWithRetry(() => import('./components/PageManagerModal').then(m => ({ default: m.PageManagerModal })));
+const CreatePDFModal = lazyWithRetry(() => import('./components/CreatePDFModal').then(m => ({ default: m.CreatePDFModal })));
+const MergePDFModal = lazyWithRetry(() => import('./components/MergePDFModal').then(m => ({ default: m.MergePDFModal })));
+const SaveMultiplePDFsModal = lazyWithRetry(() => import('./components/SaveMultiplePDFsModal').then(m => ({ default: m.SaveMultiplePDFsModal })));
+const WatermarkModal = lazyWithRetry(() => import('./components/WatermarkModal').then(m => ({ default: m.WatermarkModal })));
+const PremiumExportModal = lazyWithRetry(() => import('./components/PremiumExportModal').then(m => ({ default: m.PremiumExportModal })));
+const ThemeModal = lazyWithRetry(() => import('./components/ThemeModal').then(m => ({ default: m.ThemeModal })));
+const UserGuideModal = lazyWithRetry(() => import('./components/UserGuideModal').then(m => ({ default: m.UserGuideModal })));
+const HelcimCheckoutModal = lazyWithRetry(() => import('./components/HelcimCheckoutModal').then(m => ({ default: m.HelcimCheckoutModal })));
 import { PasswordModal } from './components/PasswordModal';
 import { CompressModal } from './components/CompressModal';
 import { ScanModal } from './components/ScanModal';
-const AppDownloadModal = React.lazy(() => import('./components/AppDownloadModal').then(m => ({ default: m.AppDownloadModal })));
-const ReviewModal = React.lazy(() => import('./components/ReviewModal').then(m => ({ default: m.ReviewModal })));
-const PrintPreviewModal = React.lazy(() => import('./components/PrintPreviewModal').then(m => ({ default: m.PrintPreviewModal })));
+const AppDownloadModal = lazyWithRetry(() => import('./components/AppDownloadModal').then(m => ({ default: m.AppDownloadModal })));
+const ReviewModal = lazyWithRetry(() => import('./components/ReviewModal').then(m => ({ default: m.ReviewModal })));
+const PrintPreviewModal = lazyWithRetry(() => import('./components/PrintPreviewModal').then(m => ({ default: m.PrintPreviewModal })));
 import './types/electron.d';
 import {
   PDFDocumentState,
@@ -49,6 +76,13 @@ import {
 } from './types/pdf';
 
 const IS_ELECTRON = Boolean(window.electronAPI?.isElectron);
+
+// Safely polyfill window.prompt in Electron / Chromium so prompt() never throws "Error: prompt() is not supported."
+if (typeof window !== 'undefined') {
+  try {
+    (window as any).prompt = (_msg?: string, _default?: string) => _default || null;
+  } catch (e) {}
+}
 
 const EMPTY_STATE: PDFDocumentState = {
   fileName: '',
@@ -145,6 +179,37 @@ export const App: React.FC = () => {
 
   const [showProWelcomeModal, setShowProWelcomeModal] = useState<boolean>(false);
   const [showTrialExpiredModal, setShowTrialExpiredModal] = useState<boolean>(false);
+
+  // In-App Password-Protected PDF Handling State (replaces prompt() for desktop & web)
+  const [passwordPromptDoc, setPasswordPromptDoc] = useState<{
+    data: Uint8Array;
+    fileName: string;
+    error?: string;
+  } | null>(null);
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [showPasswordText, setShowPasswordText] = useState<boolean>(false);
+
+  // Smart Review Trigger for first PDF Export/Save/Sign/Scan (never interrupts on render)
+  const handleTriggerReview = useCallback((reason: 'render' | 'export') => {
+    const hasRated = localStorage.getItem('isa_has_rated');
+    if (hasRated === 'true') return;
+
+    if (reason === 'render') {
+      return;
+    } else {
+      const currentCount = parseInt(localStorage.getItem('isa_export_count') || '0', 10) + 1;
+      localStorage.setItem('isa_export_count', currentCount.toString());
+      if (currentCount >= 1) {
+        setTimeout(() => {
+          setIsReviewModalOpen(true);
+        }, 1000);
+      }
+    }
+  }, []);
+
+  const handleTriggerExportReview = useCallback(() => {
+    handleTriggerReview('export');
+  }, [handleTriggerReview]);
 
   // 7-Day Free Trial Expiration Evaluator (Runs on App Load & 8th Day Interruption)
   useEffect(() => {
@@ -393,7 +458,28 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleUndo, handleRedo]);
 
-  const handleOpenRecentFile = (fileItem: RecentFileItem) => {
+  const handleOpenRecentFile = async (fileItem: RecentFileItem) => {
+    if (IS_ELECTRON && window.electronAPI?.readFileByPath && fileItem.filePath) {
+      try {
+        setIsLoading(true);
+        const res = await window.electronAPI.readFileByPath(fileItem.filePath);
+        if (res.success && res.base64Data) {
+          const binaryString = atob(res.base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          await loadPDFData(bytes, res.fileName || fileItem.name, undefined, res.filePath);
+          return;
+        } else {
+          alert(`Could not open "${fileItem.name}". The file may have been moved or deleted.`);
+        }
+      } catch (e: any) {
+        alert(`Error opening "${fileItem.name}": ${e.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    }
     if (fileItem.dataUrl) {
       const base64Data = fileItem.dataUrl.split(',')[1];
       const binaryString = atob(base64Data);
@@ -403,16 +489,20 @@ export const App: React.FC = () => {
       }
       loadPDFData(bytes, fileItem.name);
     } else {
-      alert(`To open "${fileItem.name}", please use the "Open PDF..." option to select the file from your computer.`);
+      if (IS_ELECTRON && window.electronAPI?.showOpenDialog) {
+        window.electronAPI.showOpenDialog();
+      } else {
+        document.getElementById('__pdf-file-input__')?.click();
+      }
     }
   };
 
-  const loadPDFData = useCallback(async (data: Uint8Array, fileName: string, initialPassword?: string) => {
+  const loadPDFData = useCallback(async (data: Uint8Array, fileName: string, initialPassword?: string, filePath?: string) => {
     setIsLoading(true);
     setLoadError(null);
     try {
       // Record in recent files history
-      addRecentFile(fileName);
+      addRecentFile(fileName, undefined, filePath);
 
       // Dynamically load PDF engines on demand
       const { pdfRenderer } = await import('./services/pdfRenderer');
@@ -424,30 +514,30 @@ export const App: React.FC = () => {
       try {
         pdfjsDoc = await pdfRenderer.loadDocument(data.slice(0), initialPassword);
       } catch (err: any) {
-        if (err?.name === 'PasswordException') {
-          let userPass = initialPassword || prompt(`"${fileName}" is password protected. Please enter password to open:`);
-          let isAuth = false;
-          while (userPass && !isAuth) {
-            try {
-              pdfjsDoc = await pdfRenderer.loadDocument(data.slice(0), userPass);
-              isAuth = true;
-            } catch (authErr: any) {
-              if (authErr?.name === 'PasswordException') {
-                userPass = prompt(`Incorrect password for "${fileName}". Please try again:`);
-              } else {
-                throw authErr;
-              }
-            }
-          }
-          if (!isAuth) {
-            setIsLoading(false);
-            setLoadError('Password prompt canceled. Could not open protected document.');
-            return;
-          }
+        const isPasswordErr =
+          err?.name === 'PasswordException' ||
+          err?.message?.toLowerCase().includes('password') ||
+          err?.message?.includes('NEED_PASSWORD') ||
+          err?.message?.includes('INCORRECT_PASSWORD') ||
+          err?.message?.includes('prompt()');
+        if (isPasswordErr) {
+          setIsLoading(false);
+          setPasswordPromptDoc({
+            data,
+            fileName,
+            error: initialPassword ? 'Incorrect password. Please try again.' : undefined,
+          });
+          setPasswordInput('');
+          setShowPasswordText(false);
+          return;
         } else {
           throw err;
         }
       }
+
+      // Successfully authenticated & loaded - dismiss any password prompt modal
+      setPasswordPromptDoc(null);
+      setPasswordInput('');
 
       const numPages = pdfjsDoc.numPages;
 
@@ -475,11 +565,12 @@ export const App: React.FC = () => {
         } else if (isTablet) {
           fitZoom = Math.max(0.45, Math.min(1.15, Math.floor(fitScale * 100) / 100));
         } else {
-          fitZoom = Math.max(0.6, Math.min(1.25, Math.floor(fitScale * 100) / 100));
+          fitZoom = 1.0;
         }
       }
 
-      setZoom(fitZoom);
+      // Default to 1.0 (100% Actual Size matching Ctrl+0) on desktop as requested
+      setZoom(IS_ELECTRON || (!isMobile && !isTablet) ? 1.0 : fitZoom);
 
       // On mobile or tablet screens, default sidebar to closed so PDF document gets 100% viewport width!
       if (isMobile || isTablet) {
@@ -504,6 +595,7 @@ export const App: React.FC = () => {
         formFields: [],
       });
       setCurrentPage(1);
+      setToolMode('select');
       setCurrentView('editor');
       setIsLoading(false);
       trackEvent('pdf_loaded');
@@ -563,14 +655,18 @@ export const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [handleTriggerReview]);
 
   const handleOpenFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
+    const nativePath =
+      (IS_ELECTRON && window.electronAPI?.getPathForFile?.(file)) ||
+      (file as any)?.path ||
+      undefined;
     const arrayBuffer = await file.arrayBuffer();
-    await loadPDFData(new Uint8Array(arrayBuffer), file.name);
+    await loadPDFData(new Uint8Array(arrayBuffer), file.name, undefined, nativePath || undefined);
     e.target.value = '';
   };
 
@@ -582,7 +678,7 @@ export const App: React.FC = () => {
   const handleCreateBlankPDF = async (options: CreatePDFOptions) => {
     const blankBytes = await createBlankPDF(options);
     await loadPDFData(blankBytes, `New_Document_${options.pageSize}.pdf`);
-    setToolMode('text');
+    setToolMode('select');
   };
 
   const handleCloseDocument = () => {
@@ -600,6 +696,20 @@ export const App: React.FC = () => {
 
   const handleMergeComplete = async (mergedBytes: Uint8Array, fileName: string) => {
     await loadPDFData(mergedBytes, fileName);
+    handleTriggerExportReview();
+  };
+
+  const handleUnlockPasswordDoc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordPromptDoc || !passwordInput.trim()) return;
+    const docData = passwordPromptDoc.data;
+    const docName = passwordPromptDoc.fileName;
+    const enteredPass = passwordInput.trim();
+    // Dismiss the prompt state immediately so it never lingers or pops twice
+    setPasswordPromptDoc(null);
+    setPasswordInput('');
+    setIsLoading(true);
+    await loadPDFData(docData, docName, enteredPass);
   };
 
   const handleRotatePage = (pageIndex: number) => {
@@ -716,18 +826,6 @@ export const App: React.FC = () => {
     setPendingSignatureDataUrl(dataUrl);
     setToolMode('sign');
   };
-
-  const handleTriggerExportReview = useCallback(() => {
-    const hasRated = localStorage.getItem('isa_has_rated');
-    if (hasRated === 'true') return;
-    const currentCount = parseInt(localStorage.getItem('isa_export_count') || '0', 10) + 1;
-    localStorage.setItem('isa_export_count', currentCount.toString());
-    if (currentCount >= 1) {
-      setTimeout(() => {
-        setIsReviewModalOpen(true);
-      }, 1000);
-    }
-  }, []);
 
   const handleAddSignatureAtCoords = (sigData: Omit<SignatureAnnotation, 'id'>) => {
     const quota = checkAndConsumeMonthlyQuota(isProActive, 'sign', docState.fileName || 'document.pdf');
@@ -955,7 +1053,10 @@ export const App: React.FC = () => {
   };
 
   const handleExportPDF = useCallback(async () => {
-    if (!docState.fileBytes) return;
+    if (!docState.fileBytes) {
+      alert('No PDF document is currently open. Please open a PDF before exporting.');
+      return;
+    }
     const quota = checkAndConsumeMonthlyQuota(isProActive, 'export', docState.fileName || 'document.pdf');
     if (!quota.allowed) {
       notifyMonthlyQuotaReached();
@@ -993,7 +1094,10 @@ export const App: React.FC = () => {
   }, [docState, isProActive, notifyMonthlyQuotaReached, handleTriggerExportReview]);
 
   const handleSavePDF = useCallback(async () => {
-    if (!docState.fileBytes) return;
+    if (!docState.fileBytes) {
+      alert('No PDF document is currently open. Please open a PDF before exporting.');
+      return;
+    }
     const quota = checkAndConsumeMonthlyQuota(isProActive, 'save', docState.fileName || 'document.pdf');
     if (!quota.allowed) {
       notifyMonthlyQuotaReached();
@@ -1028,7 +1132,10 @@ export const App: React.FC = () => {
   }, [docState, isProActive, notifyMonthlyQuotaReached]);
 
   const handlePrintPDF = useCallback(async () => {
-    if (!docState.fileBytes) return;
+    if (!docState.fileBytes) {
+      alert('No PDF document is currently open. Please open a PDF before exporting.');
+      return;
+    }
     setIsPrinting(true);
     try {
       const { pdfEngine } = await import('./services/pdfEngine');
@@ -1046,7 +1153,10 @@ export const App: React.FC = () => {
 
   const handleExportMultiplePDFs = useCallback(
     async (mode: 'split_all' | 'custom_range', customRanges?: string) => {
-      if (!docState.fileBytes) return;
+      if (!docState.fileBytes) {
+      alert('No PDF document is currently open. Please open a PDF before exporting.');
+      return;
+    }
       const quota = checkAndConsumeMonthlyQuota(isProActive, 'split');
       if (!quota.allowed) {
         setIsSaveMultipleModalOpen(false);
@@ -1062,7 +1172,7 @@ export const App: React.FC = () => {
           const saveRes = await window.electronAPI.showSaveDialog(result.fileName);
           if (!saveRes.canceled && saveRes.filePath) {
             const base64 = convertBytesToBase64(result.data);
-            const writeResult = await window.electronAPI.writeFile(saveRes.filePath, saveRes.filePath ? saveRes.filePath : result.fileName);
+            const writeResult = await window.electronAPI.writeFile(saveRes.filePath, base64);
             if (!writeResult.success) throw new Error(writeResult.error);
           }
         } else {
@@ -1084,16 +1194,28 @@ export const App: React.FC = () => {
     [docState, isProActive, notifyMonthlyQuotaReached, notifyMonthlyQuotaStatus]
   );
 
+  const lastOpenedPayloadRef = useRef<{ fileName: string; time: number } | null>(null);
+
   const handleOpenPayloadData = useCallback(
-    (payload: { fileName: string; base64Data: string; action?: { tool?: string; modal?: string } }) => {
+    (payload: { fileName: string; base64Data: string; filePath?: string; action?: { tool?: string; modal?: string } }) => {
       try {
+        const now = Date.now();
+        if (
+          lastOpenedPayloadRef.current &&
+          lastOpenedPayloadRef.current.fileName === payload.fileName &&
+          now - lastOpenedPayloadRef.current.time < 3000
+        ) {
+          return;
+        }
+        lastOpenedPayloadRef.current = { fileName: payload.fileName, time: now };
+
         const binaryString = atob(payload.base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
         setCurrentView('editor');
-        loadPDFData(bytes, payload.fileName);
+        loadPDFData(bytes, payload.fileName, undefined, payload.filePath);
 
         if (payload.action?.tool === 'redact') {
           setToolMode('text');
@@ -1115,6 +1237,15 @@ export const App: React.FC = () => {
     },
     [loadPDFData]
   );
+
+  const handleExportPDFRef = useRef(handleExportPDF);
+  handleExportPDFRef.current = handleExportPDF;
+
+  const handleOpenPayloadDataRef = useRef(handleOpenPayloadData);
+  handleOpenPayloadDataRef.current = handleOpenPayloadData;
+
+  const handleLoadSampleRef = useRef(handleLoadSample);
+  handleLoadSampleRef.current = handleLoadSample;
 
   const handleToggleFullscreen = useCallback(() => {
     if (window.electronAPI?.toggleFullscreen) {
@@ -1153,9 +1284,28 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Global F11 & Escape key listener for fullscreen toggle/exit
+  // Global shortcuts: Zoom (Ctrl +, Ctrl -, Ctrl 0), Fullscreen (F11), and Escape
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Global PDF document zoom shortcuts
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '=' || e.key === '+' || e.code === 'Equal' || e.code === 'NumpadAdd') {
+          e.preventDefault();
+          setZoom((prev) => Math.min(3.0, Math.round((prev + 0.15) * 100) / 100));
+          return;
+        }
+        if (e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract') {
+          e.preventDefault();
+          setZoom((prev) => Math.max(0.3, Math.round((prev - 0.15) * 100) / 100));
+          return;
+        }
+        if (e.key === '0' || e.code === 'Digit0' || e.code === 'Numpad0') {
+          e.preventDefault();
+          setZoom(1.0);
+          return;
+        }
+      }
+
       if (e.key === 'F11') {
         e.preventDefault();
         handleToggleFullscreen();
@@ -1187,21 +1337,30 @@ export const App: React.FC = () => {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Wire up Electron native menu events & system file association events
+  // Wire up Electron native menu events & system file association events once on mount
   useEffect(() => {
     if (!IS_ELECTRON || !window.electronAPI) return;
     const api = window.electronAPI;
-    api.onOpenFile(() => document.getElementById('__pdf-file-input__')?.click());
-    api.onLoadSample(() => handleLoadSample());
-    api.onExportPDF(() => handleExportPDF());
-    api.onOpenPdfPayload((payload) => handleOpenPayloadData(payload));
+    api.onOpenFile(() => {
+      if (api.showOpenDialog) {
+        api.showOpenDialog();
+      } else {
+        document.getElementById('__pdf-file-input__')?.click();
+      }
+    });
+    api.onLoadSample(() => handleLoadSampleRef.current());
+    api.onExportPDF(() => handleExportPDFRef.current());
+    api.onOpenPdfPayload((payload) => handleOpenPayloadDataRef.current(payload));
     api.onSetFullscreenState?.((isFull: boolean) => setIsFullscreen(isFull));
+    api.onZoomIn?.(() => setZoom((prev) => Math.min(3.0, Math.round((prev + 0.15) * 100) / 100)));
+    api.onZoomOut?.(() => setZoom((prev) => Math.max(0.3, Math.round((prev - 0.15) * 100) / 100)));
+    api.onZoomActual?.(() => setZoom(1.0));
     api.isFullscreen?.().then((full) => {
       if (typeof full === 'boolean') setIsFullscreen(full);
     });
 
     api.requestPendingPdfPayload().then((payload) => {
-      if (payload) handleOpenPayloadData(payload);
+      if (payload) handleOpenPayloadDataRef.current(payload);
     });
 
     return () => {
@@ -1210,8 +1369,11 @@ export const App: React.FC = () => {
       api.removeAllListeners('menu-export-pdf');
       api.removeAllListeners('open-pdf-payload');
       api.removeAllListeners('set-fullscreen-state');
+      api.removeAllListeners('menu-zoom-in');
+      api.removeAllListeners('menu-zoom-out');
+      api.removeAllListeners('menu-zoom-actual');
     };
-  }, [handleExportPDF, handleOpenPayloadData]);
+  }, []);
 
   // Android native file association (Intent ACTION_VIEW / ACTION_SEND) listener & Chrome Extension bridge
   useEffect(() => {
@@ -1355,7 +1517,7 @@ export const App: React.FC = () => {
     setCurrentView('editor');
   };
 
-  if (currentView === 'landing') {
+  if (currentView === 'landing' && !IS_ELECTRON) {
     return (
       <Suspense fallback={null}>
         <input
@@ -1381,9 +1543,11 @@ export const App: React.FC = () => {
             onClose={() => setIsScanModalOpen(false)}
             isProActive={isProActive}
             onRequirePro={notifyMonthlyQuotaReached}
+            onExportSuccess={handleTriggerExportReview}
             onScanComplete={(pdfBytes, fileName) => {
               loadPDFData(pdfBytes, fileName);
               setCurrentView('editor');
+              handleTriggerExportReview();
             }}
           />
         )}
@@ -1424,6 +1588,12 @@ export const App: React.FC = () => {
             onClose={() => setIsUserGuideModalOpen(false)}
           />
         )}
+        {!IS_ELECTRON && typeof window !== 'undefined' && window.location.protocol !== 'file:' && isReviewModalOpen && (
+          <ReviewModal
+            isOpen={isReviewModalOpen}
+            onClose={() => setIsReviewModalOpen(false)}
+          />
+        )}
       </Suspense>
     );
   }
@@ -1448,8 +1618,11 @@ export const App: React.FC = () => {
       {!isFullscreen && (
         <HeaderToolbar
           activeTheme={activeTheme}
-          onGoToLandingPage={() => setCurrentView('landing')}
+          isElectron={IS_ELECTRON}
+          onGoToLandingPage={IS_ELECTRON ? undefined : () => setCurrentView('landing')}
           onCloseDocument={handleCloseDocument}
+          isProActive={isProActive}
+          onOpenCheckout={() => handleOpenCheckout()}
           onUndo={handleUndo}
           onRedo={handleRedo}
           canUndo={canUndo}
@@ -1477,7 +1650,6 @@ export const App: React.FC = () => {
             setIsSaveMultipleModalOpen(true);
           }}
           onOpenPremiumExportModal={handleOpenPremiumExportModal}
-          onOpenReviewModal={() => setIsReviewModalOpen(true)}
           onOpenRecentFile={handleOpenRecentFile}
           onSelectSavedSignature={handleSelectSavedSignature}
           onRotatePage={handleRotatePage}
@@ -1488,6 +1660,7 @@ export const App: React.FC = () => {
           isExporting={isExporting}
           isPrinting={isPrinting}
           hasDocument={hasDocument}
+          onOpenThemeModal={() => setIsThemeModalOpen(true)}
           textFontSize={textFontSize}
           setTextFontSize={handleSetTextFontSize}
           textFontFamily={textFontFamily}
@@ -1512,8 +1685,6 @@ export const App: React.FC = () => {
           onOpenCompressModal={() => setIsCompressModalOpen(true)}
           onOpenScanModal={() => setIsScanModalOpen(true)}
           onOpenDesktopDownloadModal={() => setIsAppDownloadModalOpen(true)}
-          isProActive={isProActive}
-          onOpenCheckout={handleOpenCheckout}
         />
       )}
 
@@ -1713,6 +1884,7 @@ export const App: React.FC = () => {
         initialFormat={premiumExportFormat}
         isProActive={isProActive}
         onOpenCheckout={handleOpenCheckout}
+        onExportSuccess={handleTriggerExportReview}
       />
 
       {/* Custom Watermark & Logo Overlay Modal */}
@@ -1767,6 +1939,7 @@ export const App: React.FC = () => {
         initialMode={passwordModalMode}
         isProActive={isProActive}
         onOpenCheckout={handleOpenCheckout}
+        onExportSuccess={handleTriggerExportReview}
         onApplyDecryptedPDF={(decryptedBytes) => {
           const unlockedName = docState.fileName
             ? docState.fileName.replace(/\.pdf$/i, '_unlocked.pdf')
@@ -1802,9 +1975,11 @@ export const App: React.FC = () => {
           onClose={() => setIsScanModalOpen(false)}
           isProActive={isProActive}
           onRequirePro={notifyMonthlyQuotaReached}
+          onExportSuccess={handleTriggerExportReview}
           onScanComplete={(pdfBytes, fileName) => {
             loadPDFData(pdfBytes, fileName);
             setCurrentView('editor');
+            handleTriggerExportReview();
           }}
         />
       )}
@@ -1815,11 +1990,13 @@ export const App: React.FC = () => {
         onClose={() => setIsAppDownloadModalOpen(false)}
       />
 
-      {/* Smart In-App & Web 5-Star Review Modal */}
-      <ReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-      />
+      {/* Smart In-App & Web 5-Star Review Modal (Strictly Suppressed on Desktop) */}
+      {!IS_ELECTRON && typeof window !== 'undefined' && window.location.protocol !== 'file:' && isReviewModalOpen && (
+        <ReviewModal
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+        />
+      )}
 
       {/* Post-Payment Pro Welcome Modal */}
       {showProWelcomeModal && (
@@ -1906,6 +2083,86 @@ export const App: React.FC = () => {
                 </div>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Password-Protected Document Prompt Modal */}
+      {passwordPromptDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md bg-slate-900 border border-cyan-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl overflow-hidden text-slate-100 text-center">
+            {/* Glow backdrop */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -z-10" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -z-10" />
+
+            <button
+              onClick={() => {
+                setPasswordPromptDoc(null);
+                setPasswordInput('');
+              }}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="mx-auto w-14 h-14 bg-gradient-to-tr from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20 text-slate-950 mb-3">
+              <Lock className="w-7 h-7 text-slate-950 stroke-[2]" />
+            </div>
+
+            <h3 className="text-lg font-extrabold text-white">Password Protected PDF</h3>
+            <p className="text-xs text-slate-300 mt-1 mb-4 truncate px-2">
+              Enter password to unlock and open <span className="font-semibold text-cyan-300">"{passwordPromptDoc.fileName}"</span>
+            </p>
+
+            {passwordPromptDoc.error && (
+              <div className="mb-3 px-3 py-2 bg-rose-500/20 border border-rose-500/40 rounded-xl text-rose-300 text-xs font-semibold">
+                {passwordPromptDoc.error}
+              </div>
+            )}
+
+            <form onSubmit={handleUnlockPasswordDoc} className="space-y-4">
+              <div className="relative text-left">
+                <input
+                  type={showPasswordText ? 'text' : 'password'}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Enter document password..."
+                  autoFocus
+                  required
+                  className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 text-white text-xs rounded-xl py-3 px-4 pr-11 outline-none transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordText(!showPasswordText)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                  tabIndex={-1}
+                >
+                  {showPasswordText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPasswordPromptDoc(null);
+                    setPasswordInput('');
+                  }}
+                  className="py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!passwordInput.trim()}
+                  className="py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition active:scale-95 disabled:opacity-50 flex items-center justify-center space-x-1.5"
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>Unlock & Open</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

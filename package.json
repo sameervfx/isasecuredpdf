@@ -28,14 +28,21 @@
         "mimeType": "application/pdf"
       }
     ],
+    "compression": "maximum",
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
+      "!dist/dist_packages/**",
       "electron/**/*",
       "package.json",
-      "!node_modules/**"
+      "!node_modules/**",
+      "!dist_packages/**",
+      "!chrome-store-assets/**",
+      "!android/**",
+      "!ios/**",
+      "!scripts/**"
     ],
     "asar": true,
     "asarUnpack": [],

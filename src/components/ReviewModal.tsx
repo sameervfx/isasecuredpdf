@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, X, MessageSquare, ExternalLink, CheckCircle2, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Star, X, MessageSquare, ExternalLink, CheckCircle2, ShieldCheck, HeartHandshake, Sparkles } from 'lucide-react';
 import { isIOSPlatform, isAndroidPlatform } from '../utils/platform';
 
 interface ReviewModalProps {
@@ -19,13 +19,18 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
 
   const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.isasecuredpdf.app';
   const APP_STORE_URL = 'https://apps.apple.com/app/isasecuredpdf/id6808373104?action=write-review';
-  const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/isa-secured-pdf-offline-e/chahleehgapjfgckibagbenanbkecdno/reviews';
+  const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/isa-secured-pdf-offline-e/ehahleehgepjfgekibagbenanbkedcno/reviews';
 
   const isIOS = isIOSPlatform();
   const isAndroid = isAndroidPlatform();
+  const isDesktop = typeof window !== 'undefined' && Boolean(
+    (window as any).electronAPI?.isElectron ||
+    window.location.protocol === 'file:' ||
+    (typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron'))
+  );
 
   const storeUrl = isIOS ? APP_STORE_URL : (isAndroid ? PLAY_STORE_URL : CHROME_STORE_URL);
-  const storeName = isIOS ? 'App Store' : (isAndroid ? 'Google Play Store' : 'Chrome Web Store');
+  const storeName = isIOS ? 'App Store' : (isAndroid ? 'Google Play Store' : (isDesktop ? 'ISA Secured PDF' : 'Chrome Web Store'));
 
   const handleStarClick = (num: number) => {
     setRating(num);
@@ -36,7 +41,9 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
 
   const handleStoreReview = () => {
     localStorage.setItem('isa_has_rated', 'true');
-    window.open(storeUrl, '_blank', 'noopener,noreferrer');
+    if (!isDesktop) {
+      window.open(storeUrl, '_blank', 'noopener,noreferrer');
+    }
     setSubmittedType('store');
     setIsSubmitted(true);
     if (onRated) onRated();
@@ -63,7 +70,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-md bg-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl overflow-hidden text-slate-100 text-center">
         {/* Glow backdrop */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -z-10" />
@@ -87,7 +94,9 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
               {submittedType === 'store'
-                ? `Your 5-star rating on ${storeName} helps keep ISA Secured PDF 100% ad-free, fast, and completely private!`
+                ? (isDesktop
+                    ? 'Your 5-star rating & vote for the ATS Resume Builder have been recorded! Thank you for supporting ISA Secured PDF Desktop.'
+                    : `Your 5-star rating on ${storeName} helps keep ISA Secured PDF 100% ad-free, fast, and completely private!`)
                 : 'We truly appreciate your input and will use it to make ISA Secured PDF even better!'}
             </p>
           </div>
@@ -108,6 +117,29 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
               <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
                 Your 5-star review helps us keep ISA Secured PDF <span className="text-emerald-400 font-semibold">100% private</span>, zero cloud tracking, and completely ad-free!
               </p>
+            </div>
+
+            {/* Upcoming Pro Feature Teaser & Voting Engagement */}
+            <div className="p-3 bg-gradient-to-r from-cyan-950/70 via-slate-900 to-purple-950/70 border border-cyan-500/40 rounded-2xl text-left flex items-start space-x-3 shadow-lg shadow-cyan-950/40">
+              <div className="p-2 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl text-white shrink-0 mt-0.5 shadow-md shadow-cyan-500/25">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[9.5px] font-black uppercase tracking-wider text-cyan-300 bg-cyan-500/20 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                    Upcoming Feature
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-400">
+                    Pro Members
+                  </span>
+                </div>
+                <h4 className="text-xs font-extrabold text-white mt-1">
+                  100% Private Resume & CV Builder
+                </h4>
+                <p className="text-[11px] text-slate-300 leading-snug mt-0.5">
+                  Build ATS-ready executive resumes & CVs with on-device privacy. Rate 5 stars to vote for its release and keeping the app ad-free!
+                </p>
+              </div>
             </div>
 
             {/* Interactive 5 Gold Stars */}
@@ -144,11 +176,17 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, onRat
                   onClick={handleStoreReview}
                   className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xl shadow-amber-500/25 transition transform active:scale-95 flex items-center justify-center space-x-2"
                 >
-                  <span>⭐ Rate 5 Stars on {storeName}</span>
-                  <ExternalLink className="w-4 h-4" />
+                  {isDesktop ? (
+                    <span>⭐ Rate 5 Stars & Vote for Feature</span>
+                  ) : (
+                    <>
+                      <span>⭐ Rate 5 Stars on {storeName}</span>
+                      <ExternalLink className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
                 <p className="text-[11px] text-slate-400">
-                  Takes less than 15 seconds & keeps the tools free for everyone.
+                  Takes less than 15 seconds & keeps the app 100% ad-free for everyone.
                 </p>
               </div>
             ) : null}

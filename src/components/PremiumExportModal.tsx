@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   FileText, 
@@ -32,6 +32,7 @@ interface PremiumExportModalProps {
   initialFormat?: ExportFormatType;
   isProActive?: boolean;
   onOpenCheckout?: () => void;
+  onExportSuccess?: () => void;
 }
 
 export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
@@ -40,16 +41,28 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
   state,
   initialFormat = 'jpg',
   isProActive = false,
-  onOpenCheckout
+  onOpenCheckout,
+  onExportSuccess,
 }) => {
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormatType>(
-    isProActive ? initialFormat : 'jpg'
-  );
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormatType>(initialFormat || 'docx');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const initialName = (state.fileName || 'Scanned_Document').replace(/\.[^/.]+$/, '');
   const [customExportName, setCustomExportName] = useState<string>(initialName);
+
+  // Synchronize selection whenever user triggers a specific export format (e.g. Word, Excel, PPT)
+  useEffect(() => {
+    if (isOpen) {
+      if (initialFormat) {
+        setSelectedFormat(initialFormat);
+      }
+      const freshName = (state.fileName || 'Scanned_Document').replace(/\.[^/.]+$/, '');
+      setCustomExportName(freshName);
+      setProgress(0);
+      setIsProcessing(false);
+    }
+  }, [isOpen, initialFormat, state.fileName]);
 
   // Dual Export Modal State
   const [isExportSaveModalOpen, setIsExportSaveModalOpen] = useState(false);
@@ -429,6 +442,7 @@ export const PremiumExportModal: React.FC<PremiumExportModalProps> = ({
         onSaveSuccess={(msg) => {
           setExportToast(msg);
           setTimeout(() => setExportToast(null), 4000);
+          if (onExportSuccess) onExportSuccess();
         }}
       />
 

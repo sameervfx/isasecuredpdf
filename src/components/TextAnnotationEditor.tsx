@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { Trash2, Eye, EyeOff, Move, Clipboard, Minus, Plus, Type, Underline, Bold, Palette, Droplet } from 'lucide-react';
 import { TextAnnotation } from '../types/pdf';
 import { pdfRenderer, DetectedPDFTextLine } from '../services/pdfRenderer';
@@ -59,12 +59,9 @@ const FontSizeControl: React.FC<FontSizeControlProps> = ({ fontSize, onUpdate, i
   };
 
   const step = (delta: number) => {
-    let s = delta;
-    if (Math.abs(delta) === 1) {
-      if (fontSize >= 48) s = delta * 4;
-      else if (fontSize >= 24) s = delta * 2;
-    }
-    const target = Math.max(1, Math.min(500, Math.round((fontSize + s) * 10) / 10));
+    // Sub-pixel 0.2 pt fine-tuning step
+    const change = delta * 0.2;
+    const target = Math.max(1, Math.min(500, Math.round((fontSize + change) * 10) / 10));
     setTextVal(String(target));
     onUpdate(target);
   };
@@ -173,6 +170,8 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   const [detectedLines, setDetectedLines] = useState<DetectedPDFTextLine[]>([]);
   const [hoveredLineId, setHoveredLineId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const textareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
+  const lastFocusedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -203,6 +202,68 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
   const pageAnnotations = annotations.filter((a) => a.pageIndex === pageIndex);
   const scaleX = originalWidth > 0 ? canvasWidth / originalWidth : 1;
   const scaleY = originalHeight > 0 ? canvasHeight / originalHeight : 1;
+
+  // Keep every textarea unscrolled (never hide start of sentence) and sync box dimensions to real DOM layout
+  useLayoutEffect(() => {
+    if (!selectedId) {
+      lastFocusedIdRef.current = null;
+    } else if (selectedId !== lastFocusedIdRef.current) {
+      const targetEl = textareaRefs.current.get(selectedId);
+      if (targetEl) {
+        lastFocusedIdRef.current = selectedId;
+        if (document.activeElement !== targetEl) {
+          targetEl.focus({ preventScroll: true });
+          try {
+            targetEl.setSelectionRange(targetEl.value.length, targetEl.value.length);
+          } catch (e) {}
+        }
+        targetEl.scrollLeft = 0;
+        targetEl.scrollTop = 0;
+        requestAnimationFrame(() => {
+          if (targetEl) {
+            targetEl.scrollLeft = 0;
+            targetEl.scrollTop = 0;
+          }
+        });
+      }
+    }
+
+    for (const ann of pageAnnotations) {
+      const el = textareaRefs.current.get(ann.id);
+      if (!el) continue;
+
+      if (el.scrollLeft !== 0) el.scrollLeft = 0;
+      if (el.scrollTop !== 0) el.scrollTop = 0;
+
+      // Only auto-expand PDF dimensions while actively editing this box (prevents jitter when zooming finished text)
+      if (ann.id !== selectedId) continue;
+
+      const maxAvailPdfW = Math.max(80, originalWidth - ann.x - 10);
+      const updates: Partial<TextAnnotation> = {};
+
+      // If real browser/Android glyph width exceeds clientWidth on a single line, expand box width immediately
+      if (el.wrap === 'off' && el.scrollWidth > el.clientWidth + 2 && scaleX > 0) {
+        const neededPdfW = parseFloat(
+          Math.min(maxAvailPdfW, (el.scrollWidth + 10) / scaleX).toFixed(2)
+        );
+        if (neededPdfW > (ann.width || 0) + 1) {
+          updates.width = neededPdfW;
+        }
+      }
+
+      // If wrapped/multi-line height exceeds clientHeight, expand box height immediately so lines never clip
+      if (el.scrollHeight > el.clientHeight + 2 && scaleY > 0) {
+        const neededPdfH = parseFloat(((el.scrollHeight + 2) / scaleY).toFixed(2));
+        if (neededPdfH > (ann.height || 0) + 1) {
+          updates.height = neededPdfH;
+        }
+      }
+
+      if (updates.width !== undefined || updates.height !== undefined) {
+        onUpdateAnnotation(ann.id, updates);
+      }
+    }
+  }, [pageAnnotations, selectedId, scaleX, scaleY, originalWidth, onUpdateAnnotation]);
 
   // Dynamic color palette: extracts all detected text colors from current page + universal receipt/invoice colors
   const availableColors = useMemo(() => {
@@ -451,7 +512,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
     fontFamily?: string,
     fontWeight?: string | number
   ): number => {
-    if (!text) return 36;
+    if (!text) return Math.max(64, Math.round(fontSize * 5.5));
     try {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -459,12 +520,12 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
         ctx.font = `${fontWeight || 'normal'} ${fontSize}px ${fontFamily || 'sans-serif'}`;
         const lines = text.split('\n');
         const maxW = Math.max(...lines.map((l) => ctx.measureText(l.replace(/ /g, '\u00A0')).width), 0);
-        return Math.round(maxW + 12);
+        return Math.ceil(maxW);
       }
     } catch (e) {}
     const lines = text.split('\n');
     const maxChars = Math.max(...lines.map((l) => l.length), 1);
-    return Math.round(maxChars * fontSize * 0.55 + 12);
+    return Math.ceil(maxChars * fontSize * 0.55);
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -475,19 +536,21 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
     const clickX = (e.clientX - rect.left) / scaleX;
     const clickY = (e.clientY - rect.top) / scaleY;
     const { bgHex } = sampleCanvasTextAndBg(e.clientX - rect.left, e.clientY - rect.top, 50, 20);
+    const fs = textFontSize || 11;
 
     onAddAnnotation({
       pageIndex,
       x: parseFloat(clickX.toFixed(2)),
       y: parseFloat(clickY.toFixed(2)),
       text: '',
-      fontSize: textFontSize || 11,
-      fontFamily: textFontFamily || "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      fontSize: fs,
+      fontFamily: textFontFamily || "'Roboto', Arial, Helvetica, 'Segoe UI', sans-serif",
       color: textColor || '#000000',
       backgroundColor: bgHex,
       isRedact: textIsRedact || false,
       isUnderline: textIsUnderline || false,
-      width: 40,
+      width: Math.max(80, Math.round(fs * 7)),
+      height: parseFloat((fs * 1.15).toFixed(2)),
     });
   };
 
@@ -522,22 +585,40 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       }
     } catch (e) {}
 
-    // Measure exact rendered font width to prevent any words wrapping or disappearing
+    // Sub-pixel metric calibration: compare PDF rendered width vs browser CSS width at detected fontSize
+    // Eliminates the ~0.2pt scale oversize caused by differences between embedded PDF fonts and CSS fallback fonts
+    let calibratedFontSize = line.fontSize;
+    const rawCssW = measureTextWidth(line.text, line.fontSize, line.fontFamily, line.fontWeight);
+    if (line.text.trim().length >= 3 && line.width > 0 && rawCssW > 0) {
+      const widthRatio = line.width / rawCssW;
+      if (widthRatio < 1.0) {
+        const clampedRatio = Math.max(0.92, widthRatio);
+        calibratedFontSize = Math.max(1, Math.round(line.fontSize * clampedRatio * 10) / 10);
+      } else {
+        calibratedFontSize = Math.max(1, Math.round(line.fontSize * 10) / 10);
+      }
+    } else {
+      calibratedFontSize = Math.max(1, Math.round(line.fontSize * 10) / 10);
+    }
+
+    // Measure exact rendered font width at calibrated size
     const measuredInitialW = measureTextWidth(
       line.text,
-      line.fontSize,
+      calibratedFontSize,
       line.fontFamily,
       line.fontWeight
     );
 
-    const totalW = Math.max(line.width + 2, measuredInitialW + 2);
+    const coverW = parseFloat((line.width + 1.5).toFixed(2));
+    const totalW = Math.max(coverW, measuredInitialW + 4);
+    const tightH = parseFloat(Math.max(line.height, calibratedFontSize * 1.12).toFixed(2));
 
     onAddAnnotation({
       pageIndex,
       x: line.x,
       y: line.y, // ZERO padY: Exact line.topY anchored to baseline - (ascent * fontSize)
       text: line.text,
-      fontSize: line.fontSize,
+      fontSize: calibratedFontSize,
       fontFamily: line.fontFamily,
       fontWeight: line.fontWeight || 'normal',
       color: chosenInkColor,
@@ -545,10 +626,11 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
       isRedact: true, // Seamlessly masks original text using the EXACT sampled page background color!
       isUnderline: textIsUnderline || false,
       width: parseFloat(totalW.toFixed(2)),
-      height: line.height,
+      minCoverWidth: coverW,
+      height: tightH,
     });
     if (setTextFontSize) {
-      setTextFontSize(line.fontSize);
+      setTextFontSize(calibratedFontSize);
     }
   };
 
@@ -660,7 +742,7 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
               onMouseEnter={() => setHoveredLineId(line.id)}
               onMouseLeave={() => setHoveredLineId(null)}
               onClick={(e) => handleLineClick(e, line)}
-              className={`absolute pointer-events-auto cursor-text rounded transition-all duration-150 z-10 ${
+              className={`absolute pointer-events-auto cursor-text rounded transition-colors duration-150 z-10 ${
                 isHovered
                   ? 'bg-cyan-500/20 border border-dashed border-cyan-400 shadow-sm ring-2 ring-cyan-400/30'
                   : 'hover:bg-cyan-500/10 hover:border hover:border-dashed hover:border-cyan-400/50'
@@ -703,10 +785,21 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
           ann.fontFamily || textFontFamily,
           ann.fontWeight
         );
-        // While actively editing, dynamic buffer allows real-time cursor travel and instant text expansion
-        const typingBuffer = isSelected ? 24 : 16;
-        const effectiveWidth = Math.max((ann.width || 0) * scaleX, dynamicScreenW + typingBuffer);
-        const effectiveHeight = Math.max((ann.height || 0) * scaleY, lineCount * renderedFontSize * 1.35 + 8);
+        // While actively editing, generous buffer guarantees cursor never triggers horizontal textarea scroll (never hides start of sentence);
+        // when deselected, tight buffer keeps box snug without covering adjacent PDF text.
+        const typingBuffer = isSelected ? Math.max(20, Math.round(renderedFontSize * 1.4)) : 4;
+        const maxAvailScreenW = Math.max(80, (originalWidth - ann.x - 10) * scaleX);
+        const shouldWrap = lineCount > 1 || dynamicScreenW + typingBuffer > maxAvailScreenW;
+        const effectiveWidth = shouldWrap
+          ? Math.min(maxAvailScreenW, Math.max((ann.width || 0) * scaleX, dynamicScreenW + typingBuffer))
+          : Math.max((ann.width || 0) * scaleX, dynamicScreenW + typingBuffer);
+        const estimatedVisualLines =
+          lineCount === 1 && shouldWrap
+            ? Math.max(2, Math.ceil((dynamicScreenW + 12) / Math.max(80, effectiveWidth - 4)))
+            : lineCount;
+        const effectiveHeight = estimatedVisualLines > 1
+          ? Math.max((ann.height || 0) * scaleY, estimatedVisualLines * renderedFontSize * 1.24)
+          : Math.max((ann.height || 0) * scaleY, renderedFontSize * 1.15);
         const tbOffset = toolbarOffsets[ann.id] || { x: 0, y: 4 };
 
         return (
@@ -723,40 +816,75 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
               left: `${scaledX}px`,
               top: `${scaledY}px`,
               width: `${effectiveWidth}px`,
+              height: `${effectiveHeight}px`,
               minWidth: '0px',
-              minHeight: effectiveHeight ? `${effectiveHeight}px` : undefined,
               backgroundColor: ann.isRedact ? (ann.backgroundColor || '#ffffff') : 'transparent',
               opacity: ann.opacity !== undefined ? ann.opacity : 1.0,
               transform: ann.rotation ? `translate(-50%, -50%) rotate(${ann.rotation}deg)` : undefined,
               transformOrigin: 'center center',
             }}
           >
-            {/* Plain Text Area - Auto Expands Horizontally Until Enter Key */}
+            {/* Plain Text Area - Auto Expands Horizontally Until Page Margin or Enter Key */}
             <textarea
-              autoFocus
-              cols={1}
+              spellCheck={false}
+              wrap={shouldWrap ? 'soft' : 'off'}
               ref={(el) => {
-                if (el && isSelected && document.activeElement !== el) {
-                  el.focus();
-                  try {
-                    el.setSelectionRange(el.value.length, el.value.length);
-                  } catch (e) {}
+                if (el) {
+                  textareaRefs.current.set(ann.id, el);
+                } else {
+                  textareaRefs.current.delete(ann.id);
                 }
               }}
               value={ann.text}
+              onFocus={(e) => {
+                setSelectedId(ann.id);
+                e.currentTarget.scrollLeft = 0;
+                e.currentTarget.scrollTop = 0;
+              }}
+              onInput={(e) => {
+                const target = e.currentTarget;
+                if (target.scrollLeft !== 0) target.scrollLeft = 0;
+                if (target.scrollTop !== 0) target.scrollTop = 0;
+              }}
+              onKeyUp={(e) => {
+                const target = e.currentTarget;
+                if (target.scrollLeft !== 0) target.scrollLeft = 0;
+                if (target.scrollTop !== 0) target.scrollTop = 0;
+              }}
               onChange={(e) => {
-                const newText = e.target.value;
+                const target = e.target;
+                const newText = target.value;
+                target.scrollLeft = 0;
+                target.scrollTop = 0;
                 const measuredW = measureTextWidth(
                   newText,
                   ann.fontSize,
                   ann.fontFamily || textFontFamily,
                   ann.fontWeight
                 );
-                const lines = newText.split('\n');
+                const maxAvailPdfW = Math.max(80, originalWidth - ann.x - 10);
+                const newLines = newText.split('\n');
+                const willWrap = newLines.length > 1 || measuredW + 10 > maxAvailPdfW;
+                const nextW = parseFloat(
+                  Math.min(
+                    maxAvailPdfW,
+                    Math.max(
+                      ann.minCoverWidth || 0,
+                      newText ? measuredW + 10 : Math.max(80, ann.fontSize * 7)
+                    )
+                  ).toFixed(2)
+                );
+                const approxLines =
+                  newLines.length === 1 && willWrap
+                    ? Math.max(2, Math.ceil((measuredW + 8) / Math.max(60, nextW - 4)))
+                    : newLines.length;
+                const exactH = approxLines > 1
+                  ? parseFloat((approxLines * ann.fontSize * 1.24).toFixed(2))
+                  : parseFloat((ann.fontSize * 1.15).toFixed(2));
                 onUpdateAnnotation(ann.id, {
                   text: newText,
-                  width: Math.max(32, measuredW + 16),
-                  height: Math.max(24, lines.length * ann.fontSize * 1.35 + 8),
+                  width: nextW,
+                  height: exactH,
                 });
               }}
               onPaste={(e) => {
@@ -765,38 +893,48 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                   setTimeout(() => {
                     if (e.target) {
                       const newText = (e.target as HTMLTextAreaElement).value;
-                      const lines = newText.split('\n');
-                      const maxW = Math.max(...lines.map((l) => measureTextWidth(l, ann.fontSize, ann.fontFamily || textFontFamily, ann.fontWeight)));
-                      const availW = Math.max(120, Math.min(originalWidth - ann.x - 20, maxW + 24));
+                      const newLines = newText.split('\n');
+                      const maxW = Math.max(
+                        ...newLines.map((l) =>
+                          measureTextWidth(l, ann.fontSize, ann.fontFamily || textFontFamily, ann.fontWeight)
+                        )
+                      );
+                      const availW = Math.max(
+                        ann.minCoverWidth || 40,
+                        Math.min(originalWidth - ann.x - 16, maxW + 6)
+                      );
+                      const exactH = newLines.length > 1
+                        ? parseFloat((newLines.length * ann.fontSize * 1.22).toFixed(2))
+                        : parseFloat((ann.fontSize * 1.15).toFixed(2));
                       onUpdateAnnotation(ann.id, {
                         text: newText,
-                        width: availW,
-                        height: Math.max(30, lines.length * ann.fontSize * 1.35 + 16),
+                        width: parseFloat(availW.toFixed(2)),
+                        height: exactH,
                       });
                     }
                   }, 0);
                 }
               }}
               placeholder="Type text..."
-              rows={lineCount}
-              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none p-0 m-0 w-full overflow-visible resize-none select-text block"
+              rows={estimatedVisualLines}
+              className="bg-transparent border-none outline-none ring-0 focus:ring-0 focus:outline-none focus:border-none p-0 m-0 w-full resize-none select-text block"
               style={{
                 fontSize: `${renderedFontSize}px`,
-                fontFamily: ann.fontFamily || textFontFamily || "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+                fontFamily: ann.fontFamily || textFontFamily || "'Roboto', Arial, Helvetica, 'Segoe UI', sans-serif",
                 fontWeight: ann.fontWeight || 'normal',
                 color: ann.color || '#000000',
                 caretColor: ann.color || '#000000',
                 textDecoration: ann.isUnderline ? 'underline' : 'none',
-                lineHeight: '1.35',
-                padding: '4px 8px',
-                paddingRight: isSelected ? '14px' : '8px',
+                lineHeight: estimatedVisualLines > 1 ? '1.22' : '1.15',
+                padding: '0px',
                 margin: '0',
                 letterSpacing: 'normal',
                 width: '100%',
+                height: `${effectiveHeight}px`,
                 minWidth: '0px',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                overflow: 'visible',
+                whiteSpace: shouldWrap ? 'pre-wrap' : 'pre',
+                wordBreak: shouldWrap ? 'break-word' : 'normal',
+                overflow: 'hidden',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
                 resize: 'none',
@@ -858,9 +996,14 @@ export const TextAnnotationEditor: React.FC<TextAnnotationEditorProps> = ({
                         ann.fontFamily || textFontFamily,
                         ann.fontWeight
                       );
+                      const curLines = (ann.text || '').split('\n');
+                      const exactH = curLines.length > 1
+                        ? parseFloat((curLines.length * newSize * 1.22).toFixed(2))
+                        : parseFloat((newSize * 1.15).toFixed(2));
                       onUpdateAnnotation(ann.id, {
                         fontSize: newSize,
-                        width: Math.max(32, measuredW + 16),
+                        width: parseFloat(Math.max(ann.minCoverWidth || 0, measuredW + 4).toFixed(2)),
+                        height: exactH,
                       });
                       if (setTextFontSize) setTextFontSize(newSize);
                     }}

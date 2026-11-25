@@ -22,6 +22,7 @@ export interface TextAnnotation {
   y: number;
   width?: number;
   height?: number;
+  minCoverWidth?: number; // Preserves original PDF text coverage when shortening edited text
   text: string;
   fontSize: number;
   fontFamily?: string;

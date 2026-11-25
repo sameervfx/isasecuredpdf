@@ -128,6 +128,12 @@
       gtag('config', 'G-N5PQZTXWDZ');
     </script>
     <script>
+      // Polyfill prompt in Electron/Chromium so prompt() never throws "Error: prompt() is not supported."
+      if (typeof window !== 'undefined' && typeof window.prompt !== 'function') {
+        window.prompt = function(_msg, _def) { return _def || null; };
+      }
+    </script>
+    <script>
       // Configure MuPDF WASM loader to reliably locate mupdf-wasm.wasm
       window.$libmupdf_wasm_Module = {
         locateFile: function(path, prefix) {

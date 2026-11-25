@@ -256,7 +256,7 @@ export const ExportSaveModal: React.FC<ExportSaveModalProps> = ({
                   <span className="text-[9px] bg-white/20 px-1.5 py-0.2 rounded font-bold uppercase">Direct</span>
                 </div>
                 <div className="text-[10px] text-cyan-100 font-medium">
-                  {isNative ? 'Documents & Downloads folder' : 'Download directly to your device'}
+                  {isNative ? 'Documents / ISA Secured PDF' : 'Download directly to your device'}
                 </div>
               </div>
             </div>

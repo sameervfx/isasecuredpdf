@@ -38,6 +38,7 @@ function handleOpenedPdfFile(filePath) {
     const payload = {
       fileName: path.basename(filePath),
       base64Data: fileBytes.toString('base64'),
+      filePath,
     };
     pendingPdfPayload = payload;
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -213,13 +214,28 @@ async function createWindow() {
 function buildMenu() {
   const template = [
     {
-      label: 'File',
+      label: 'Home',
       submenu: [
         {
           label: 'Open PDF…',
           accelerator: 'CmdOrCtrl+O',
-          click() {
-            mainWindow?.webContents.send('menu-open-file');
+          async click() {
+            try {
+              const result = await dialog.showOpenDialog(mainWindow, {
+                title: 'Open PDF Document',
+                filters: [{ name: 'PDF Documents', extensions: ['pdf'] }],
+                properties: ['openFile'],
+              });
+              if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+                const filePath = result.filePaths[0];
+                const fileBuffer = fs.readFileSync(filePath);
+                const base64Data = fileBuffer.toString('base64');
+                const fileName = path.basename(filePath);
+                mainWindow?.webContents.send('open-pdf-payload', { base64Data, fileName, filePath });
+              }
+            } catch (err) {
+              console.error('Failed to open PDF from menu:', err);
+            }
           },
         },
         {
@@ -258,9 +274,27 @@ function buildMenu() {
         { role: 'reload' },
         { role: 'forceReload' },
         { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
+        {
+          label: 'Actual Size',
+          accelerator: 'CmdOrCtrl+0',
+          click() {
+            mainWindow?.webContents.send('menu-zoom-actual');
+          },
+        },
+        {
+          label: 'Zoom In',
+          accelerator: 'CmdOrCtrl+=',
+          click() {
+            mainWindow?.webContents.send('menu-zoom-in');
+          },
+        },
+        {
+          label: 'Zoom Out',
+          accelerator: 'CmdOrCtrl+-',
+          click() {
+            mainWindow?.webContents.send('menu-zoom-out');
+          },
+        },
         { type: 'separator' },
         {
           label: 'Toggle Full Screen',
@@ -322,14 +356,50 @@ ipcMain.handle('show-save-dialog', async (_event, defaultName) => {
   return result;
 });
 
-// IPC: Open file dialog
+// IPC: Open file dialog with direct file read
 ipcMain.handle('show-open-dialog', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
-    filters: [{ name: 'PDF Documents', extensions: ['pdf'] }],
-    properties: ['openFile'],
-    title: 'Open PDF Document',
-  });
-  return result;
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      filters: [{ name: 'PDF Documents', extensions: ['pdf'] }],
+      properties: ['openFile'],
+      title: 'Open PDF Document',
+    });
+    if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0];
+      const buffer = fs.readFileSync(filePath);
+      const base64Data = buffer.toString('base64');
+      const fileName = path.basename(filePath);
+      mainWindow?.webContents.send('open-pdf-payload', { base64Data, fileName, filePath });
+      return {
+        canceled: false,
+        filePaths: result.filePaths,
+        filePath,
+        fileName,
+        base64Data,
+      };
+    }
+    return { canceled: true, filePaths: [] };
+  } catch (err) {
+    return { canceled: true, filePaths: [], error: err.message };
+  }
+});
+
+// IPC: Read file by path for recent files
+ipcMain.handle('read-file-by-path', async (_event, filePath) => {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: 'File does not exist or was moved' };
+    }
+    const buffer = fs.readFileSync(filePath);
+    return {
+      success: true,
+      filePath,
+      fileName: path.basename(filePath),
+      base64Data: buffer.toString('base64'),
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
 // IPC: Write file to disk (for native export with dialog)

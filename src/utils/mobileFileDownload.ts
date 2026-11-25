@@ -37,33 +37,70 @@ async function ensureStoragePermissions(): Promise<void> {
   }
 }
 
+const APP_DOCUMENTS_SUBFOLDER = 'ISA Secured PDF';
+
+async function writeToAppDocumentsFolder(
+  fileName: string,
+  base64Data: string,
+  mimeType?: string
+): Promise<'documents' | 'data'> {
+  // 1. Prefer Android MediaStore bridge (Android 10+ zero-permission public Documents/ISA Secured PDF)
+  try {
+    const androidBridge = typeof window !== 'undefined' ? (window as any).AndroidPdfBridge : null;
+    if (androidBridge && typeof androidBridge.saveToDocumentsFolder === 'function') {
+      const res = androidBridge.saveToDocumentsFolder(
+        fileName,
+        mimeType || 'application/pdf',
+        base64Data
+      );
+      if (res === 'OK') {
+        return 'documents';
+      }
+    }
+  } catch (bridgeErr) {
+    console.warn('AndroidPdfBridge saveToDocumentsFolder fallback:', bridgeErr);
+  }
+
+  // 2. Capacitor Filesystem Documents/ISA Secured PDF (iOS & Android fallback)
+  const targetPath = `${APP_DOCUMENTS_SUBFOLDER}/${fileName}`;
+  try {
+    await Filesystem.mkdir({
+      path: APP_DOCUMENTS_SUBFOLDER,
+      directory: Directory.Documents,
+      recursive: true,
+    }).catch(() => {});
+
+    await Filesystem.writeFile({
+      path: targetPath,
+      data: base64Data,
+      directory: Directory.Documents,
+      recursive: true,
+    });
+    return 'documents';
+  } catch (docErr) {
+    await Filesystem.writeFile({
+      path: targetPath,
+      data: base64Data,
+      directory: Directory.Data,
+      recursive: true,
+    });
+    return 'data';
+  }
+}
+
 /**
- * Writes the file directly to phone/device local storage (Documents or Downloads directory)
+ * Writes the file directly to phone/device local storage (Documents/ISA Secured PDF)
  */
 export async function saveToPhoneStorage(options: DownloadOptions): Promise<{ success: boolean; message: string }> {
-  const { fileName, blob } = options;
+  const { fileName, blob, mimeType } = options;
   if (Capacitor.isNativePlatform()) {
     try {
       await ensureStoragePermissions();
       const base64Data = await blobToBase64(blob);
-      try {
-        await Filesystem.writeFile({
-          path: fileName,
-          data: base64Data,
-          directory: Directory.Documents,
-          recursive: true,
-        });
-      } catch (docErr) {
-        await Filesystem.writeFile({
-          path: fileName,
-          data: base64Data,
-          directory: Directory.Data,
-          recursive: true,
-        });
-      }
+      await writeToAppDocumentsFolder(fileName, base64Data, mimeType || blob.type || 'application/pdf');
       return {
         success: true,
-        message: `Saved ${fileName} to phone storage`,
+        message: `Saved to Documents/${APP_DOCUMENTS_SUBFOLDER}/${fileName}`,
       };
     } catch (err: any) {
       console.warn('Native saveToPhoneStorage failed:', err);
@@ -87,7 +124,7 @@ export async function saveToPhoneStorage(options: DownloadOptions): Promise<{ su
 }
 
 /**
- * Writes multiple files directly to phone/device local storage
+ * Writes multiple files directly to phone/device local storage (Documents/ISA Secured PDF)
  */
 export async function saveMultipleToPhoneStorage(
   files: DownloadOptions[]
@@ -98,28 +135,14 @@ export async function saveMultipleToPhoneStorage(
     await ensureStoragePermissions();
     for (const f of files) {
       const base64Data = await blobToBase64(f.blob);
-      try {
-        await Filesystem.writeFile({
-          path: f.fileName,
-          data: base64Data,
-          directory: Directory.Documents,
-          recursive: true,
-        });
-      } catch (err) {
-        await Filesystem.writeFile({
-          path: f.fileName,
-          data: base64Data,
-          directory: Directory.Data,
-          recursive: true,
-        });
-      }
+      await writeToAppDocumentsFolder(f.fileName, base64Data, f.mimeType || f.blob.type || 'application/pdf');
     }
     return {
       success: true,
       message:
         files.length === 1
-          ? `Saved ${files[0].fileName} to phone`
-          : `Saved ${files.length} files to phone storage`,
+          ? `Saved to Documents/${APP_DOCUMENTS_SUBFOLDER}/${files[0].fileName}`
+          : `Saved ${files.length} files to Documents/${APP_DOCUMENTS_SUBFOLDER}`,
     };
   }
 
@@ -270,12 +293,8 @@ export async function downloadFile(options: DownloadOptions): Promise<void> {
           dialogTitle: `Save or Share ${fileName}`,
         });
       } else {
-        // Fallback to Documents directory
-        await Filesystem.writeFile({
-          path: fileName,
-          data: base64Data,
-          directory: Directory.Documents,
-        });
+        // Fallback to Documents/ISA Secured PDF directory
+        await writeToAppDocumentsFolder(fileName, base64Data, mimeType);
       }
       return;
     } catch (nativeErr) {

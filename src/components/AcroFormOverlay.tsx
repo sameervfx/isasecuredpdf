@@ -126,10 +126,10 @@ export const AcroFormOverlay: React.FC<AcroFormOverlayProps> = ({
         const fieldIsRedact = field.isRedact !== undefined ? field.isRedact : textIsRedact;
 
         const activeBgClass = fieldIsRedact
-          ? 'bg-white text-slate-900 border border-slate-300 font-serif focus:outline-none transition-all duration-150'
+          ? 'bg-white text-slate-900 border border-slate-300 font-serif focus:outline-none transition-colors duration-150'
           : hasVal
-          ? 'bg-white text-black border-b border-black font-serif focus:bg-blue-50 focus:outline-none transition-all duration-150'
-          : 'bg-blue-100/70 hover:bg-blue-200/90 text-blue-950 border-b border-blue-500/80 font-serif focus:bg-white focus:outline-none transition-all duration-150';
+          ? 'bg-white text-black border-b border-black font-serif focus:bg-blue-50 focus:outline-none transition-colors duration-150'
+          : 'bg-blue-100/70 hover:bg-blue-200/90 text-blue-950 border-b border-blue-500/80 font-serif focus:bg-white focus:outline-none transition-colors duration-150';
 
         return (
           <div

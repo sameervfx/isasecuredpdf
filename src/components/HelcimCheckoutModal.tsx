@@ -18,8 +18,9 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
   onPaymentSuccess,
   initialPlan = 'annual',
 }) => {
+  const isElectronEnv = typeof window !== 'undefined' && Boolean((window as any).electronAPI?.isElectron || window.location.protocol === 'file:');
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual' | 'lifetime'>(initialPlan);
-  const [paymentTab, setPaymentTab] = useState<'helcim' | 'key'>('helcim');
+  const [paymentTab, setPaymentTab] = useState<'helcim' | 'key'>(isElectronEnv ? 'key' : 'helcim');
   
   const detectedCurr = detectUserCurrency();
   const initialPricing = SUPPORTED_CURRENCIES[detectedCurr] || SUPPORTED_CURRENCIES.USD;
@@ -164,20 +165,32 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
         {/* Modal Header */}
         <div className="flex items-start justify-between pb-3.5 border-b border-slate-800">
           <div className="flex items-center space-x-3 min-w-0">
-            <div className="p-2.5 bg-gradient-to-tr from-emerald-500 to-teal-600 rounded-2xl shadow-lg shadow-emerald-500/20 shrink-0">
-              <CreditCard className="w-5 h-5 text-white" />
+            <div className={`p-2.5 rounded-2xl shadow-lg shrink-0 ${
+              paymentTab === 'key'
+                ? 'bg-gradient-to-tr from-amber-500 to-amber-600 shadow-amber-500/20'
+                : 'bg-gradient-to-tr from-emerald-500 to-teal-600 shadow-emerald-500/20'
+            }`}>
+              {paymentTab === 'key' ? (
+                <Key className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+              ) : (
+                <CreditCard className="w-5 h-5 text-white" />
+              )}
             </div>
             <div className="min-w-0">
               <div className="flex items-center space-x-2">
                 <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
-                  Unlock ISA Secure PDF Pro
+                  {paymentTab === 'key' ? 'Activate Enterprise & Pro License' : 'Unlock ISA Secure PDF Pro'}
                 </h3>
               </div>
               <p className="text-[11px] text-slate-400 leading-tight mt-1">
-                100% Client-Side Air-Gapped PDF Suite • Official Store Pricing
+                {paymentTab === 'key'
+                  ? '100% Client-Side Air-Gapped PDF Suite • On-Device License Verification'
+                  : '100% Client-Side Air-Gapped PDF Suite • Official Store Pricing'}
               </p>
               <p className="text-[10.5px] font-semibold text-emerald-400 leading-tight mt-0.5">
-                {isNativeApp ? 'Secure In-App Purchase' : 'Official Helcim Merchant Gateway'}
+                {paymentTab === 'key'
+                  ? 'Authorized Commercial & Enterprise License'
+                  : (isNativeApp ? 'Secure In-App Purchase' : 'Official Helcim Merchant Gateway')}
               </p>
             </div>
           </div>
@@ -205,13 +218,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
             </div>
           ) : (
             <>
-              {/* Plan Selection Cards */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Select Plan</label>
-                
-                {/* 1. NATIVE MOBILE PLAN CARDS (Dynamic Play Store Catalog Binding) */}
-                {isNativeApp || isAndroidPlatform() ? (
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3 items-stretch">
+              {/* Plan Selection Cards (Strictly for Public Consumer Checkout - Never shown when redeeming corporate license keys) */}
+              {(isNativeApp || (paymentTab === 'helcim' && !isElectronEnv)) && (
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Select Plan</label>
+                  
+                  {/* 1. NATIVE MOBILE PLAN CARDS (Dynamic Play Store Catalog Binding) */}
+                  {isNativeApp || isAndroidPlatform() ? (
+                    <div className="grid grid-cols-3 gap-2 sm:gap-3 items-stretch">
                     {/* Monthly Plan */}
                     <div
                       onClick={() => setSelectedPlan('monthly')}
@@ -381,6 +395,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                   </div>
                 )}
               </div>
+              )}
 
               {/* Condition 1: Native Mobile App (Google Play Billing / Apple In-App Purchase) */}
               {isNativeApp ? (
@@ -422,8 +437,8 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         <span>Unlimited PDF Exports & Conversions</span>
                       </div>
                       <div className="flex items-center space-x-2 sm:col-span-2 text-cyan-300 font-semibold pt-0.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                        <span>No ads and possible new features</span>
+                        <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        <span>No ads & Early Access to Upcoming Pro Resume & CV Builder</span>
                       </div>
                     </div>
                   </div>
@@ -518,36 +533,38 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
               ) : !isAndroidPlatform() ? (
                 /* Condition 2: Web Browser Environment (Official Helcim Hosted Gateway Checkout) */
                 <div className="space-y-4 my-3">
-                  {/* Payment Method Selector Tabs */}
-                  <div className="flex items-center space-x-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentTab('helcim')}
-                      className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
-                        paymentTab === 'helcim'
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold shadow-md'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                      }`}
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Helcim Secure Checkout</span>
-                    </button>
+                  {/* Payment Method Selector Tabs (Only on Web where both payment and license redemption exist) */}
+                  {!isElectronEnv && (
+                    <div className="flex items-center space-x-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 text-xs font-semibold">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentTab('helcim')}
+                        className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
+                          paymentTab === 'helcim'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold shadow-md'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                        }`}
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                        <span>Helcim Secure Checkout</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setPaymentTab('key')}
-                      className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
-                        paymentTab === 'key'
-                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                      }`}
-                    >
-                      <Key className="w-3.5 h-3.5" />
-                      <span>Redeem License Key</span>
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentTab('key')}
+                        className={`flex-1 py-2 px-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 text-[11px] ${
+                          paymentTab === 'key'
+                            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-bold shadow-md'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                        }`}
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>Redeem License Key</span>
+                      </button>
+                    </div>
+                  )}
 
-                  {paymentTab === 'helcim' ? (
+                  {paymentTab === 'helcim' && !isElectronEnv ? (
                     <>
                       {/* Pro Feature Checklist */}
                       <div className="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
@@ -600,6 +617,10 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                               <span className="font-bold text-emerald-300">Windows & Mac Offline Desktop Apps Included</span>
                             </div>
                           )}
+                          <div className="flex items-center space-x-2 sm:col-span-2 pt-0.5 text-cyan-300 font-semibold text-[11px]">
+                            <Sparkles className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                            <span>Early Access Included: Upcoming Pro Resume & CV Builder</span>
+                          </div>
                         </div>
                       </div>
 
@@ -628,14 +649,14 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       </button>
                     </>
                   ) : (
-                    /* License Key Activation Form */
-                    <form onSubmit={handleVerifyLicenseKey} className="space-y-3 bg-slate-950/80 p-4 rounded-2xl border border-purple-500/30">
-                      <div className="flex items-center space-x-2 text-purple-300 font-bold text-xs">
-                        <Key className="w-4 h-4 text-yellow-400" />
-                        <span>Activate Purchased License Key</span>
+                    /* License Key Activation Form (Private Enterprise & Commercial Activation - Zero Pricing Displayed) */
+                    <form onSubmit={handleVerifyLicenseKey} className="space-y-3.5 bg-slate-950/80 p-5 rounded-2xl border border-cyan-500/30">
+                      <div className="flex items-center space-x-2 text-cyan-300 font-bold text-xs">
+                        <Key className="w-4 h-4 text-amber-400" />
+                        <span>Activate Enterprise & Pro License Key</span>
                       </div>
                       <p className="text-[11px] text-slate-400">
-                        Enter the License Key sent to your email after purchasing on www.isasecuredpdf.com or your promo code.
+                        Enter the commercial or enterprise license key assigned to your workstation by your organization.
                       </p>
 
                       <input
@@ -643,7 +664,7 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                         placeholder="e.g. ISA-PRO-8942-X920"
                         value={licenseKeyInput}
                         onChange={(e) => setLicenseKeyInput(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 focus:border-purple-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition"
+                        className="w-full px-4 py-3 bg-slate-900 border border-slate-700 focus:border-cyan-400 text-white font-mono text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/30 transition uppercase"
                       />
 
                       {keyError && <p className="text-[11px] text-rose-400 font-medium">{keyError}</p>}
@@ -651,13 +672,13 @@ export const HelcimCheckoutModal: React.FC<HelcimCheckoutModalProps> = ({
                       <button
                         type="submit"
                         disabled={isProcessing}
-                        className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs rounded-xl shadow-lg border border-purple-400/30 transition transform active:scale-95 flex items-center justify-center space-x-2"
+                        className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs rounded-xl shadow-lg border border-cyan-400/30 transition transform active:scale-95 flex items-center justify-center space-x-2"
                       >
                         {isProcessing ? (
                           <span>Verifying License Key...</span>
                         ) : (
                           <>
-                            <Zap className="w-4 h-4 text-yellow-300" />
+                            <Zap className="w-4 h-4 text-amber-300" />
                             <span>Activate Pro Access</span>
                           </>
                         )}
