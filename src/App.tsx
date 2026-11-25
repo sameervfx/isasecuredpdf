@@ -15,6 +15,7 @@ import { ExportFormatType } from './components/PremiumExportModal';
 import { ExportSaveModal } from './components/ExportSaveModal';
 import { checkAndConsumeMonthlyQuota, canUseMonthlyQuotaFeature, FREE_MONTHLY_DOC_LIMIT } from './utils/monthlyUsageLimit';
 import { isNativeMobileApp, isIOSPlatform } from './utils/platform';
+import { scheduleWelcomeNotificationOnce, cancelWelcomeNotification } from './utils/welcomeNotification';
 
 // Resilient lazy loader: automatically recovers once if a live deploy replaced chunk hashes
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -208,8 +209,18 @@ export const App: React.FC = () => {
   }, []);
 
   const handleTriggerExportReview = useCallback(() => {
+    cancelWelcomeNotification().catch(() => {});
     handleTriggerReview('export');
   }, [handleTriggerReview]);
+
+  // Schedule a single 4-hour local welcome notification on native Android & iOS (no-op on Web/Desktop)
+  useEffect(() => {
+    if (!isNativeMobileApp()) return;
+    const t = setTimeout(() => {
+      scheduleWelcomeNotificationOnce().catch(() => {});
+    }, 3500);
+    return () => clearTimeout(t);
+  }, []);
 
   // 7-Day Free Trial Expiration Evaluator (Runs on App Load & 8th Day Interruption)
   useEffect(() => {
